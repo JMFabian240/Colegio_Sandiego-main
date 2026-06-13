@@ -47,6 +47,12 @@ async function actualizar(req, res, next) {
 
 async function eliminar(req, res, next) {
   try {
+    if (req.usuario?.id === Number(req.params.id)) {
+      return res.status(403).json({
+        ok: false,
+        message: 'Acción denegada: No puede eliminar su propia cuenta activa.',
+      });
+    }
     const auditCtx = { usuarioId: req.usuario?.id, ip: req.ip };
     await usuariosService.eliminar(req.params.id, auditCtx);
     return success(res, null, 'Usuario desactivado correctamente.');

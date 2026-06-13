@@ -16,11 +16,13 @@ const usuariosRoutes      = require('./usuarios.routes');
 const gruposRoutes        = require('./grupos.routes');
 const bitacoraRoutes      = require('./bitacora.routes');
 const permisosRoutes      = require('./permisos.routes');
+const tutoresRoutes       = require('./tutores.routes');
 
 const router = Router();
 
 router.use('/auth',          authRoutes);
 router.use('/alumnos',       alumnosRoutes);
+router.use('/tutores',       tutoresRoutes);
 router.use('/pagos',         pagosRoutes);
 router.use('/becas',         becasRoutes);
 router.use('/calificaciones',calificacionesRoutes);

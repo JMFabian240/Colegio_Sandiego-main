@@ -170,6 +170,26 @@
     },
   };
 
+  // ── Módulo: Tutores ─────────────────────────────────────────────────────────
+  var tutores = {
+    listar: function(filtros) {
+      var params = new URLSearchParams();
+      if (filtros && typeof filtros === 'object') {
+        if (filtros.q) params.set('q', filtros.q);
+        if (filtros.page) params.set('page', filtros.page);
+        if (filtros.limit) params.set('limit', filtros.limit);
+      }
+      var qs = params.toString();
+      return request('GET', '/tutores' + (qs ? '?' + qs : ''));
+    },
+    obtener:    function (id)       { return request('GET',    '/tutores/' + id); },
+    crear:      function (datos)    { return request('POST',   '/tutores', datos); },
+    actualizar: function (id, data) { return request('PUT',    '/tutores/' + id, data); },
+    eliminar:   function (id)       { return request('DELETE', '/tutores/' + id); },
+    vincular:   function (id, data) { return request('POST',   '/tutores/' + id + '/vincular', data); },
+    desvincular:function (id, alumnoId) { return request('DELETE', '/tutores/' + id + '/desvincular/' + alumnoId); },
+  };
+
   // ── Módulo: Pagos ───────────────────────────────────────────────────────────
   var pagos = {
     listar: function (filtros) {
@@ -262,7 +282,7 @@
   var permisos = {
     modulos: function() { return request('GET', '/permisos/modulos'); },
     obtenerUsuario: function(usuarioId) { return request('GET', '/permisos/usuarios/' + usuarioId); },
-    actualizar: function(datos) { return request('PUT', '/permisos/usuarios', datos); }
+    actualizar: function(datos) { return request('PUT', '/permisos/usuarios/' + datos.usuarioId, datos); }
   };
 
   // ── Mappers: API → formato frontend ────────────────────────────────────────
@@ -274,9 +294,9 @@
   function mapAlumno(a) {
     var primerPadre = (a.padres && a.padres.length > 0) ? a.padres[0] : null;
     return {
-      id:               a.id,
+      id:               a.id || a.alumnoId,
       grupoId:          a.grupoId,
-      nombre:           a.nombre,
+      nombre:           a.nombre || a.nombreCompleto,
       matricula:        a.matricula,
       curp:             a.curp || '',
       activo:           a.activo,
@@ -365,7 +385,7 @@
     };
     var el = document.createElement('div');
     el.style.cssText = [
-      'position:fixed', 'bottom:1.5rem', 'right:1.5rem', 'z-index:9999',
+      'position:fixed', 'bottom:1.5rem', 'left:1.5rem', 'z-index:9999',
       'padding:0.8rem 1.25rem', 'border-radius:0.75rem',
       'font-size:0.875rem', 'font-weight:500', 'color:white',
       'max-width:340px', 'box-shadow:0 4px 16px rgba(0,0,0,0.18)',
@@ -386,7 +406,7 @@
     getToken: getToken, setToken: setToken, clearSession: clearSession,
     getUsuario: getUsuario, setUsuario: setUsuario,
     // Módulos
-    auth: auth, alumnos: alumnos, pagos: pagos, becas: becas,
+    auth: auth, alumnos: alumnos, tutores: tutores, pagos: pagos, becas: becas,
     calificaciones: calificaciones, grupos: grupos, usuarios: usuarios,
     bitacora: bitacora, permisos: permisos,
     // Mappers

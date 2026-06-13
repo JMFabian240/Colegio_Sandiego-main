@@ -250,7 +250,9 @@ async function create(datos, auditCtx = {}) { return withAudit(auditCtx.usuarioI
     for (const padre of padres) {
       // Buscar si ya existe el tutor por RFC (o crear nuevo)
       let tutor = null;
-      if (rfc || padre.rfc) {
+      if (padre.tutorId) {
+        tutor = await tx.tutor.findUnique({ where: { tutorId: Number(padre.tutorId) } });
+      } else if (rfc || padre.rfc) {
         tutor = await tx.tutor.findFirst({
           where: { rfc: rfc || padre.rfc, eliminadoEn: null },
         });
@@ -305,7 +307,7 @@ async function create(datos, auditCtx = {}) { return withAudit(auditCtx.usuarioI
   }
 
   // Re-query con datos completos
-  return findById(alumno.alumnoId);
+  const finalAlumno = await tx.alumno.findFirst({ where: { alumnoId: alumno.alumnoId }, include: INCLUDE_COMPLETO }); return finalAlumno ? mapAlumno(finalAlumno) : null;
 });
 }
 

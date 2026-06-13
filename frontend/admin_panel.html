@@ -7,7 +7,7 @@
 <!-- SAE: config dinámica (IP del servidor) + guard de sesión + cliente API -->
 <script src="/config.js"></script>
 <script src="/shared/auth-guard.js"></script>
-<script src="/shared/api.js"></script>
+<script src="/shared/api.js?v=2"></script>
 <!-- Indicador de conectividad LAN (chip rojo discreto cuando el servidor no responde) -->
 <script src="/shared/offline-indicator.js"></script>
 <!-- Librerías visuales -->
@@ -93,7 +93,7 @@
       <div class="nav-link" :class="view==='deudores'?'active':''" @click="view='deudores'"><i data-lucide="alert-triangle" class="w-4 h-4"></i> Deudores <span class="ml-auto bg-crimson-500 text-white text-[10px] px-1.5 rounded-full" x-show="dashSummary.deudores>0" x-text="dashSummary.deudores"></span></div>
 
       <div class="nav-section">Comunidad</div>
-      <div class="nav-link" :class="view==='alumnos'?'active':''" @click="cargarAlumnos(); view='alumnos'"><i data-lucide="users" class="w-4 h-4"></i> Alumnos y padres</div>
+      <div class="nav-link" :class="view==='alumnos'?'active':''" @click="cargarAlumnos(); view='alumnos'"><i data-lucide="users" class="w-4 h-4"></i> Directorio Escolar</div>
       <div class="nav-link" :class="view==='grupos'?'active':''" @click="view='grupos'"><i data-lucide="book-open" class="w-4 h-4"></i> Grupos & materias</div>
 
       <div class="nav-section">Académico</div>
@@ -103,7 +103,6 @@
       <div class="nav-section">Configuración</div>
       <div class="nav-link" :class="view==='cicloEscolar'?'active':''" @click="view='cicloEscolar'"><i data-lucide="calendar-range" class="w-4 h-4"></i> Ciclo escolar</div>
       <div class="nav-link" :class="view==='usuarios'?'active':''" @click="view='usuarios'"><i data-lucide="users-round" class="w-4 h-4"></i> Usuarios y roles</div>
-      <div class="nav-link" :class="view==='permisos'?'active':''" @click="cargarPermisos(); view='permisos'"><i data-lucide="shield-check" class="w-4 h-4"></i> Permisos Granulares</div>
       <div class="nav-link" :class="view==='reportes'?'active':''" @click="view='reportes'"><i data-lucide="bar-chart-2" class="w-4 h-4"></i> Reportes descargables</div>
       
       <div class="nav-section">Auditoría</div>
@@ -127,7 +126,7 @@
       <div><span class="text-gray-500 text-sm">SAE /</span> <span class="font-semibold text-gray-800" x-text="viewLabel"></span></div>
       <div class="flex items-center gap-4">
         <span class="text-sm text-gray-400" x-text="fechaActual"></span>
-        <button class="btn-primary text-sm" @click="abrirModalPago()">+ Pago rápido</button>
+        <button x-show="view === 'dashboard' || view === 'pagos'" class="btn-primary text-sm" @click="abrirModalPago()">+ Pago rápido</button>
       </div>
     </header>
     <main class="flex-1 overflow-y-auto p-6 space-y-6">
@@ -135,12 +134,295 @@
       <!-- DASHBOARD -->
       <template x-if="view==='dashboard'"><div class="space-y-5"><div class="grid grid-cols-4 gap-5"><div class="card-clean p-5"><div class="text-xs text-gray-400">Ingresos hoy</div><div class="text-2xl font-bold text-navy-700" x-text="'$' + dashSummary.ingresosHoy.toLocaleString('es-MX')"></div></div><div class="card-clean p-5"><div class="text-xs text-gray-400">Deudores activos</div><div class="text-2xl font-bold text-crimson-600" x-text="dashSummary.deudores"></div></div><div class="card-clean p-5"><div class="text-xs text-gray-400">Alumnos activos</div><div class="text-2xl font-bold text-navy-700" x-text="dashSummary.alumnos"></div></div><div class="card-clean p-5"><div class="text-xs text-gray-400">Becas activas</div><div class="text-2xl font-bold text-emerald-600" x-text="dashSummary.becasActivas"></div></div></div><div class="card-clean p-5"><h3 class="font-semibold mb-2">Pagos del día de hoy</h3><div x-show="dashUltimosPagos.length===0" class="text-sm text-gray-400 py-2">Sin pagos registrados hoy.</div><table class="w-full text-sm" x-show="dashUltimosPagos.length>0"><template x-for="p in dashUltimosPagos" :key="p.id"><tr class="border-b"><td class="py-2" x-text="p.alumno"></td><td class="font-mono" :class="p.recargo?'text-crimson-600 font-bold':''" x-text="'$'+p.monto"></td><td x-text="p.fecha"></td></tr></template></table></div></div></template>
 
-      <!-- ALUMNOS Y PADRES -->
-      <template x-if="view==='alumnos'"><div><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold text-navy-800">Directorio escolar</h2><button class="btn-primary" @click="openNuevoAlumno()">+ Nuevo alumno</button></div><div class="mb-4"><input type="text" class="input-modern max-w-md" placeholder="Buscar por nombre, matrícula o CURP..." x-model="busquedaAlumno" @input="filtrarAlumnos"></div><div class="card-clean overflow-hidden" x-show="!alumnoSeleccionado"><table class="w-full text-sm"><thead class="bg-gray-50"><tr><th class="p-3 text-left">Alumno</th><th class="p-3 text-left">Grupo</th><th class="p-3 text-left">Padre/Tutor</th><th class="p-3 text-left">Contacto</th><th></th></tr></thead><tbody><template x-for="al in alumnosFiltrados"><tr class="border-b hover:bg-gray-50"><td class="p-3 font-medium" x-text="al.nombre"></td><td class="p-3" x-text="al.grupo"></td><td class="p-3" x-text="al.padre"></td><td class="p-3" x-text="al.telefono"></td><td class="p-3"><button class="btn-outline text-xs py-1" @click="seleccionarAlumnoFicha(al)">Ver ficha</button></td></tr></template></tbody></table><div class="flex items-center justify-between py-2 px-3 border-t bg-gray-50" x-show="paginasAlumnos > 1"><span class="text-xs text-gray-500" x-text="`Página ${paginaAlumnos} de ${paginasAlumnos} · ${totalAlumnos} alumnos`"></span><div class="flex gap-2"><button class="btn-outline text-xs py-1 px-3" :disabled="paginaAlumnos<=1" @click="_irPaginaAlumnos(paginaAlumnos-1)">← Anterior</button><button class="btn-outline text-xs py-1 px-3" :disabled="paginaAlumnos>=paginasAlumnos" @click="_irPaginaAlumnos(paginaAlumnos+1)">Siguiente →</button></div></div></div>
-      <div x-show="alumnoSeleccionado" class="grid grid-cols-3 gap-5"><div class="card-clean col-span-1"><div class="p-5 text-center"><div class="w-20 h-20 mx-auto bg-gradient-to-br from-navy-500 to-navy-700 rounded-full flex items-center justify-center text-white text-2xl font-bold" x-text="alumnoActualFicha?.nombre?.charAt(0)"></div><h2 class="font-bold mt-3" x-text="alumnoActualFicha?.nombre"></h2><p class="text-xs text-gray-500" x-text="alumnoActualFicha?.matricula"></p><div class="mt-4 space-y-2"><button class="btn-primary w-full" @click="abrirModalPago()">Registrar Pago</button><button class="btn-outline w-full" @click="alumnoSeleccionado=false">Volver al listado</button></div></div></div>
-      <div class="card-clean col-span-2"><div class="flex border-b"><button class="px-4 py-2 text-sm font-medium" :class="tabAlumno==='academicos'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabAlumno='academicos'">Datos Académicos</button><button class="px-4 py-2 text-sm font-medium" :class="tabAlumno==='fiscales'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabAlumno='fiscales'">Datos Fiscales</button></div>
-      <div class="p-5" x-show="tabAlumno==='academicos'"><div class="grid grid-cols-2 gap-4"><div><label class="text-xs font-medium">Nombre Completo</label><input class="input-modern" :value="alumnoActualFicha?.nombre"></div><div><label class="text-xs font-medium">Matrícula</label><input class="input-modern" :value="alumnoActualFicha?.matricula"></div><div><label class="text-xs font-medium">Nivel/Grupo</label><input class="input-modern" :value="alumnoActualFicha?.grupo"></div><div><label class="text-xs font-medium">CURP</label><input class="input-modern" :value="alumnoActualFicha?.curp || 'No registrada'"></div><div class="col-span-2"><label class="text-xs font-medium">Personas Autorizadas para Recogerlo</label><textarea class="input-modern" rows="2" x-text="alumnoActualFicha?.autorizados || 'Padres o tutores registrados'"></textarea></div></div><div class="flex justify-end mt-4"><button class="btn-primary">Guardar cambios</button></div></div>
-      <div class="p-5" x-show="tabAlumno==='fiscales'"><div class="grid grid-cols-2 gap-4"><div><label class="text-xs font-medium">RFC Padre/Tutor</label><input class="input-modern" :value="alumnoActualFicha?.rfc || 'No registrado'"></div><div><label class="text-xs font-medium">Régimen Fiscal</label><select class="input-modern"><option>605 - Sueldos y Salarios</option></select></div><div><label class="text-xs font-medium">Correo Facturación</label><input class="input-modern" :value="alumnoActualFicha?.correoFacturacion || 'pendiente@ejemplo.com'"></div></div><div class="flex justify-end mt-4"><button class="btn-primary">Guardar Datos Fiscales</button></div></div></div></div></div></template>
+            <!-- ALUMNOS Y TUTORES (DIRECTORIO ESCOLAR) -->
+      <template x-if="view==='alumnos'">
+        <div>
+          <!-- CABECERA DIRECTORIO -->
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-navy-800">Directorio Escolar</h2>
+            <div class="flex gap-2">
+              <button class="btn-outline" @click="openNuevoTutor()"><i data-lucide="user-plus" class="w-4 h-4 mr-1"></i>+ Alta Tutor</button>
+              <button class="btn-primary" @click="openNuevoAlumno()">+ Nuevo alumno</button>
+            </div>
+          </div>
+          
+          <!-- TABS -->
+          <div class="flex border-b mb-4">
+            <button class="px-4 py-2 text-sm font-medium" :class="tabDirectorio==='alumnos'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabDirectorio='alumnos'; _cargarAlumnosAPI()">Directorio de Alumnos</button>
+            <button class="px-4 py-2 text-sm font-medium" :class="tabDirectorio==='tutores'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabDirectorio='tutores'; _cargarTutoresAPI()">Padres / Tutores</button>
+          </div>
+
+          <!-- TAB: ALUMNOS -->
+          <div x-show="tabDirectorio==='alumnos'">
+            <div class="mb-4">
+              <input type="text" class="input-modern max-w-md" placeholder="Buscar por nombre, matrícula o CURP..." x-model="busquedaAlumno" @input="filtrarAlumnos()">
+            </div>
+            
+            <!-- Listado de Alumnos -->
+            <div class="card-clean overflow-hidden" x-show="!alumnoSeleccionado">
+              <table class="w-full text-sm">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="p-3 text-left">Alumno</th>
+                    <th class="p-3 text-left">Grupo/Nivel</th>
+                    <th class="p-3 text-left">Tutor Principal</th>
+                    <th class="p-3 text-left">Contacto</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="al in alumnosFiltrados" :key="al.id">
+                    <tr class="border-b hover:bg-gray-50">
+                      <td class="p-3 font-medium">
+                        <span x-text="al.nombre"></span>
+                        <div class="text-xs text-gray-500" x-text="'Matrícula: ' + al.matricula"></div>
+                      </td>
+                      <td class="p-3" x-text="al.grupo"></td>
+                      <td class="p-3 text-gray-700" x-text="al.padre"></td>
+                      <td class="p-3 text-xs text-gray-500">
+                        <div x-text="'Tel: ' + al.telefono"></div>
+                        <div x-text="al.email" x-show="al.email"></div>
+                      </td>
+                      <td class="p-3 text-right">
+                        <button class="btn-outline text-xs py-1 px-3" @click="seleccionarAlumnoFicha(al)">Ver ficha</button>
+                      </td>
+                    </tr>
+                  </template>
+                  <tr x-show="alumnosFiltrados.length===0">
+                    <td colspan="5" class="p-6 text-center text-gray-500">No se encontraron alumnos con los criterios especificados.</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="flex items-center justify-between py-2 px-3 border-t bg-gray-50" x-show="paginasAlumnos > 1">
+                <span class="text-xs text-gray-500" x-text="`Página ${paginaAlumnos} de ${paginasAlumnos} · ${totalAlumnos} alumnos`"></span>
+                <div class="flex gap-2">
+                  <button class="btn-outline text-xs py-1 px-3" :disabled="paginaAlumnos<=1" @click="_irPaginaAlumnos(paginaAlumnos-1)">← Anterior</button>
+                  <button class="btn-outline text-xs py-1 px-3" :disabled="paginaAlumnos>=paginasAlumnos" @click="_irPaginaAlumnos(paginaAlumnos+1)">Siguiente →</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Ficha de Alumno -->
+            <div x-show="alumnoSeleccionado" class="grid grid-cols-3 gap-5">
+              <div class="card-clean col-span-1">
+                <div class="p-5 text-center">
+                  <div class="w-20 h-20 mx-auto bg-gradient-to-br from-navy-500 to-navy-700 rounded-full flex items-center justify-center text-white text-2xl font-bold" x-text="(alumnoActualFicha?.nombre||'').charAt(0)"></div>
+                  <h2 class="font-bold mt-3 text-navy-800" x-text="alumnoActualFicha?.nombre"></h2>
+                  <p class="text-xs text-gray-500" x-text="alumnoActualFicha?.matricula"></p>
+                  <div class="mt-2 text-sm">
+                    <span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold" x-text="alumnoActualFicha?.activo ? 'Activo' : 'Baja'"></span>
+                  </div>
+                  <div class="mt-4 space-y-2">
+                    <button class="btn-primary w-full" @click="abrirModalPagoDesdeAlumno(alumnoActualFicha)">Registrar Pago</button>
+                    <button class="btn-outline w-full" @click="alumnoSeleccionado=false">Volver al listado</button>
+                  </div>
+                </div>
+              </div>
+              <div class="card-clean col-span-2">
+                <div class="flex border-b">
+                  <button class="px-4 py-3 text-sm font-medium" :class="tabAlumnoFicha==='academicos'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabAlumnoFicha='academicos'">Expediente Escolar</button>
+                  <button class="px-4 py-3 text-sm font-medium flex items-center" :class="tabAlumnoFicha==='tutores'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabAlumnoFicha='tutores'"><i data-lucide="users" class="w-4 h-4 mr-2"></i> Familia / Tutores</button>
+                </div>
+                <!-- Pestaña: Expediente Escolar -->
+                <div class="p-5 space-y-4" x-show="tabAlumnoFicha==='academicos'">
+                  <div class="grid grid-cols-2 gap-4">
+                    <div>
+                      <label class="text-xs font-medium text-gray-600">Nombre Completo</label>
+                      <input class="input-modern" x-model="alumnoFichaEditable.nombre">
+                    </div>
+                    <div>
+                      <label class="text-xs font-medium text-gray-600">Matrícula</label>
+                      <input class="input-modern bg-gray-50 cursor-not-allowed" disabled :value="alumnoActualFicha?.matricula">
+                    </div>
+                    <div>
+                      <label class="text-xs font-medium text-gray-600">CURP</label>
+                      <input class="input-modern" x-model="alumnoFichaEditable.curp" maxlength="18">
+                    </div>
+                    <div>
+                      <label class="text-xs font-medium text-gray-600">Estado / Estatus</label>
+                      <select class="input-modern" x-model="alumnoFichaEditable.estado">
+                        <option value="Activo">Activo</option>
+                        <option value="Baja Temporal">Baja Temporal</option>
+                        <option value="Baja Definitiva">Baja Definitiva</option>
+                        <option value="Egresado">Egresado</option>
+                      </select>
+                    </div>
+                    <div class="col-span-2">
+                      <label class="text-xs font-medium text-gray-600">Personas autorizadas para recoger (separadas por coma)</label>
+                      <textarea class="input-modern" rows="2" x-model="alumnoFichaEditable.autorizados"></textarea>
+                    </div>
+                  </div>
+                  <div class="flex justify-between items-center mt-6">
+                    <button class="btn-outline text-crimson-600 border-crimson-200" @click="confirmarBajaAlumno()">Dar de Baja Definitiva</button>
+                    <button class="btn-primary" @click="guardarCambiosAlumno()">Guardar Expediente</button>
+                  </div>
+                </div>
+
+                <!-- Pestaña: Tutores Vinculados -->
+                <div class="p-5" x-show="tabAlumnoFicha==='tutores'">
+                  <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-semibold text-gray-700">Tutores vinculados a este alumno</h3>
+                    <button class="btn-outline text-xs" @click="abrirModalVincularTutor()">+ Vincular Tutor</button>
+                  </div>
+                  <div class="space-y-3">
+                    <template x-for="t in alumnoActualFicha?.padresLista || []" :key="t.id">
+                      <div class="border rounded-lg p-4 flex justify-between items-center">
+                        <div>
+                          <div class="font-bold text-navy-800 flex items-center">
+                            <span x-text="t.nombre"></span>
+                            <span x-show="t.esTutor" class="ml-2 px-2 py-0.5 bg-navy-100 text-navy-700 text-[10px] rounded-full uppercase font-bold">Responsable Financiero</span>
+                          </div>
+                          <div class="text-sm text-gray-600 mt-1" x-text="t.tipoRelacion"></div>
+                          <div class="text-xs text-gray-500 mt-1 flex items-center gap-3">
+                            <span><i data-lucide="phone" class="w-3 h-3 inline mr-1"></i><span x-text="t.telefono || 'Sin teléfono'"></span></span>
+                            <span><i data-lucide="mail" class="w-3 h-3 inline mr-1"></i><span x-text="t.email || 'Sin correo'"></span></span>
+                          </div>
+                        </div>
+                        <div class="flex gap-2">
+                          <button class="p-2 text-gray-400 hover:text-crimson-600 bg-gray-50 rounded-lg transition" title="Desvincular tutor" @click="desvincularTutor(t.id)"><i data-lucide="unlink" class="w-4 h-4"></i></button>
+                        </div>
+                      </div>
+                    </template>
+                    <div x-show="!alumnoActualFicha?.padresLista || alumnoActualFicha.padresLista.length === 0" class="text-center p-6 text-gray-400 bg-gray-50 rounded-lg">
+                      No hay tutores vinculados. Es obligatorio vincular al menos uno.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB: TUTORES -->
+          <div x-show="tabDirectorio==='tutores'">
+            <div class="mb-4">
+              <input type="text" class="input-modern max-w-md" placeholder="Buscar tutor por nombre, RFC, correo..." x-model="busquedaTutor" @input="filtrarTutores()">
+            </div>
+            
+            <div class="card-clean overflow-hidden" x-show="!tutorSeleccionado">
+              <table class="w-full text-sm">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="p-3 text-left">Nombre Completo</th>
+                    <th class="p-3 text-left">RFC / Facturación</th>
+                    <th class="p-3 text-left">Contacto</th>
+                    <th class="p-3 text-center">Hijos (Alumnos)</th>
+                    <th class="p-3 text-right"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="tut in tutoresFiltrados" :key="tut.tutorId">
+                    <tr class="border-b hover:bg-gray-50">
+                      <td class="p-3 font-medium text-navy-800" x-text="tut.nombreCompleto"></td>
+                      <td class="p-3 text-gray-600 text-xs">
+                        <div x-text="tut.rfc || 'Sin RFC'"></div>
+                        <div x-show="tut.requiereFactura" class="text-emerald-600 mt-1 font-semibold"><i data-lucide="file-check" class="w-3 h-3 inline mr-1"></i>Requiere Factura</div>
+                      </td>
+                      <td class="p-3 text-xs text-gray-500">
+                        <div x-text="'Tel: ' + (tut.telefono || 'N/D')"></div>
+                        <div x-text="tut.correoElectronico"></div>
+                      </td>
+                      <td class="p-3 text-center">
+                        <span class="bg-navy-100 text-navy-700 font-bold px-2 py-1 rounded-lg text-xs" x-text="tut.alumnos?.length || 0"></span>
+                      </td>
+                      <td class="p-3 text-right">
+                        <button class="btn-outline text-xs py-1 px-3" @click="seleccionarTutorFicha(tut)">Ver Perfil</button>
+                      </td>
+                    </tr>
+                  </template>
+                  <tr x-show="tutoresFiltrados.length===0">
+                    <td colspan="5" class="p-6 text-center text-gray-500">No se encontraron tutores.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Ficha del Tutor -->
+            <div x-show="tutorSeleccionado" class="card-clean p-6">
+              <div class="flex justify-between items-start mb-6 border-b pb-4">
+                <div class="flex gap-4 items-center">
+                  <div class="w-16 h-16 bg-navy-100 rounded-full flex justify-center items-center text-navy-800 text-xl font-bold" x-text="(tutorActualFicha?.nombreCompleto||'').charAt(0)"></div>
+                  <div>
+                    <h2 class="text-xl font-bold text-navy-800" x-text="tutorActualFicha?.nombreCompleto"></h2>
+                    <p class="text-sm text-gray-500" x-text="tutorActualFicha?.correoElectronico || 'Sin correo'"></p>
+                  </div>
+                </div>
+                <div class="flex gap-2">
+                  <button class="btn-outline" @click="tutorSeleccionado=false">Volver al listado</button>
+                  <button class="btn-primary" @click="guardarCambiosTutor()">Guardar Perfil</button>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-8">
+                <!-- Columna Izquierda: Datos del Tutor -->
+                <div class="space-y-4">
+                  <h3 class="font-bold text-navy-800 border-b pb-2">Información y Contacto</h3>
+                  <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2">
+                      <label class="text-xs font-medium text-gray-600">Nombre Completo</label>
+                      <input type="text" class="input-modern" x-model="tutorFichaEditable.nombreCompleto">
+                    </div>
+                    <div>
+                      <label class="text-xs font-medium text-gray-600">Teléfono Móvil / Fijo</label>
+                      <input type="text" class="input-modern" x-model="tutorFichaEditable.telefono">
+                    </div>
+                    <div>
+                      <label class="text-xs font-medium text-gray-600">Correo Electrónico</label>
+                      <input type="email" class="input-modern" x-model="tutorFichaEditable.correoElectronico">
+                    </div>
+                    <div class="col-span-2">
+                      <label class="text-xs font-medium text-gray-600">Dirección Domicilio</label>
+                      <textarea class="input-modern" rows="2" x-model="tutorFichaEditable.direccion"></textarea>
+                    </div>
+                  </div>
+
+                  <h3 class="font-bold text-navy-800 border-b pb-2 mt-6">Datos de Facturación (Opcional)</h3>
+                  <div class="grid grid-cols-2 gap-4">
+                    <div>
+                      <label class="text-xs font-medium text-gray-600">RFC</label>
+                      <input type="text" class="input-modern uppercase" maxlength="13" x-model="tutorFichaEditable.rfc">
+                    </div>
+                    <div>
+                      <label class="text-xs font-medium text-gray-600">Régimen Fiscal (Código)</label>
+                      <input type="text" class="input-modern" placeholder="Ej: 605, 612..." x-model="tutorFichaEditable.regimenFiscal">
+                    </div>
+                    <div class="col-span-2">
+                      <label class="text-xs font-medium text-gray-600">Correo para envío de CFDI</label>
+                      <input type="email" class="input-modern" x-model="tutorFichaEditable.correoFacturacion">
+                    </div>
+                    <div class="col-span-2 mt-2">
+                      <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                        <input type="checkbox" class="rounded border-gray-300 text-navy-600" x-model="tutorFichaEditable.requiereFactura">
+                        Requiere facturación
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Columna Derecha: Alumnos (Hijos) -->
+                <div>
+                  <div class="flex justify-between items-center border-b pb-2 mb-4">
+                    <h3 class="font-bold text-navy-800">Alumnos / Hijos Vinculados</h3>
+                  </div>
+                  <div class="space-y-3">
+                    <template x-for="al in tutorActualFicha?.alumnos || []">
+                      <div class="card-clean p-4 flex justify-between items-center border hover:border-navy-300 transition">
+                        <div>
+                          <div class="font-bold text-navy-700" x-text="al.alumno?.nombreCompleto"></div>
+                          <div class="text-xs text-gray-500 mt-1" x-text="'Matrícula: ' + al.alumno?.matricula + ' · ' + (al.alumno?.nivel?.nombre || '')"></div>
+                          <div class="text-[11px] mt-1 font-medium text-emerald-600 uppercase" x-text="al.tipoRelacion"></div>
+                        </div>
+                      </div>
+                    </template>
+                    <div x-show="!tutorActualFicha?.alumnos || tutorActualFicha.alumnos.length === 0" class="p-6 text-center text-gray-400 bg-gray-50 rounded-lg">
+                      Este tutor no tiene alumnos vinculados.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
 
       <!-- PAGOS -->
       <template x-if="view==='pagos'"><div><div class="flex justify-between mb-4"><h2 class="text-xl font-bold text-navy-800">Registro de pagos</h2><button class="btn-primary" @click="abrirModalPago()">+ Nuevo pago</button></div><div class="card-clean p-5"><table class="w-full text-sm"><thead class="bg-gray-50"><tr><th class="p-2 text-left">Alumno</th><th class="p-2 text-left">Concepto</th><th class="p-2 text-left">Fecha</th><th class="p-2 text-right">Monto</th></tr></thead><tbody><template x-for="p in pagosRegistrados"><tr class="border-b"><td class="p-2" x-text="p.alumno"></td><td class="p-2" x-text="p.concepto"></td><td class="p-2" x-text="p.fecha"></td><td class="p-2 text-right font-mono" :class="p.recargo ? 'text-crimson-600 font-bold' : ''" x-text="'$'+p.monto"></td></tr></template></tbody></table><div class="flex items-center justify-between pt-3 mt-2 border-t" x-show="paginasPagos > 1"><span class="text-xs text-gray-500" x-text="`Página ${paginaPagos} de ${paginasPagos} · ${totalPagos} pagos`"></span><div class="flex gap-2"><button class="btn-outline text-xs py-1 px-3" :disabled="paginaPagos<=1" @click="_irPaginaPagos(paginaPagos-1)">← Anterior</button><button class="btn-outline text-xs py-1 px-3" :disabled="paginaPagos>=paginasPagos" @click="_irPaginaPagos(paginaPagos+1)">Siguiente →</button></div></div></div></div></template>
@@ -157,50 +439,106 @@
       <!-- USUARIOS -->
       <template x-if="view==='usuarios'">
         <div>
-          <div class="flex justify-between mb-4">
-            <h2 class="text-xl font-bold text-navy-800">Usuarios del sistema</h2>
-            <div class="flex gap-4 items-center">
-              <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                <input type="checkbox" x-model="verInactivos" @change="_cargarUsuariosAPI()" class="rounded border-gray-300 text-navy-600 focus:ring-navy-600">
-                Mostrar inactivos
-              </label>
-              <button class="btn-primary" @click="modalUsuario=true; nuevoUsuario={nombre:'',rol:'Docente'}">+ Nuevo usuario</button>
+          <!-- Maestro: Tabla de Usuarios -->
+          <div x-show="!usuarioPermisosActivo">
+            <div class="flex justify-between mb-4">
+              <h2 class="text-xl font-bold text-navy-800">Usuarios del sistema</h2>
+              <div class="flex gap-4 items-center">
+                <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                  <input type="checkbox" x-model="verInactivos" @change="_cargarUsuariosAPI()" class="rounded border-gray-300 text-navy-600 focus:ring-navy-600">
+                  Mostrar inactivos
+                </label>
+                <button class="btn-primary" @click="modalUsuario=true; nuevoUsuario={nombre:'',rol:'Docente'}">+ Nuevo usuario</button>
+              </div>
+            </div>
+            <div class="card-clean overflow-hidden">
+              <table class="w-full text-sm">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="p-3 text-left">Usuario</th>
+                    <th class="p-3 text-left">Rol</th>
+                    <th class="p-3 text-left">Estado</th>
+                    <th class="p-3 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="(user,idx) in listaUsuarios" :key="user.id">
+                    <tr class="border-b hover:bg-gray-50" :class="!user.activo ? 'bg-gray-50' : ''">
+                      <td class="p-3 font-medium text-gray-800" x-text="user.nombre"></td>
+                      <td class="p-3 text-gray-600" x-text="user.rol"></td>
+                      <td class="p-3">
+                        <span x-show="user.activo" class="badge-emerald">Activo</span>
+                        <span x-show="!user.activo" class="badge-gray">Inactivo</span>
+                      </td>
+                      <td class="p-3 text-right">
+                        <button class="btn-outline text-xs py-1" @click="seleccionarUsuarioPermisos(user)">Gestionar Ficha</button>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
             </div>
           </div>
-          <div class="card-clean overflow-hidden">
-            <table class="w-full text-sm">
-              <thead class="bg-gray-50">
-                <tr>
-                  <th class="p-3 text-left">Usuario</th>
-                  <th class="p-3 text-left">Rol</th>
-                  <th class="p-3 text-left">Estado</th>
-                  <th class="p-3 text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                <template x-for="(user,idx) in listaUsuarios">
-                  <tr class="border-b" :class="!user.activo ? 'bg-gray-50' : ''">
-                    <td class="p-3 font-medium text-gray-800" x-text="user.nombre"></td>
-                    <td class="p-3 text-gray-600" x-text="user.rol"></td>
-                    <td class="p-3">
-                      <span x-show="user.activo" class="badge-emerald">Activo</span>
-                      <span x-show="!user.activo" class="badge-gray">Inactivo</span>
-                    </td>
-                    <td class="p-3 text-right flex gap-2 justify-end">
-                      <template x-if="user.activo">
-                        <div class="flex gap-2">
-                          <button class="text-navy-600 text-xs hover:underline" @click="abrirResetPassword(user)">Restablecer pwd</button>
-                          <button class="text-crimson-600 text-xs hover:underline" @click="eliminarUsuario(idx)">Eliminar</button>
-                        </div>
-                      </template>
-                      <template x-if="!user.activo">
-                        <button class="text-emerald-600 font-semibold text-xs hover:underline" @click="reactivarUsuario(user.id)">Reactivar</button>
-                      </template>
-                    </td>
-                  </tr>
-                </template>
-              </tbody>
-            </table>
+
+          <!-- Detalle: Ficha y Permisos -->
+          <div x-show="usuarioPermisosActivo" class="grid gap-6" :class="usuarioPermisosActivo?.rol === 'Administrador' ? 'max-w-sm mx-auto grid-cols-1' : 'grid-cols-3'">
+            <!-- Columna 1: Info básica y acciones -->
+            <div class="card-clean col-span-1">
+              <div class="p-5 text-center">
+                <div class="w-16 h-16 mx-auto bg-gradient-to-br from-navy-500 to-navy-700 rounded-full flex items-center justify-center text-white text-2xl font-bold" x-text="usuarioPermisosActivo?.nombre?.charAt(0)"></div>
+                <h2 class="font-bold mt-3 text-navy-800" x-text="usuarioPermisosActivo?.nombre"></h2>
+                <p class="text-xs text-gray-500 font-medium mt-1" x-text="usuarioPermisosActivo?.rol"></p>
+                <div class="mt-3">
+                  <span x-show="usuarioPermisosActivo?.activo" class="badge-emerald text-[10px]">Cuenta Activa</span>
+                  <span x-show="!usuarioPermisosActivo?.activo" class="badge-gray text-[10px]">Cuenta Inactiva</span>
+                </div>
+                
+                <div class="mt-6 space-y-3 text-left border-t pt-4">
+                  <template x-if="usuarioPermisosActivo?.activo">
+                    <div class="space-y-3">
+                      <button class="btn-outline w-full justify-center text-navy-600 border-navy-200" @click="abrirResetPassword(usuarioPermisosActivo)">Restablecer Contraseña</button>
+                      <button class="btn-outline w-full justify-center text-crimson-600 border-crimson-200" @click="eliminarUsuario(listaUsuarios.findIndex(u=>u.id===usuarioPermisosActivo.id)); usuarioPermisosActivo = null">Desactivar / Eliminar</button>
+                    </div>
+                  </template>
+                  <template x-if="!usuarioPermisosActivo?.activo">
+                    <button class="btn-outline w-full justify-center text-emerald-600 border-emerald-200" @click="reactivarUsuario(usuarioPermisosActivo?.id); usuarioPermisosActivo.activo = true">Reactivar Cuenta</button>
+                  </template>
+                  <button class="btn-primary w-full justify-center mt-2" @click="usuarioPermisosActivo = null">← Volver al listado</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Columna 2: Permisos -->
+            <div class="col-span-2 card-clean flex flex-col" x-show="usuarioPermisosActivo?.rol !== 'Administrador'">
+              <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+                <h3 class="font-bold text-navy-800">Permisos de Acceso a Módulos</h3>
+                <button class="btn-primary text-xs py-1 px-3" @click="guardarPermisosUsuario(usuarioPermisosActivo.id)" :disabled="!usuarioPermisosActivo?.activo" :class="!usuarioPermisosActivo?.activo ? 'opacity-50 cursor-not-allowed' : ''">Guardar cambios</button>
+              </div>
+              <div class="p-5 flex-1">
+                <div x-show="!usuarioPermisosActivo?.activo" class="p-3 mb-4 bg-amber-50 border-l-4 border-amber-500 text-amber-800 text-sm flex justify-between items-center">
+                  <span><strong>Cuenta inactiva.</strong> Debes reactivar al usuario para modificar sus accesos.</span>
+                </div>
+
+                <div class="space-y-4" :class="!usuarioPermisosActivo?.activo ? 'opacity-50 pointer-events-none' : ''">
+                  <template x-for="mod in todosModulos" :key="mod">
+                    <div class="flex items-center justify-between py-2 border-b border-gray-50">
+                      <div class="font-medium text-sm text-gray-700 capitalize" x-text="mod"></div>
+                      <div class="flex gap-4">
+                        <label class="flex items-center gap-1 text-sm text-gray-600 cursor-pointer hover:text-navy-600">
+                          <input type="radio" :name="'permiso_'+mod" value="NINGUNO" x-model="permisosEditando[mod]" :disabled="!usuarioPermisosActivo?.activo" class="text-navy-600"> Ninguno
+                        </label>
+                        <label class="flex items-center gap-1 text-sm text-gray-600 cursor-pointer hover:text-navy-600">
+                          <input type="radio" :name="'permiso_'+mod" value="lectura" x-model="permisosEditando[mod]" :disabled="!usuarioPermisosActivo?.activo" class="text-navy-600"> Lectura
+                        </label>
+                        <label class="flex items-center gap-1 text-sm text-gray-600 cursor-pointer hover:text-navy-600">
+                          <input type="radio" :name="'permiso_'+mod" value="escritura" x-model="permisosEditando[mod]" :disabled="!usuarioPermisosActivo?.activo" class="text-navy-600"> Lectura y Edición
+                        </label>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </template>
@@ -294,72 +632,7 @@
         </div>
       </template>
 
-      <!-- ============================================================
-           PERMISOS GRANULARES
-           ============================================================ -->
-      <template x-if="view==='permisos'">
-        <div>
-          <h2 class="text-xl font-bold text-navy-800 mb-4">Permisos Granulares (GESTOR y MAESTRA)</h2>
-          <div class="grid grid-cols-3 gap-6">
-            <div class="col-span-1 card-clean overflow-hidden">
-              <div class="p-3 bg-gray-50 border-b font-semibold text-sm">Usuarios Configurable</div>
-              <ul class="divide-y text-sm">
-                <template x-for="u in listaUsuariosPermisos" :key="u.id">
-                  <li class="p-3 cursor-pointer hover:bg-navy-50 flex justify-between items-center" 
-                      :class="usuarioPermisosActivo?.id === u.id ? 'bg-navy-50 border-l-4 border-navy-600' : ''"
-                      @click="seleccionarUsuarioPermisos(u)">
-                    <div>
-                      <div class="font-medium text-navy-800" x-text="u.nombre"></div>
-                      <div class="text-xs text-gray-500" x-text="u.rol"></div>
-                    </div>
-                    <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400"></i>
-                  </li>
-                </template>
-                <li x-show="listaUsuariosPermisos.length===0" class="p-4 text-center text-gray-400 text-xs">No hay usuarios GESTOR o MAESTRA activos</li>
-              </ul>
-            </div>
-            
-            <div class="col-span-2 card-clean" x-show="usuarioPermisosActivo">
-              <div class="p-4 border-b flex justify-between items-center">
-                <div>
-                  <h3 class="font-bold text-navy-800" x-text="'Permisos para: ' + usuarioPermisosActivo?.nombre"></h3>
-                  <div class="flex gap-2 items-center mt-1">
-                    <div class="text-xs text-gray-500 font-medium" x-text="usuarioPermisosActivo?.rol"></div>
-                    <span x-show="!usuarioPermisosActivo?.activo" class="badge-gray text-[10px] px-1.5 py-0">Inactivo</span>
-                  </div>
-                </div>
-                <button class="btn-primary text-xs py-1" @click="guardarPermisosUsuario(usuarioPermisosActivo.id)" :disabled="!usuarioPermisosActivo?.activo" :class="!usuarioPermisosActivo?.activo ? 'opacity-50 cursor-not-allowed' : ''">Guardar cambios</button>
-              </div>
-              <div class="p-4">
-                <div x-show="!usuarioPermisosActivo?.activo" class="p-4 mb-4 bg-amber-50 border-l-4 border-amber-500 text-amber-800 text-sm flex justify-between items-center">
-                  <div>
-                    <strong>Cuenta inactiva.</strong> Este usuario fue desactivado. Debes reactivarlo antes de modificar sus accesos.
-                  </div>
-                  <button class="btn-outline border-amber-500 text-amber-700 bg-white hover:bg-amber-100" @click="reactivarUsuario(usuarioPermisosActivo.id)">Reactivar cuenta</button>
-                </div>
-                <div class="space-y-4" :class="!usuarioPermisosActivo?.activo ? 'opacity-50 pointer-events-none' : ''">
-                  <template x-for="mod in todosModulos" :key="mod">
-                    <div class="flex items-center justify-between py-2 border-b border-gray-50">
-                      <div class="font-medium text-sm text-gray-700 capitalize" x-text="mod"></div>
-                      <div class="flex gap-4">
-                        <label class="flex items-center gap-1 text-sm text-gray-600 cursor-pointer">
-                          <input type="radio" :name="'permiso_'+mod" value="NINGUNO" x-model="permisosEditando[mod]" :disabled="!usuarioPermisosActivo?.activo"> Ninguno
-                        </label>
-                        <label class="flex items-center gap-1 text-sm text-gray-600 cursor-pointer">
-                          <input type="radio" :name="'permiso_'+mod" value="lectura" x-model="permisosEditando[mod]" :disabled="!usuarioPermisosActivo?.activo"> Lectura
-                        </label>
-                        <label class="flex items-center gap-1 text-sm text-gray-600 cursor-pointer">
-                          <input type="radio" :name="'permiso_'+mod" value="escritura" x-model="permisosEditando[mod]" :disabled="!usuarioPermisosActivo?.activo"> Lectura / Edición
-                        </label>
-                      </div>
-                    </div>
-                  </template>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </template>
+
 
       <!-- ============================================================
            BITACORA DEL SISTEMA
@@ -511,7 +784,41 @@
   </div>
 
   <!-- MODAL NUEVO ALUMNO -->
-  <div x-show="modalNuevoAlumno" x-cloak class="modal-mask" @click.self="modalNuevoAlumno=false"><div class="modal-container p-6"><div class="font-bold text-lg text-navy-800">Registrar nuevo alumno</div><div class="space-y-3 mt-3"><input class="input-modern" placeholder="Nombre completo" x-model="nuevoAlumnoData.nombre"><input class="input-modern" placeholder="Matrícula" x-model="nuevoAlumnoData.matricula"><input class="input-modern" placeholder="CURP" x-model="nuevoAlumnoData.curp"><select class="input-modern" x-model="nuevoAlumnoData.grupoId"><option value="">— Selecciona un grupo —</option><template x-for="g in gruposData" :key="g.id"><option :value="g.id" x-text="g.nombre"></option></template></select><input class="input-modern" placeholder="Nombre del padre o tutor" x-model="nuevoAlumnoData.padre"><input class="input-modern" placeholder="Teléfono de contacto" x-model="nuevoAlumnoData.telefono"></div><div class="flex justify-end gap-2 mt-5"><button class="btn-outline" @click="modalNuevoAlumno=false">Cancelar</button><button class="btn-primary" @click="guardarNuevoAlumno()">Registrar alumno</button></div></div></div>
+<!-- Modal Nuevo Alumno -->
+<div x-show="modalNuevoAlumno" x-cloak class="modal-mask" @click.self="modalNuevoAlumno=false">
+  <div class="modal-container p-6">
+    <div class="font-bold text-lg text-navy-800">Registrar nuevo alumno</div>
+    <div class="space-y-3 mt-3">
+      <input class="input-modern" :class="{'border-crimson-500 bg-crimson-50': erroresNuevoAlumno.nombre}" placeholder="Nombre completo *" x-model="nuevoAlumnoData.nombre">
+      <input class="input-modern" :class="{'border-crimson-500 bg-crimson-50': erroresNuevoAlumno.matricula}" placeholder="Matrícula *" x-model="nuevoAlumnoData.matricula">
+      <input class="input-modern" placeholder="CURP (Opcional)" x-model="nuevoAlumnoData.curp">
+      <select class="input-modern" :class="{'border-crimson-500 bg-crimson-50': erroresNuevoAlumno.grupoId}" x-model="nuevoAlumnoData.grupoId">
+        <option value="">— Selecciona un grupo * —</option>
+        <template x-for="g in gruposData" :key="g.id">
+          <option :value="g.id" x-text="g.nombre"></option>
+        </template>
+      </select>
+      <!-- Autocomplete de Padre/Tutor -->
+      <div class="relative w-full">
+        <input class="input-modern" placeholder="Buscar tutor existente o escribir nombre nuevo (Opcional)" x-model="nuevoAlumnoData.padre" @input="buscarTutorAutocomplete()" @focus="buscarTutorAutocomplete()">
+        <!-- Lista de sugerencias -->
+        <div x-show="sugerenciasTutor.length > 0" @click.away="sugerenciasTutor = []" class="absolute z-50 w-full bg-white border border-gray-200 mt-1 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+          <template x-for="sug in sugerenciasTutor" :key="sug.tutorId">
+            <div class="p-3 hover:bg-navy-50 cursor-pointer border-b border-gray-100 last:border-0" @click="seleccionarTutorSugerido(sug)">
+              <div class="font-bold text-navy-800 text-sm" x-text="sug.nombreCompleto"></div>
+              <div class="text-xs text-gray-500" x-text="(sug.rfc || 'Sin RFC') + ' • ' + (sug.telefono || 'Sin Teléfono')"></div>
+            </div>
+          </template>
+        </div>
+      </div>
+      <input class="input-modern" placeholder="Teléfono de contacto (Opcional)" x-model="nuevoAlumnoData.telefono" :disabled="nuevoAlumnoData.tutorId !== null">
+    </div>
+    <div class="flex justify-end gap-2 mt-5">
+      <button class="btn-outline" @click="modalNuevoAlumno=false">Cancelar</button>
+      <button class="btn-primary" @click="guardarNuevoAlumno()">Registrar alumno</button>
+    </div>
+  </div>
+</div>
 
   <!-- MODAL RESTABLECER CONTRASEÑA -->
   <div x-show="modalResetPassword" x-cloak class="modal-mask" @click.self="modalResetPassword=false">
@@ -536,6 +843,80 @@
       <div class="flex justify-end gap-2 mt-5">
         <button class="btn-outline" @click="modalConfirmEliminar=false">Cancelar</button>
         <button class="btn-primary" style="background:#CC0000" @click="confirmarEliminarUsuario()">Sí, eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Alta de Tutor -->
+  <div x-show="modalNuevoTutor" x-cloak class="modal-mask" @click.self="modalNuevoTutor=false">
+    <div class="modal-container p-6">
+      <div class="font-bold text-lg text-navy-800 border-b pb-2 mb-4">Alta de Tutor / Padre de Familia</div>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="col-span-2">
+          <label class="text-xs font-medium text-gray-600">Nombre Completo *</label>
+          <input class="input-modern" x-model="nuevoTutorData.nombreCompleto" placeholder="Ej. Juan Pérez">
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-600">Teléfono</label>
+          <input class="input-modern" x-model="nuevoTutorData.telefono" placeholder="Opcional">
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-600">Correo Electrónico</label>
+          <input type="email" class="input-modern" x-model="nuevoTutorData.correoElectronico" placeholder="Opcional">
+        </div>
+        <div class="col-span-2 mt-2">
+          <label class="font-bold text-navy-800 text-sm">Datos de Facturación (Opcional)</label>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-600">RFC</label>
+          <input class="input-modern uppercase" maxlength="13" x-model="nuevoTutorData.rfc">
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-600">Régimen Fiscal</label>
+          <input class="input-modern" x-model="nuevoTutorData.regimenFiscal">
+        </div>
+        <div class="col-span-2">
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input type="checkbox" x-model="nuevoTutorData.requiereFactura" class="rounded border-gray-300"> Requiere factura
+          </label>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-6 border-t pt-4">
+        <button class="btn-outline" @click="modalNuevoTutor=false">Cancelar</button>
+        <button class="btn-primary" @click="guardarNuevoTutor()">Guardar Tutor</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Vincular Tutor -->
+  <div x-show="modalVincularTutor" x-cloak class="modal-mask" @click.self="modalVincularTutor=false">
+    <div class="modal-container p-6">
+      <div class="font-bold text-lg text-navy-800 border-b pb-2 mb-4">Vincular Tutor a <span x-text="alumnoActualFicha?.nombre"></span></div>
+      
+      <div>
+        <label class="text-sm font-medium text-gray-600">Buscar Tutor Existente</label>
+        <input type="text" class="input-modern mt-1" placeholder="Buscar por nombre o RFC (Mínimo 3 letras)..." x-model="busquedaVincularTutor" @input="buscarTutorParaVincular()">
+      </div>
+
+      <div class="mt-4 space-y-2">
+        <template x-for="t in tutoresParaVincular" :key="t.tutorId">
+          <div class="card-clean p-3 flex justify-between items-center hover:bg-gray-50 cursor-pointer" @click="confirmarVinculacionTutor(t)">
+            <div>
+              <div class="font-bold text-navy-700" x-text="t.nombreCompleto"></div>
+              <div class="text-xs text-gray-500" x-text="t.rfc || 'Sin RFC'"></div>
+            </div>
+            <button class="btn-primary text-xs py-1">Vincular</button>
+          </div>
+        </template>
+        <div x-show="busquedaVincularTutor.length >= 3 && tutoresParaVincular.length === 0" class="text-sm text-center text-gray-500 py-4">
+          No se encontró ningún tutor con ese nombre o RFC. 
+          <br><br>
+          <button class="btn-outline text-xs" @click="modalVincularTutor=false; openNuevoTutor()">Crear Nuevo Tutor</button>
+        </div>
+      </div>
+
+      <div class="flex justify-end mt-6 border-t pt-4">
+        <button class="btn-outline" @click="modalVincularTutor=false">Cerrar</button>
       </div>
     </div>
   </div>
@@ -571,16 +952,35 @@
       calificacionesTemp: { matematicas: '', espanol: '', ciencias: '' },
       _materiasIds: { matematicas: null, espanol: null, ciencias: null },
 
-      // ── Ficha alumno ────────────────────────────────────────────────────────
+      // ── Ficha alumno & Directorio ───────────────────────────────────────────
       alumnoSeleccionado: false,
       alumnoActualFicha: null,
       tabAlumno: 'academicos',
+      
+      tabDirectorio: 'alumnos',
+      tabAlumnoFicha: 'academicos',
+      busquedaTutor: '',
+      tutoresRegistrados: [],
+      tutoresFiltrados: [],
+      tutorSeleccionado: false,
+      tutorActualFicha: null,
+      tutorFichaEditable: {},
+      alumnoFichaEditable: {},
+      
+      modalNuevoTutor: false,
+      nuevoTutorData: { nombreCompleto: '', telefono: '', correoElectronico: '', rfc: '', regimenFiscal: '', correoFacturacion: '', requiereFactura: false },
+      
+      modalVincularTutor: false,
+      busquedaVincularTutor: '',
+      tutoresParaVincular: [],
 
       // ── Formularios ─────────────────────────────────────────────────────────
       nuevaBeca:      { alumnoId: null, tipo: 'Beca por hermanos (15%)' },
       nuevoUsuario:   { nombre: '', rol: 'Estándar (Maestra)' },
       nuevoPago:      { alumno: '', alumnoId: null, concepto: 'Colegiatura', monto: '', fecha: new Date().toISOString().slice(0,10) },
-      nuevoAlumnoData:{ nombre: '', matricula: '', curp: '', grupoId: null, padre: '', telefono: '' },
+      nuevoAlumnoData:{ nombre: '', matricula: '', curp: '', grupoId: null, padre: '', telefono: '', tutorId: null },
+      erroresNuevoAlumno: {},
+      sugerenciasTutor: [],
 
       // ── Autocomplete pago ───────────────────────────────────────────────────
       busquedaPagoAlumno: '',
@@ -745,19 +1145,42 @@
         }
       },
       async seleccionarUsuarioPermisos(u) {
+        if (this.todosModulos.length === 0) {
+          const resMod = await window.saeApi.permisos.modulos();
+          if (resMod.ok) this.todosModulos = resMod.data;
+        }
         this.usuarioPermisosActivo = u;
-        // Inicializar vacío
+        
+        // Inicializar con predeterminados según el rol
         const perms = {};
-        this.todosModulos.forEach(m => perms[m] = 'NINGUNO');
+        this.todosModulos.forEach(m => {
+          if (u.rol === 'Docente' || u.rol === 'MAESTRA') {
+            if (m === 'alumnos') perms[m] = 'lectura';
+            else if (m === 'calificaciones') perms[m] = 'escritura';
+            else perms[m] = 'NINGUNO';
+          } else if (u.rol === 'Gestor' || u.rol === 'GESTOR') {
+            if (['alumnos', 'tutores', 'becas', 'colegiaturas', 'calificaciones', 'reportes'].includes(m)) perms[m] = 'lectura';
+            else if (m === 'pagos') perms[m] = 'escritura';
+            else perms[m] = 'NINGUNO';
+          } else {
+            perms[m] = 'NINGUNO';
+          }
+        });
         
         // Cargar permisos del servidor
         const res = await window.saeApi.permisos.obtenerUsuario(u.id);
-        if (res.ok && res.data) {
+        if (res.ok && res.data && res.data.length > 0) {
+          // Si tiene configuracion guardada, usarla en vez de los defaults
+          const permsGuardados = {};
+          this.todosModulos.forEach(m => permsGuardados[m] = 'NINGUNO');
           res.data.forEach(p => {
-            perms[p.modulo] = p.nivel;
+            permsGuardados[p.modulo] = p.nivel;
           });
+          this.permisosEditando = permsGuardados;
+        } else {
+          // Si está vacío, cargar los predeterminados en la UI (listos para ser guardados)
+          this.permisosEditando = perms;
         }
-        this.permisosEditando = perms;
       },
       async guardarPermisosUsuario(usuarioId) {
         // Convertir el objeto { modulo: "NIVEL" } a un array
@@ -773,6 +1196,164 @@
         }
       },
 
+
+      // ── Directorio Escolar (Tutores) ─────────────────────────────────────────
+      async _cargarTutoresAPI() {
+        try {
+          const res = await window.saeApi.tutores.listar();
+          if (res && res.ok && res.data) {
+            this.tutoresRegistrados = res.data;
+            this.filtrarTutores();
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      },
+      filtrarTutores() {
+        const q = this.busquedaTutor.toLowerCase();
+        this.tutoresFiltrados = this.tutoresRegistrados.filter(t =>
+          (t.nombreCompleto || '').toLowerCase().includes(q) ||
+          (t.rfc || '').toLowerCase().includes(q) ||
+          (t.correoElectronico || '').toLowerCase().includes(q)
+        );
+      },
+      async seleccionarTutorFicha(tut) {
+        try {
+          const res = await window.saeApi.tutores.obtener(tut.tutorId || tut.id);
+          if (res && res.ok && res.data) {
+            this.tutorActualFicha = res.data;
+            this.tutorFichaEditable = { ...res.data };
+            this.tutorSeleccionado = true;
+          }
+        } catch (e) {
+          window.saeApi.toast('error', 'Error al cargar perfil del tutor');
+        }
+      },
+      openNuevoTutor() {
+        this.nuevoTutorData = { nombreCompleto: '', telefono: '', correoElectronico: '', rfc: '', regimenFiscal: '', correoFacturacion: '', requiereFactura: false };
+        this.modalNuevoTutor = true;
+      },
+      async guardarNuevoTutor() {
+        if (!this.nuevoTutorData.nombreCompleto) {
+          window.saeApi.toast('advertencia', 'El nombre del tutor es obligatorio');
+          return;
+        }
+        try {
+          const res = await window.saeApi.tutores.crear(this.nuevoTutorData);
+          if (res && res.ok) {
+            window.saeApi.toast('exito', 'Tutor registrado correctamente');
+            this.modalNuevoTutor = false;
+            this._cargarTutoresAPI();
+          } else {
+            window.saeApi.toast('error', res?.message || 'Error al guardar');
+          }
+        } catch(e) { window.saeApi.toast('error', 'Error de red'); }
+      },
+      async guardarCambiosTutor() {
+        try {
+          const payload = {
+            nombreCompleto: this.tutorFichaEditable.nombreCompleto,
+            telefono: this.tutorFichaEditable.telefono,
+            correoElectronico: this.tutorFichaEditable.correoElectronico,
+            rfc: this.tutorFichaEditable.rfc,
+            regimenFiscal: this.tutorFichaEditable.regimenFiscal,
+            correoFacturacion: this.tutorFichaEditable.correoFacturacion,
+            requiereFactura: this.tutorFichaEditable.requiereFactura,
+          };
+          const res = await window.saeApi.tutores.actualizar(this.tutorActualFicha.tutorId, payload);
+          if (res && res.ok) {
+            window.saeApi.toast('exito', 'Perfil del tutor actualizado');
+            this._cargarTutoresAPI();
+          } else {
+            window.saeApi.toast('error', res?.message || 'Error al guardar');
+          }
+        } catch (e) {
+          window.saeApi.toast('error', 'Error de red al actualizar tutor');
+        }
+      },
+      abrirModalPagoDesdeAlumno(al) {
+        // Simulates selecting a student and opening the payment modal
+        this.alumnoActualFicha = al;
+        this.abrirModalPago();
+      },
+      abrirModalVincularTutor() {
+        this.busquedaVincularTutor = '';
+        this.tutoresParaVincular = [];
+        this.modalVincularTutor = true;
+      },
+      buscarTutorParaVincular() {
+        const q = this.busquedaVincularTutor.toLowerCase();
+        if (q.length < 3) {
+          this.tutoresParaVincular = [];
+          return;
+        }
+        this.tutoresParaVincular = this.tutoresRegistrados.filter(t => 
+          t.nombreCompleto.toLowerCase().includes(q) || (t.rfc||'').toLowerCase().includes(q)
+        ).slice(0, 5);
+      },
+      async confirmarVinculacionTutor(tutor) {
+        try {
+          const payload = { alumnoId: this.alumnoActualFicha.id, tipoRelacion: 'tutor', esResponsableFinanciero: false };
+          const res = await window.saeApi.tutores.vincular(tutor.tutorId, payload);
+          if (res && res.ok) {
+            window.saeApi.toast('exito', 'Tutor vinculado correctamente');
+            this.modalVincularTutor = false;
+            this.seleccionarAlumnoFicha(this.alumnoActualFicha); // recargar ficha
+          } else {
+            window.saeApi.toast('error', res?.message || 'Error al vincular');
+          }
+        } catch(e) { window.saeApi.toast('error', 'Error de red'); }
+      },
+      async desvincularTutor(tutorId) {
+        if (!confirm('¿Seguro que deseas desvincular este tutor del alumno?')) return;
+        try {
+          const res = await window.saeApi.tutores.desvincular(tutorId, this.alumnoActualFicha.id);
+          if (res && res.ok) {
+            window.saeApi.toast('exito', 'Tutor desvinculado');
+            this.seleccionarAlumnoFicha(this.alumnoActualFicha); // Reload
+          } else {
+            window.saeApi.toast('error', res?.message || 'Error al desvincular');
+          }
+        } catch (e) {
+          window.saeApi.toast('error', 'Error de red');
+        }
+      },
+      async guardarCambiosAlumno() {
+        // Simplified academic edit
+        try {
+          const payload = {
+            nombre: this.alumnoFichaEditable.nombre,
+            curp: this.alumnoFichaEditable.curp,
+            estado: this.alumnoFichaEditable.estado,
+            observaciones: this.alumnoFichaEditable.autorizados // Using as authorized persons
+          };
+          const res = await window.saeApi.alumnos.actualizar(this.alumnoActualFicha.id, payload);
+          if (res && res.ok) {
+            window.saeApi.toast('exito', 'Expediente actualizado');
+            this._cargarAlumnosAPI();
+          } else {
+            window.saeApi.toast('error', res?.message || 'Error al actualizar');
+          }
+        } catch (e) {
+          window.saeApi.toast('error', 'Error de red');
+        }
+      },
+      async confirmarBajaAlumno() {
+        if (!confirm('¿Estás seguro de dar de BAJA DEFINITIVA a este alumno?')) return;
+        try {
+          const res = await window.saeApi.alumnos.eliminar(this.alumnoActualFicha.id);
+          if (res && res.ok) {
+            window.saeApi.toast('exito', 'Alumno dado de baja definitivamente');
+            this.alumnoSeleccionado = false;
+            this._cargarAlumnosAPI();
+          } else {
+            window.saeApi.toast('error', res?.message || 'Error al dar de baja');
+          }
+        } catch (e) {
+          window.saeApi.toast('error', 'Error de red');
+        }
+      },
+
       // ── Alumnos ─────────────────────────────────────────────────────────────
       cargarAlumnos() {
         this.alumnosFiltrados = [...this.listaAlumnos];
@@ -784,26 +1365,75 @@
         );
       },
       seleccionarAlumnoFicha(al) {
-        this.alumnoActualFicha = al;
-        this.alumnoSeleccionado = true;
-        this.tabAlumno = 'academicos';
+        // Ensure we fetch fresh data via API
+        window.saeApi.alumnos.obtener(al.id).then(res => {
+          if (res && res.ok && res.data) {
+            this.alumnoActualFicha = res.data;
+            this.alumnoActualFicha.padresLista = res.data.padres || [];
+            this.alumnoFichaEditable = {
+              nombre: res.data.nombre,
+              curp: res.data.curp,
+              estado: res.data.estado || 'Activo',
+              autorizados: typeof res.data.personasAutorizadas === 'string' ? res.data.personasAutorizadas : (res.data.autorizados || '')
+            };
+            this.alumnoSeleccionado = true;
+            this.tabAlumnoFicha = 'academicos';
+          }
+        });
       },
       openNuevoAlumno() {
         this.modalNuevoAlumno = true;
-        this.nuevoAlumnoData  = { nombre: '', matricula: '', curp: '', grupoId: null, padre: '', telefono: '' };
+        this.nuevoAlumnoData  = { nombre: '', matricula: '', curp: '', grupoId: null, padre: '', telefono: '', tutorId: null };
+        this.erroresNuevoAlumno = {};
+        this.sugerenciasTutor = [];
       },
-      async guardarNuevoAlumno() {
-        if (!this.nuevoAlumnoData.nombre) {
-          window.saeApi.toast('advertencia', 'Completa al menos el nombre del alumno.');
+      async buscarTutorAutocomplete() {
+        if (!this.nuevoAlumnoData.padre || this.nuevoAlumnoData.padre.length < 3) {
+          this.sugerenciasTutor = [];
+          if(this.nuevoAlumnoData.tutorId) {
+            // El usuario editó el texto, desvincular el ID
+            this.nuevoAlumnoData.tutorId = null;
+            this.nuevoAlumnoData.telefono = '';
+          }
           return;
         }
+        
+        // Si el texto actual es exactamente igual al tutor seleccionado, no buscar
+        if(this.nuevoAlumnoData.tutorId) return;
+
+        try {
+          const res = await window.saeApi.tutores.listar({ q: this.nuevoAlumnoData.padre, limit: 5 });
+          if (res && res.ok && Array.isArray(res.data)) {
+            this.sugerenciasTutor = res.data;
+          }
+        } catch (e) { console.error(e); }
+      },
+      seleccionarTutorSugerido(tut) {
+        this.nuevoAlumnoData.tutorId = tut.tutorId;
+        this.nuevoAlumnoData.padre = tut.nombreCompleto;
+        this.nuevoAlumnoData.telefono = tut.telefono || '';
+        this.sugerenciasTutor = [];
+      },
+      async guardarNuevoAlumno() {
+        // Validación de campos requeridos
+        this.erroresNuevoAlumno = {
+          nombre: !this.nuevoAlumnoData.nombre,
+          matricula: !this.nuevoAlumnoData.matricula,
+          grupoId: !this.nuevoAlumnoData.grupoId
+        };
+        
+        if (Object.values(this.erroresNuevoAlumno).some(v => v)) {
+          window.saeApi.toast('advertencia', 'Por favor, completa los campos requeridos marcados en rojo.');
+          return;
+        }
+        
         const payload = {
           nombre:    this.nuevoAlumnoData.nombre,
           matricula: this.nuevoAlumnoData.matricula,
           curp:      this.nuevoAlumnoData.curp || undefined,
           grupoId:   this.nuevoAlumnoData.grupoId ? Number(this.nuevoAlumnoData.grupoId) : undefined,
           padres:    this.nuevoAlumnoData.padre
-            ? [{ nombre: this.nuevoAlumnoData.padre, telefono: this.nuevoAlumnoData.telefono || null, esTutor: true }]
+            ? [{ nombre: this.nuevoAlumnoData.padre, telefono: this.nuevoAlumnoData.telefono || null, esTutor: true, tutorId: this.nuevoAlumnoData.tutorId }]
             : [],
         };
         const res = await window.saeApi.alumnos.crear(payload);
@@ -811,7 +1441,7 @@
           this.listaAlumnos.push(window.saeApi.mapAlumno(res.data));
           this.alumnosFiltrados = [...this.listaAlumnos];
           this.modalNuevoAlumno = false;
-          window.saeApi.toast('exito', `Alumno ${res.data.nombre} registrado correctamente.`);
+          window.saeApi.toast('exito', 'Alumno registrado correctamente');
         } else {
           window.saeApi.toast('error', res.message || 'Error al registrar alumno.');
         }

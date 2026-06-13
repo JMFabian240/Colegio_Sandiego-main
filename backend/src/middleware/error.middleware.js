@@ -40,9 +40,13 @@ function errorHandler(err, req, res, next) {
 
   // Errores de validación express-validator (pasados como error custom)
   if (err.type === 'VALIDATION_ERROR') {
+    const detalles = err.errors && Array.isArray(err.errors) 
+      ? err.errors.map(e => e.msg).join('; ')
+      : 'Revisa los campos del formulario.';
+      
     return res.status(422).json({
       ok: false,
-      message: 'Datos de entrada inválidos.',
+      message: `Datos inválidos: ${detalles}`,
       errors: err.errors,
     });
   }

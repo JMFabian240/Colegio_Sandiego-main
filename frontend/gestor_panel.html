@@ -130,7 +130,7 @@
       </div>
       <div class="flex items-center gap-4">
     
-        <button class="btn-primary text-sm" @click="abrirModalPago()">+ Pago rápido</button>
+        <button x-show="view === 'dashboard' || view === 'pagos'" class="btn-primary text-sm" @click="abrirModalPago()">+ Pago rápido</button>
       </div>
     </header>
 

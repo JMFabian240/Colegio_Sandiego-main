@@ -20,7 +20,7 @@ async function obtenerPorId(id) {
   return alumno;
 }
 
-async function crear(datos) {
+async function crear(datos, auditCtx) {
   // Verificar matrícula única
   const existente = await alumnosRepository.findByMatricula(datos.matricula);
   if (existente) {
@@ -29,17 +29,17 @@ async function crear(datos) {
       { statusCode: 409 }
     );
   }
-  return alumnosRepository.create(datos);
+  return alumnosRepository.create(datos, auditCtx);
 }
 
-async function actualizar(id, datos) {
+async function actualizar(id, datos, auditCtx) {
   await obtenerPorId(id); // Lanza 404 si no existe
-  return alumnosRepository.update(id, datos);
+  return alumnosRepository.update(id, datos, auditCtx);
 }
 
-async function eliminar(id) {
+async function eliminar(id, auditCtx) {
   await obtenerPorId(id); // Lanza 404 si no existe
-  return alumnosRepository.softDelete(id);
+  return alumnosRepository.softDelete(id, auditCtx);
 }
 
 module.exports = { listar, obtenerPorId, crear, actualizar, eliminar };

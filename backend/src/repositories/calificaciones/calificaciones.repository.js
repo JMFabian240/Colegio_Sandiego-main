@@ -1,3 +1,4 @@
+const { withAudit } = require('../../utils/audit.utils');
 /**
  * SAE — Calificaciones Repository (PostgreSQL)
  * Mantiene compatibilidad con el frontend existente.
@@ -217,13 +218,13 @@ async function findByAlumnoYPeriodo(alumnoId, periodo) {
  * Acepta el mismo formato anterior:
  *   { alumnoId, grupoMateriaId, periodo (string), valor, registradoPorId }
  */
-async function upsert(datos) {
+async function upsert(datos, auditCtx = {}) { return withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
   const { alumnoId, grupoMateriaId, periodo, valor, registradoPorId, tipoEvaluacion } = datos;
 
   const periodoId = await resolverPeriodoId(periodo, grupoMateriaId);
   if (!periodoId) throw new Error(`Período '${periodo}' no pudo resolverse.`);
 
-  const cal = await prisma.calificacion.upsert({
+  const cal = await tx.calificacion.upsert({
     where: {
       alumnoId_grupoMateriaId_periodoId: {
         alumnoId:       Number(alumnoId),
@@ -248,13 +249,14 @@ async function upsert(datos) {
   });
 
   return mapCalificacion(cal);
+});
 }
 
 /**
  * Upsert masivo de calificaciones.
  */
-async function upsertLote(registros) {
-  return Promise.all(registros.map((r) => upsert(r)));
+async function upsertLote(registros, auditCtx = {}) {
+  return Promise.all(registros.map((r) => upsert(r, auditCtx)));
 }
 
 module.exports = { findAll, findByAlumnoYPeriodo, upsert, upsertLote };

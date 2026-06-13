@@ -1,3 +1,4 @@
+const { withAudit } = require('../../utils/audit.utils');
 /**
  * SAE — Becas Repository (PostgreSQL)
  * Mantiene compatibilidad con el frontend existente.
@@ -169,13 +170,14 @@ async function createBeca(datos) {
 /**
  * Retira (desactiva) una beca de un alumno.
  */
-async function deactivateBeca(id) {
-  const asignacion = await prisma.asignacionBeca.update({
+async function deactivateBeca(id, auditCtx = {}) { return withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
+  const asignacion = await tx.asignacionBeca.update({
     where: { asignacionId: Number(id) },
     data:  { estado: 'retirada', fechaRetiro: new Date() },
     include: INCLUDE_ASIGNACION,
   });
   return mapAsignacion(asignacion);
+});
 }
 
 // ── SOLICITUDES DE BECA (Flujo RF-21) ────────────────────────
@@ -208,11 +210,11 @@ async function findSolicitudById(id) {
  * Crea una solicitud de beca.
  * Acepta el mismo formato: { alumnoId, tipo, porcentaje, motivo, solicitadoPorId }
  */
-async function createSolicitud(datos) {
+async function createSolicitud(datos, auditCtx = {}) { return withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
   const { alumnoId, tipo, porcentaje, motivo, solicitadoPorId, nombre, cicloId } = datos;
 
   const ciclo = cicloId
-    ? await prisma.cicloEscolar.findUnique({ where: { cicloId: Number(cicloId) } })
+    ? await tx.cicloEscolar.findUnique({ where: { cicloId: Number(cicloId) } })
     : await getCicloActivo();
 
   if (!ciclo) throw Object.assign(new Error('No hay ciclo escolar activo.'), { statusCode: 422 });
@@ -226,16 +228,16 @@ async function createSolicitud(datos) {
   };
 
   let beca = nombre
-    ? await prisma.beca.findFirst({ where: { nombreBeca: { equals: nombre, mode: 'insensitive' }, eliminadoEn: null } })
-    : await prisma.beca.findFirst({ where: { criterio: criterioMap[tipo] ?? tipo?.toLowerCase() ?? 'otro', eliminadoEn: null } });
+    ? await tx.beca.findFirst({ where: { nombreBeca: { equals: nombre, mode: 'insensitive' }, eliminadoEn: null } })
+    : await tx.beca.findFirst({ where: { criterio: criterioMap[tipo] ?? tipo?.toLowerCase() ?? 'otro', eliminadoEn: null } });
 
   if (!beca) {
-    beca = await prisma.beca.create({
+    beca = await tx.beca.create({
       data: { nombreBeca: nombre ?? tipo ?? 'Otro', criterio: 'otro', porcentaje: porcentaje ?? 0 },
     });
   }
 
-  const sol = await prisma.solicitudBeca.create({
+  const sol = await tx.solicitudBeca.create({
     data: {
       alumnoId:   Number(alumnoId),
       becaId:     beca.becaId,
@@ -248,16 +250,17 @@ async function createSolicitud(datos) {
   });
 
   return mapSolicitud(sol);
+});
 }
 
 /**
  * Resuelve una solicitud (aprobada/rechazada).
  * Si se aprueba → crea asignacion_beca.
  */
-async function resolverSolicitud(id, { estado, aprobadoPorId, observaciones }) {
+async function resolverSolicitud(id, { estado, aprobadoPorId, observaciones }, auditCtx = {}) { return withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
   const estadoNorm = estado.toLowerCase();
 
-  const sol = await prisma.solicitudBeca.update({
+  const sol = await tx.solicitudBeca.update({
     where: { solicitudId: Number(id) },
     data: {
       estado:          estadoNorm,
@@ -270,7 +273,7 @@ async function resolverSolicitud(id, { estado, aprobadoPorId, observaciones }) {
 
   // Si se aprueba, materializar la asignación de beca
   if (estadoNorm === 'aprobada') {
-    await prisma.asignacionBeca.upsert({
+    await tx.asignacionBeca.upsert({
       where: { alumnoId_becaId_cicloId: { alumnoId: sol.alumnoId, becaId: sol.becaId, cicloId: sol.cicloId } },
       update: { estado: 'activa', fechaRetiro: null, motivoRetiro: null },
       create: {
@@ -285,6 +288,7 @@ async function resolverSolicitud(id, { estado, aprobadoPorId, observaciones }) {
   }
 
   return mapSolicitud(sol);
+});
 }
 
 module.exports = {

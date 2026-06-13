@@ -1,3 +1,4 @@
+const { withAudit } = require('../../utils/audit.utils');
 /**
  * SAE — Alumnos Repository (PostgreSQL)
  * Mantiene compatibilidad de respuesta con el frontend existente.
@@ -201,7 +202,7 @@ async function findByMatricula(matricula) {
  * Crea un nuevo alumno junto a su tutor principal.
  * Acepta el mismo formato que el frontend: { nombre, matricula, padres[], grupoId, ... }
  */
-async function create(datos) {
+async function create(datos, auditCtx = {}) { return withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
   const {
     padres, nombre, grupoId, nivel,
     // Campos de facturación (antes en alumno, ahora en tutor)
@@ -213,7 +214,7 @@ async function create(datos) {
   // Resolver nivel_id
   let nivelId = null;
   if (nivel || alumnoData.nivelId) {
-    const nivelReg = await prisma.nivelEducativo.findFirst({
+    const nivelReg = await tx.nivelEducativo.findFirst({
       where: nivel
         ? { codigo: nivel.toUpperCase() }
         : { nivelId: Number(alumnoData.nivelId) },
@@ -228,7 +229,7 @@ async function create(datos) {
   }
 
   // Crear el alumno
-  const alumno = await prisma.alumno.create({
+  const alumno = await tx.alumno.create({
     data: {
       nombreCompleto:     nombre || alumnoData.nombreCompleto,
       matricula:          alumnoData.matricula,
@@ -250,13 +251,13 @@ async function create(datos) {
       // Buscar si ya existe el tutor por RFC (o crear nuevo)
       let tutor = null;
       if (rfc || padre.rfc) {
-        tutor = await prisma.tutor.findFirst({
+        tutor = await tx.tutor.findFirst({
           where: { rfc: rfc || padre.rfc, eliminadoEn: null },
         });
       }
 
       if (!tutor) {
-        tutor = await prisma.tutor.create({
+        tutor = await tx.tutor.create({
           data: {
             nombreCompleto:    padre.nombre,
             correoElectronico: padre.email ?? null,
@@ -270,7 +271,7 @@ async function create(datos) {
       }
 
       // Vincular tutor-alumno
-      await prisma.tutorAlumno.create({
+      await tx.tutorAlumno.create({
         data: {
           tutorId:                  tutor.tutorId,
           alumnoId:                 alumno.alumnoId,
@@ -285,11 +286,11 @@ async function create(datos) {
 
   // Inscribir en ciclo activo si se especificó grupoId
   if (grupoId) {
-    const cicloActivo = await prisma.cicloEscolar.findFirst({
+    const cicloActivo = await tx.cicloEscolar.findFirst({
       where: { activo: true },
     });
     if (cicloActivo) {
-      await prisma.inscripcionCiclo.upsert({
+      await tx.inscripcionCiclo.upsert({
         where: { alumnoId_cicloId: { alumnoId: alumno.alumnoId, cicloId: cicloActivo.cicloId } },
         update: { grupoId: Number(grupoId) },
         create: {
@@ -305,23 +306,24 @@ async function create(datos) {
 
   // Re-query con datos completos
   return findById(alumno.alumnoId);
+});
 }
 
 /**
  * Actualiza un alumno por ID.
  */
-async function update(id, datos) {
+async function update(id, datos, auditCtx = {}) { return withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
   const { padres, nombre, nivel, ...rest } = datos;
 
   let nivelId;
   if (nivel) {
-    const nivelReg = await prisma.nivelEducativo.findFirst({
+    const nivelReg = await tx.nivelEducativo.findFirst({
       where: { codigo: nivel.toUpperCase() },
     });
     nivelId = nivelReg?.nivelId;
   }
 
-  await prisma.alumno.update({
+  await tx.alumno.update({
     where: { alumnoId: Number(id) },
     data: {
       ...(nombre ? { nombreCompleto: nombre } : {}),
@@ -335,19 +337,21 @@ async function update(id, datos) {
   });
 
   return findById(id);
+});
 }
 
 /**
  * Soft delete: marca eliminadoEn y estado=Baja Definitiva.
  */
-async function softDelete(id) {
-  return prisma.alumno.update({
+async function softDelete(id, auditCtx = {}) { return withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
+  return tx.alumno.update({
     where: { alumnoId: Number(id) },
     data: {
       eliminadoEn: new Date(),
       estado:      'Baja Definitiva',
     },
   });
+});
 }
 
 module.exports = { findAll, findById, findByMatricula, create, update, softDelete };

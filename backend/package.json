@@ -37,6 +37,7 @@
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
+    "pdfkit": "^0.19.1",
     "pg": "^8.13.0"
   },
   "devDependencies": {
@@ -53,7 +54,14 @@
   "prisma": {
     "seed": "node prisma/seed.js"
   },
-  "keywords": ["escolar", "offline", "postgresql", "express", "prisma", "lan"],
+  "keywords": [
+    "escolar",
+    "offline",
+    "postgresql",
+    "express",
+    "prisma",
+    "lan"
+  ],
   "license": "UNLICENSED",
   "private": true
 }

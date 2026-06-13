@@ -237,6 +237,25 @@
     },
   };
 
+  // ── Módulo: Bitácora ────────────────────────────────────────────────────────
+  var bitacora = {
+    listar: function(page, limit) {
+      var qs = '?page=' + (page || 1) + '&limite=' + (limit || 50);
+      return request('GET', '/bitacora' + qs);
+    },
+    exportarURL: function(formato) {
+      var token = getToken();
+      return getBase() + '/bitacora/exportar?formato=' + (formato || 'pdf') + '&token=' + token;
+    }
+  };
+
+  // ── Módulo: Permisos ────────────────────────────────────────────────────────
+  var permisos = {
+    modulos: function() { return request('GET', '/permisos/modulos'); },
+    obtenerUsuario: function(usuarioId) { return request('GET', '/permisos/usuarios/' + usuarioId); },
+    actualizar: function(datos) { return request('PUT', '/permisos/usuarios', datos); }
+  };
+
   // ── Mappers: API → formato frontend ────────────────────────────────────────
 
   /**
@@ -358,6 +377,7 @@
     // Módulos
     auth: auth, alumnos: alumnos, pagos: pagos, becas: becas,
     calificaciones: calificaciones, grupos: grupos, usuarios: usuarios,
+    bitacora: bitacora, permisos: permisos,
     // Mappers
     mapAlumno: mapAlumno, mapGrupo: mapGrupo, mapPago: mapPago,
     // Constantes

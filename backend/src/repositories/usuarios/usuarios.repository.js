@@ -13,19 +13,21 @@
 
 const prisma = require('../../config/database');
 const { derivarRolSistema } = require('../auth/auth.repository');
+const { withAudit } = require('../../utils/audit.utils');
 
 // ── Mapper ────────────────────────────────────────────────────
 function mapUsuario(u) {
   return {
-    id:       u.usuarioId,
-    nombre:   u.nombreCompleto,
-    username: u.nombreUsuario,
-    rol:      derivarRolSistema(u.roles ?? []),
-    activo:   u.activo && !u.eliminadoEn,
-    correo:   u.correo,
-    telefono: u.telefono,
-    createdAt:u.creadoEn,
-    updatedAt:u.actualizadoEn,
+    id:           u.usuarioId,
+    nombre:       u.nombreCompleto,
+    username:     u.nombreUsuario,
+    rol:          derivarRolSistema(u.roles ?? []),
+    activo:       u.activo && !u.eliminadoEn,
+    correo:       u.correo,
+    telefono:     u.telefono,
+    ultimoAcceso: u.ultimoAcceso ?? null,
+    createdAt:    u.creadoEn,
+    updatedAt:    u.actualizadoEn,
   };
 }
 
@@ -61,6 +63,7 @@ async function findAll({ rol } = {}) {
       telefono:       true,
       activo:         true,
       eliminadoEn:    true,
+      ultimoAcceso:   true,
       creadoEn:       true,
       actualizadoEn:  true,
       roles: {
@@ -85,6 +88,7 @@ async function findById(id) {
       telefono:       true,
       activo:         true,
       eliminadoEn:    true,
+      ultimoAcceso:   true,
       creadoEn:       true,
       actualizadoEn:  true,
       roles: {
@@ -117,9 +121,11 @@ async function findByUsername(username) {
 
 /**
  * Crea un nuevo usuario con su rol.
- * Acepta: { nombre, username, password, rol }
+ * Acepta: { nombre, username, password, rol, correo, telefono }
+ * @param {object} datos
+ * @param {{ usuarioId: number|null, ip: string }} [auditCtx]
  */
-async function create(datos) {
+async function create(datos, auditCtx = {}) {
   const { nombre, username, password, rol, correo, telefono } = datos;
 
   // Mapear rol sistema → código PostgreSQL
@@ -129,91 +135,105 @@ async function create(datos) {
     MAESTRA: 'docente',
   }[rol] ?? (rol ? rol.toLowerCase() : 'docente');
 
-  // Buscar o crear el rol
+  // Buscar el rol en catálogo (fuera de la transacción auditada)
   const rolReg = await prisma.rol.findFirst({ where: { codigo: codigoRol } });
   if (!rolReg) throw new Error(`Rol '${codigoRol}' no encontrado en la BD.`);
 
-  const usuario = await prisma.usuario.create({
-    data: {
-      nombreCompleto: nombre,
-      nombreUsuario:  username,
-      passwordHash:   password,
-      correo:         correo ?? null,
-      telefono:       telefono ?? null,
-      activo:         true,
-      roles: {
-        create: {
-          rolId: rolReg.rolId,
-          activo: true,
+  const usuario = await withAudit(auditCtx.usuarioId ?? null, auditCtx.ip ?? '0.0.0.0', (tx) =>
+    tx.usuario.create({
+      data: {
+        nombreCompleto: nombre,
+        nombreUsuario:  username,
+        passwordHash:   password,
+        correo:         correo ?? null,
+        telefono:       telefono ?? null,
+        activo:         true,
+        roles: {
+          create: {
+            rolId: rolReg.rolId,
+            activo: true,
+          },
         },
       },
-    },
-    select: {
-      usuarioId:      true,
-      nombreCompleto: true,
-      nombreUsuario:  true,
-      correo:         true,
-      telefono:       true,
-      activo:         true,
-      eliminadoEn:    true,
-      creadoEn:       true,
-      actualizadoEn:  true,
-      roles: {
-        where: { activo: true, eliminadoEn: null },
-        select: { activo: true, eliminadoEn: true, rol: { select: { codigo: true } } },
+      select: {
+        usuarioId:      true,
+        nombreCompleto: true,
+        nombreUsuario:  true,
+        correo:         true,
+        telefono:       true,
+        activo:         true,
+        eliminadoEn:    true,
+        ultimoAcceso:   true,
+        creadoEn:       true,
+        actualizadoEn:  true,
+        roles: {
+          where: { activo: true, eliminadoEn: null },
+          select: { activo: true, eliminadoEn: true, rol: { select: { codigo: true } } },
+        },
       },
-    },
-  });
+    })
+  );
 
   return mapUsuario(usuario);
 }
 
-async function update(id, datos) {
+/**
+ * @param {string|number} id
+ * @param {object} datos
+ * @param {{ usuarioId: number|null, ip: string }} [auditCtx]
+ */
+async function update(id, datos, auditCtx = {}) {
   const { nombre, username, password, rol, correo, telefono } = datos;
 
-  await prisma.usuario.update({
-    where: { usuarioId: Number(id) },
-    data: {
-      ...(nombre   ? { nombreCompleto: nombre } : {}),
-      ...(username ? { nombreUsuario: username } : {}),
-      ...(password ? { passwordHash: password } : {}),
-      ...(correo   !== undefined ? { correo } : {}),
-      ...(telefono !== undefined ? { telefono } : {}),
-    },
-  });
+  await withAudit(auditCtx.usuarioId ?? null, auditCtx.ip ?? '0.0.0.0', async (tx) => {
+    await tx.usuario.update({
+      where: { usuarioId: Number(id) },
+      data: {
+        ...(nombre   ? { nombreCompleto: nombre } : {}),
+        ...(username ? { nombreUsuario: username } : {}),
+        ...(password ? { passwordHash: password } : {}),
+        ...(correo   !== undefined ? { correo } : {}),
+        ...(telefono !== undefined ? { telefono } : {}),
+      },
+    });
 
-  // Actualizar rol si se especificó
-  if (rol) {
-    const codigoRol = {
-      ADMIN:   'administrador',
-      GESTOR:  'empleado',
-      MAESTRA: 'docente',
-    }[rol] ?? rol.toLowerCase();
+    // Actualizar rol si se especificó
+    if (rol) {
+      const codigoRol = {
+        ADMIN:   'administrador',
+        GESTOR:  'empleado',
+        MAESTRA: 'docente',
+      }[rol] ?? rol.toLowerCase();
 
-    const rolReg = await prisma.rol.findFirst({ where: { codigo: codigoRol } });
-    if (rolReg) {
-      // Desactivar roles anteriores
-      await prisma.usuarioRol.updateMany({
-        where: { usuarioId: Number(id), activo: true },
-        data:  { activo: false },
-      });
-      // Asignar nuevo rol
-      await prisma.usuarioRol.upsert({
-        where: { usuarioId_rolId: { usuarioId: Number(id), rolId: rolReg.rolId } },
-        update: { activo: true },
-        create: { usuarioId: Number(id), rolId: rolReg.rolId, activo: true },
-      });
+      const rolReg = await tx.rol.findFirst({ where: { codigo: codigoRol } });
+      if (rolReg) {
+        await tx.usuarioRol.updateMany({
+          where: { usuarioId: Number(id), activo: true },
+          data:  { activo: false },
+        });
+        await tx.usuarioRol.upsert({
+          where: { usuarioId_rolId: { usuarioId: Number(id), rolId: rolReg.rolId } },
+          update: { activo: true },
+          create: { usuarioId: Number(id), rolId: rolReg.rolId, activo: true },
+        });
+      }
     }
-  }
+  });
 
   return findById(id);
 }
 
-async function softDelete(id) {
-  return prisma.usuario.update({
-    where: { usuarioId: Number(id) },
-    data: { activo: false, eliminadoEn: new Date() },
-  });
+/**
+ * @param {string|number} id
+ * @param {{ usuarioId: number|null, ip: string }} [auditCtx]
+ */
+async function softDelete(id, auditCtx = {}) {
+  return withAudit(auditCtx.usuarioId ?? null, auditCtx.ip ?? '0.0.0.0', (tx) =>
+    tx.usuario.update({
+      where: { usuarioId: Number(id) },
+      data: { activo: false, eliminadoEn: new Date() },
+    })
+  );
 }
 
 module.exports = { findAll, findById, findByUsername, create, update, softDelete };

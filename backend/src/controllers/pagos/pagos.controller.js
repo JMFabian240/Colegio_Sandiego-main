@@ -37,7 +37,8 @@ async function obtener(req, res, next) {
 
 async function registrar(req, res, next) {
   try {
-    const pago = await pagosService.registrar(req.body, req.usuario.id);
+    const auditCtx = { usuarioId: req.usuario?.id, ip: req.ip };
+    const pago = await pagosService.registrar(req.body, req.usuario.id, auditCtx);
     return created(res, pago, 'Pago registrado correctamente.');
   } catch (err) { next(err); }
 }

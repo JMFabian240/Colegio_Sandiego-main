@@ -53,20 +53,42 @@ function esOrigenLAN(origin) {
   return false;
 }
 
-const corsOptions = {
-  origin: (origin, callback) => {
-    // Sin origin (curl, Postman, SSR): permitir
-    if (!origin) return callback(null, true);
-    // Orígenes explícitos del .env
-    if (config.cors.origin.includes(origin)) return callback(null, true);
-    // Cualquier IP de la subred LAN
-    if (esOrigenLAN(origin)) return callback(null, true);
-    // Rechazar
+const corsOptions = (req, callback) => {
+  const origin = req.header('Origin');
+  let allow = false;
+
+  if (!origin) {
+    allow = true;
+  } else {
+    try {
+      const requestedHost = req.headers['x-forwarded-host'] || req.get('host');
+      const url = new URL(origin);
+      
+      // Permitir si el origen coincide con el host solicitado (mismo dominio/túnel)
+      if (url.host === requestedHost) {
+        allow = true;
+      } else if (config.cors.origin.includes(origin)) {
+        allow = true;
+      } else if (esOrigenLAN(origin)) {
+        allow = true;
+      } else if (url.hostname.endsWith('.loca.lt') || url.hostname.endsWith('.ngrok-free.app')) {
+        allow = true;
+      }
+    } catch {
+      allow = false;
+    }
+  }
+
+  if (allow) {
+    callback(null, {
+      origin: true,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+      credentials: true,
+    });
+  } else {
     callback(new Error(`CORS: origen no permitido — ${origin}`));
-  },
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
+  }
 };
 
 app.use(cors(corsOptions));
@@ -108,6 +130,9 @@ if (config.env !== 'test') {
 // Los clientes de la LAN cargan este script y obtienen la IP real del servidor.
 // El script detecta automáticamente la primera IPv4 no-loopback disponible.
 app.get('/config.js', (req, res) => {
+  const host = req.headers['x-forwarded-host'] || req.get('host');
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+
   const ifaces = os.networkInterfaces();
   let   serverIP = '127.0.0.1';
 
@@ -125,12 +150,12 @@ app.get('/config.js', (req, res) => {
   res.send(
 `/* SAE — Configuración dinámica generada por el servidor (${new Date().toISOString()}) */
 window.SAE_CONFIG = {
-  API_BASE:  'http://${serverIP}:${config.port}/api/v1',
+  API_BASE:  '${protocol}://${host}/api/v1',
   SERVER_IP: '${serverIP}',
   PORT:      ${config.port},
   VERSION:   '2.0.0',
 };
-console.log('[SAE] Servidor:', window.SAE_CONFIG.SERVER_IP + ':' + window.SAE_CONFIG.PORT);`
+console.log('[SAE] Servidor:', '${host}');`
   );
 });
 

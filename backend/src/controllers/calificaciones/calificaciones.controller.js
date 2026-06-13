@@ -25,14 +25,16 @@ async function listarPorAlumno(req, res, next) {
 
 async function guardar(req, res, next) {
   try {
-    const calificacion = await calificacionesService.guardar(req.body, req.usuario.id);
+    const auditCtx = { usuarioId: req.usuario?.id, ip: req.ip };
+    const calificacion = await calificacionesService.guardar(req.body, req.usuario.id, auditCtx);
     return created(res, calificacion, 'Calificación guardada correctamente.');
   } catch (err) { next(err); }
 }
 
 async function guardarLote(req, res, next) {
   try {
-    const registros = await calificacionesService.guardarLote(req.body.calificaciones, req.usuario.id);
+    const auditCtx = { usuarioId: req.usuario?.id, ip: req.ip };
+    const registros = await calificacionesService.guardarLote(req.body.calificaciones, req.usuario.id, auditCtx);
     return created(res, registros, `${registros.length} calificaciones guardadas.`);
   } catch (err) { next(err); }
 }

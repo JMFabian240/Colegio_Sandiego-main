@@ -27,17 +27,20 @@ async function listarSolicitudes(req, res, next) {
 
 async function solicitarBeca(req, res, next) {
   try {
-    const solicitud = await becasService.solicitarBeca(req.body, req.usuario.id);
+    const auditCtx = { usuarioId: req.usuario?.id, ip: req.ip };
+    const solicitud = await becasService.solicitarBeca(req.body, req.usuario.id, auditCtx);
     return created(res, solicitud, 'Solicitud de beca enviada al Administrador.');
   } catch (err) { next(err); }
 }
 
 async function resolverSolicitud(req, res, next) {
   try {
+    const auditCtx = { usuarioId: req.usuario?.id, ip: req.ip };
     const resultado = await becasService.resolverSolicitud(
       req.params.id,
       req.body,
-      req.usuario.id
+      req.usuario.id,
+      auditCtx
     );
     return success(res, resultado, `Solicitud ${req.body.estado.toLowerCase()} correctamente.`);
   } catch (err) { next(err); }
@@ -45,7 +48,8 @@ async function resolverSolicitud(req, res, next) {
 
 async function desactivarBeca(req, res, next) {
   try {
-    await becasService.desactivarBeca(req.params.id);
+    const auditCtx = { usuarioId: req.usuario?.id, ip: req.ip };
+    await becasService.desactivarBeca(req.params.id, auditCtx);
     return success(res, null, 'Beca desactivada correctamente.');
   } catch (err) { next(err); }
 }

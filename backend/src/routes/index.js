@@ -14,6 +14,8 @@ const becasRoutes         = require('./becas.routes');
 const calificacionesRoutes= require('./calificaciones.routes');
 const usuariosRoutes      = require('./usuarios.routes');
 const gruposRoutes        = require('./grupos.routes');
+const bitacoraRoutes      = require('./bitacora.routes');
+const permisosRoutes      = require('./permisos.routes');
 
 const router = Router();
 
@@ -24,5 +26,8 @@ router.use('/becas',         becasRoutes);
 router.use('/calificaciones',calificacionesRoutes);
 router.use('/usuarios',      usuariosRoutes);
 router.use('/grupos',        gruposRoutes);
+router.use('/bitacora',      bitacoraRoutes);
+router.use('/permisos',      permisosRoutes);
 
 module.exports = router;
+

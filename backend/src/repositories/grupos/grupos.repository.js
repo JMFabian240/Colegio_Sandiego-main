@@ -1,3 +1,4 @@
+const { withAudit } = require('../../utils/audit.utils');
 /**
  * SAE — Grupos Repository (PostgreSQL)
  * Mantiene compatibilidad de respuesta con el frontend existente.
@@ -118,20 +119,20 @@ async function findById(id) {
  * Acepta el mismo formato anterior:
  *   { nombre, nivel (string), titular (nombre docente o ID), materias: [...] }
  */
-async function create(datos) {
+async function create(datos, auditCtx = {}) { return withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
   const { materias, nombre, nivel, titular, cicloId: datoCicloId, grado: datoGrado, seccion: datoSeccion } = datos;
 
   // Resolver nivel_id
   let nivelId = null;
   if (nivel) {
-    const nivelReg = await prisma.nivelEducativo.findFirst({
+    const nivelReg = await tx.nivelEducativo.findFirst({
       where: { codigo: nivel.toUpperCase() },
     });
     nivelId = nivelReg?.nivelId ?? null;
   }
 
   // Ciclo activo
-  const cicloActivo = await prisma.cicloEscolar.findFirst({ where: { activo: true } });
+  const cicloActivo = await tx.cicloEscolar.findFirst({ where: { activo: true } });
   const cicloId = datoCicloId ? Number(datoCicloId) : cicloActivo?.cicloId ?? null;
   if (!cicloId) throw Object.assign(new Error('No hay ciclo escolar activo.'), { statusCode: 422 });
 
@@ -146,14 +147,14 @@ async function create(datos) {
     if (typeof titular === 'number') {
       docenteTitularId = titular;
     } else {
-      const docente = await prisma.usuario.findFirst({
+      const docente = await tx.usuario.findFirst({
         where: { nombreCompleto: { contains: titular, mode: 'insensitive' }, eliminadoEn: null },
       });
       docenteTitularId = docente?.usuarioId ?? null;
     }
   }
 
-  const grupo = await prisma.grupo.create({
+  const grupo = await tx.grupo.create({
     data: {
       nombre,
       nivelId,
@@ -168,7 +169,7 @@ async function create(datos) {
   // Crear grupoMaterias si se especificaron
   if (materias && materias.length > 0) {
     for (const mat of materias) {
-      let materiaReg = await prisma.materia.findFirst({
+      let materiaReg = await tx.materia.findFirst({
         where: {
           nombre: { equals: mat.materia ?? mat.nombre, mode: 'insensitive' },
           ...(nivelId ? { nivelId } : {}),
@@ -177,7 +178,7 @@ async function create(datos) {
       });
 
       if (!materiaReg) {
-        materiaReg = await prisma.materia.create({
+        materiaReg = await tx.materia.create({
           data: {
             nombre: mat.materia ?? mat.nombre,
             nivelId: nivelId ?? 1,
@@ -191,14 +192,14 @@ async function create(datos) {
         if (typeof mat.docente === 'number') {
           docenteId = mat.docente;
         } else {
-          const doc = await prisma.usuario.findFirst({
+          const doc = await tx.usuario.findFirst({
             where: { nombreCompleto: { contains: mat.docente, mode: 'insensitive' }, eliminadoEn: null },
           });
           docenteId = doc?.usuarioId ?? null;
         }
       }
 
-      await prisma.grupoMateria.create({
+      await tx.grupoMateria.create({
         data: {
           grupoId:   grupo.grupoId,
           materiaId: materiaReg.materiaId,
@@ -211,17 +212,18 @@ async function create(datos) {
   }
 
   return findById(grupo.grupoId);
+});
 }
 
 /**
  * Actualiza un grupo.
  */
-async function update(id, datos) {
+async function update(id, datos, auditCtx = {}) { return withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
   const { materias, nombre, nivel, titular } = datos;
 
   let nivelId;
   if (nivel) {
-    const nivelReg = await prisma.nivelEducativo.findFirst({
+    const nivelReg = await tx.nivelEducativo.findFirst({
       where: { codigo: nivel.toUpperCase() },
     });
     nivelId = nivelReg?.nivelId;
@@ -232,7 +234,7 @@ async function update(id, datos) {
     if (typeof titular === 'number') {
       docenteTitularId = titular;
     } else if (titular) {
-      const docente = await prisma.usuario.findFirst({
+      const docente = await tx.usuario.findFirst({
         where: { nombreCompleto: { contains: titular, mode: 'insensitive' }, eliminadoEn: null },
       });
       docenteTitularId = docente?.usuarioId ?? null;
@@ -241,7 +243,7 @@ async function update(id, datos) {
     }
   }
 
-  await prisma.grupo.update({
+  await tx.grupo.update({
     where: { grupoId: Number(id) },
     data: {
       ...(nombre             ? { nombre }             : {}),
@@ -252,7 +254,7 @@ async function update(id, datos) {
 
   // Actualizar materias: desactivar anteriores y crear nuevas
   if (materias && materias.length > 0) {
-    await prisma.grupoMateria.updateMany({
+    await tx.grupoMateria.updateMany({
       where: { grupoId: Number(id), eliminadoEn: null },
       data:  { eliminadoEn: new Date() },
     });
@@ -262,11 +264,11 @@ async function update(id, datos) {
 
     for (const mat of materias) {
       const nombreMateria = mat.materia ?? mat.nombre;
-      let materiaReg = await prisma.materia.findFirst({
+      let materiaReg = await tx.materia.findFirst({
         where: { nombre: { equals: nombreMateria, mode: 'insensitive' }, eliminadoEn: null },
       });
       if (!materiaReg) {
-        materiaReg = await prisma.materia.create({
+        materiaReg = await tx.materia.create({
           data: { nombre: nombreMateria, nivelId: nivelIdFinal ?? 1, obligatoria: true },
         });
       }
@@ -276,14 +278,14 @@ async function update(id, datos) {
         if (typeof mat.docente === 'number') {
           docenteId = mat.docente;
         } else {
-          const doc = await prisma.usuario.findFirst({
+          const doc = await tx.usuario.findFirst({
             where: { nombreCompleto: { contains: mat.docente, mode: 'insensitive' }, eliminadoEn: null },
           });
           docenteId = doc?.usuarioId ?? null;
         }
       }
 
-      await prisma.grupoMateria.create({
+      await tx.grupoMateria.create({
         data: {
           grupoId:   Number(id),
           materiaId: materiaReg.materiaId,
@@ -296,16 +298,18 @@ async function update(id, datos) {
   }
 
   return findById(id);
+});
 }
 
 /**
  * Soft delete de un grupo.
  */
-async function softDelete(id) {
-  return prisma.grupo.update({
+async function softDelete(id, auditCtx = {}) { return withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
+  return tx.grupo.update({
     where: { grupoId: Number(id) },
     data:  { eliminadoEn: new Date() },
   });
+});
 }
 
 module.exports = { findAll, findById, create, update, softDelete };

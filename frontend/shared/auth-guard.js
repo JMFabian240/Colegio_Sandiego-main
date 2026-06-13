@@ -44,7 +44,22 @@
   }
 
   // Helper de logout global — disponible desde cualquier panel
-  window.saeLogout = function () {
+  window.saeLogout = async function () {
+    var currentToken = localStorage.getItem(TOKEN_KEY);
+    if (currentToken) {
+      try {
+        var base = (window.SAE_CONFIG && window.SAE_CONFIG.API_BASE) ? window.SAE_CONFIG.API_BASE : window.location.origin + '/api/v1';
+        await fetch(base + '/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + currentToken
+          }
+        });
+      } catch (e) {
+        console.error('Error al hacer logout en el backend', e);
+      }
+    }
     limpiarSesion();
     window.location.replace('/auth/login.html');
   };

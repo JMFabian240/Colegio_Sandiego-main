@@ -7,6 +7,7 @@
 
 const authService  = require('../../services/auth/auth.service');
 const jwtUtils     = require('../../utils/jwt.utils');
+const prisma       = require('../../config/database');
 const { success }  = require('../../utils/response.utils');
 
 /**
@@ -20,6 +21,42 @@ async function login(req, res, next) {
     const resultado = await authService.login(username, password, ip, userAgent);
 
     return success(res, resultado, 'Inicio de sesión exitoso.');
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/v1/auth/logout
+ * Revoca el token actual insertándolo en token_revocado.
+ * El token sigue siendo válido cripto-gráficamente pero el middleware
+ * de autenticación lo rechazará en todas las peticiones futuras.
+ */
+async function logout(req, res, next) {
+  try {
+    const { jti, exp } = req.usuario;
+
+    if (!jti) {
+      // Token antiguo sin jti — solo limpiamos del lado del cliente
+      return success(res, null, 'Sesión cerrada correctamente.');
+    }
+
+    // expira_en: usar la expiración del token o 24h por defecto
+    const expiraEn = exp
+      ? new Date(exp * 1000)
+      : new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await prisma.tokenRevocado.upsert({
+      where:  { jti },
+      update: {},   // ya revocado, no hacer nada
+      create: {
+        jti,
+        usuarioId: req.usuario.id ?? null,
+        expiraEn,
+      },
+    });
+
+    return success(res, null, 'Sesión cerrada correctamente.');
   } catch (err) {
     next(err);
   }
@@ -123,4 +160,4 @@ async function resetPassword(req, res, next) {
   }
 }
 
-module.exports = { login, me, refresh, resetPassword };
+module.exports = { login, logout, me, refresh, resetPassword };

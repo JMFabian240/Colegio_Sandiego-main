@@ -18,13 +18,13 @@ async function obtenerPorId(id) {
   return grupo;
 }
 
-async function crear(datos) {
-  return gruposRepository.create(datos);
+async function crear(datos, auditCtx = {}) {
+  return gruposRepository.create(datos, auditCtx);
 }
 
-async function actualizar(id, datos) {
+async function actualizar(id, datos, auditCtx = {}) {
   await obtenerPorId(id);
-  return gruposRepository.update(id, datos);
+  return gruposRepository.update(id, datos, auditCtx);
 }
 
 module.exports = { listar, obtenerPorId, crear, actualizar };

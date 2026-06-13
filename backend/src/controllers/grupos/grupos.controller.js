@@ -24,14 +24,16 @@ async function obtener(req, res, next) {
 
 async function crear(req, res, next) {
   try {
-    const grupo = await gruposService.crear(req.body);
+    const auditCtx = { usuarioId: req.usuario?.id, ip: req.ip };
+    const grupo = await gruposService.crear(req.body, auditCtx);
     return created(res, grupo, 'Grupo creado correctamente.');
   } catch (err) { next(err); }
 }
 
 async function actualizar(req, res, next) {
   try {
-    const grupo = await gruposService.actualizar(req.params.id, req.body);
+    const auditCtx = { usuarioId: req.usuario?.id, ip: req.ip };
+    const grupo = await gruposService.actualizar(req.params.id, req.body, auditCtx);
     return success(res, grupo, 'Grupo actualizado correctamente.');
   } catch (err) { next(err); }
 }

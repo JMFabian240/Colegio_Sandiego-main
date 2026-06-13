@@ -37,21 +37,24 @@ async function obtener(req, res, next) {
 
 async function crear(req, res, next) {
   try {
-    const alumno = await alumnosService.crear(req.body);
+    const auditCtx = { usuarioId: req.usuario?.id, ip: req.ip };
+    const alumno = await alumnosService.crear(req.body, auditCtx);
     return created(res, alumno, 'Alumno registrado correctamente.');
   } catch (err) { next(err); }
 }
 
 async function actualizar(req, res, next) {
   try {
-    const alumno = await alumnosService.actualizar(req.params.id, req.body);
+    const auditCtx = { usuarioId: req.usuario?.id, ip: req.ip };
+    const alumno = await alumnosService.actualizar(req.params.id, req.body, auditCtx);
     return success(res, alumno, 'Datos del alumno actualizados.');
   } catch (err) { next(err); }
 }
 
 async function eliminar(req, res, next) {
   try {
-    await alumnosService.eliminar(req.params.id);
+    const auditCtx = { usuarioId: req.usuario?.id, ip: req.ip };
+    await alumnosService.eliminar(req.params.id, auditCtx);
     return success(res, null, 'Alumno desactivado correctamente.');
   } catch (err) { next(err); }
 }

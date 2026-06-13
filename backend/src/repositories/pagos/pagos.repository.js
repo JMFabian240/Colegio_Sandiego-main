@@ -170,7 +170,7 @@ async function findById(id) {
  * Acepta el mismo formato que antes:
  *   { alumnoId, concepto, monto, fecha, tieneRecargo, montoRecargo, registradoPorId, metodoPago }
  */
-async function create(datos) {
+async function create(datos, auditCtx = {}) {
   const {
     alumnoId, concepto, monto, fecha, tieneRecargo,
     montoRecargo, registradoPorId, observaciones, metodoPago,
@@ -184,7 +184,8 @@ async function create(datos) {
     .replace('material_didactico', 'material')
     .replace('uniforme', 'uniforme');
 
-  const pago = await prisma.$transaction(async (tx) => {
+  const { withAudit } = require('../../utils/audit.utils');
+  const pago = await withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
     // 1. Crear el pago principal
     const nuevoPago = await tx.pago.create({
       data: {

@@ -22,7 +22,7 @@ async function listarSolicitudes(filtros) {
  * @param {{ alumnoId: number, tipo: string, motivo: string }} datos
  * @param {number} solicitadoPorId
  */
-async function solicitarBeca(datos, solicitadoPorId) {
+async function solicitarBeca(datos, solicitadoPorId, auditCtx = {}) {
   const alumno = await alumnosRepository.findById(datos.alumnoId);
   if (!alumno) {
     throw Object.assign(new Error('Alumno no encontrado.'), { statusCode: 404 });
@@ -36,7 +36,7 @@ async function solicitarBeca(datos, solicitadoPorId) {
     porcentaje,
     motivo:          datos.motivo,
     solicitadoPorId,
-  });
+  }, auditCtx);
 }
 
 /**
@@ -46,7 +46,7 @@ async function solicitarBeca(datos, solicitadoPorId) {
  * @param {{ estado: string, observaciones?: string }} payload
  * @param {number} aprobadoPorId
  */
-async function resolverSolicitud(solicitudId, { estado, observaciones }, aprobadoPorId) {
+async function resolverSolicitud(solicitudId, { estado, observaciones }, aprobadoPorId, auditCtx = {}) {
   const solicitud = await becasRepository.findSolicitudById(solicitudId);
   if (!solicitud) {
     throw Object.assign(new Error('Solicitud no encontrada.'), { statusCode: 404 });
@@ -64,11 +64,11 @@ async function resolverSolicitud(solicitudId, { estado, observaciones }, aprobad
     estado,
     aprobadoPorId,
     observaciones,
-  });
+  }, auditCtx);
 }
 
-async function desactivarBeca(becaId) {
-  return becasRepository.deactivateBeca(becaId);
+async function desactivarBeca(becaId, auditCtx = {}) {
+  return becasRepository.deactivateBeca(becaId, auditCtx);
 }
 
 module.exports = {

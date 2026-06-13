@@ -19,7 +19,7 @@ async function obtenerPorId(id) {
   return usuario;
 }
 
-async function crear(datos) {
+async function crear(datos, auditCtx = {}) {
   // Verificar username único
   const existente = await usuariosRepository.findByUsername(datos.username);
   if (existente) {
@@ -36,10 +36,10 @@ async function crear(datos) {
     username: datos.username,
     password: passwordHash,
     rol:      datos.rol || 'MAESTRA',
-  });
+  }, auditCtx);
 }
 
-async function actualizar(id, datos) {
+async function actualizar(id, datos, auditCtx = {}) {
   await obtenerPorId(id);
 
   const updateData = { ...datos };
@@ -49,12 +49,12 @@ async function actualizar(id, datos) {
     updateData.password = await hashPassword(datos.password);
   }
 
-  return usuariosRepository.update(id, updateData);
+  return usuariosRepository.update(id, updateData, auditCtx);
 }
 
-async function eliminar(id) {
+async function eliminar(id, auditCtx = {}) {
   await obtenerPorId(id);
-  return usuariosRepository.softDelete(id);
+  return usuariosRepository.softDelete(id, auditCtx);
 }
 
 module.exports = { listar, obtenerPorId, crear, actualizar, eliminar };

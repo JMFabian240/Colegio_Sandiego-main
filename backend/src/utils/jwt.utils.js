@@ -6,18 +6,21 @@
 'use strict';
 
 const jwt    = require('jsonwebtoken');
+const crypto = require('crypto');
 const config = require('../config/env');
 
 /**
  * Genera un token JWT con el payload del usuario.
+ * Incluye un `jti` (JWT ID) único para permitir la revocación por logout (RF-06).
  * @param {{ id: number, username: string, nombre: string, rol: string }} payload
  * @returns {string} Token firmado
  */
 function generateToken(payload) {
-  return jwt.sign(payload, config.jwt.secret, {
-    expiresIn: config.jwt.expiresIn,
-    issuer: 'sae-sandiego',
-  });
+  return jwt.sign(
+    { ...payload, jti: crypto.randomUUID() },
+    config.jwt.secret,
+    { expiresIn: config.jwt.expiresIn, issuer: 'sae-sandiego' }
+  );
 }
 
 /**

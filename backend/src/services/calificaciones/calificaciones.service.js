@@ -42,17 +42,17 @@ async function listarPorAlumno(alumnoId, periodo) {
  * Guarda (upsert) una calificación individual.
  * La resolución del periodo_id (string → FK) se delega al repository.
  */
-async function guardar(datos, registradoPorId) {
-  return calificacionesRepository.upsert({ ...datos, registradoPorId });
+async function guardar(datos, registradoPorId, auditCtx = {}) {
+  return calificacionesRepository.upsert({ ...datos, registradoPorId }, auditCtx);
 }
 
 /**
  * Guarda (upsert) un lote de calificaciones en paralelo.
  * Cada registro resuelve su periodo_id independientemente.
  */
-async function guardarLote(calificaciones, registradoPorId) {
+async function guardarLote(calificaciones, registradoPorId, auditCtx = {}) {
   const registros = calificaciones.map((c) => ({ ...c, registradoPorId }));
-  return calificacionesRepository.upsertLote(registros);
+  return calificacionesRepository.upsertLote(registros, auditCtx);
 }
 
 // ──────────────────────────────────────────────────────────────

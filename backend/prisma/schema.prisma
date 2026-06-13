@@ -60,6 +60,10 @@ model Usuario {
   intentosLogin              IntentoLogin[]
   logsAuditoria              LogAuditoria[]
   movimientosSaldoCreados    MovimientoSaldo[] @relation("MovimientoSaldoCreadoPor")
+  // RF-06: tokens revocados por logout
+  tokensRevocados            TokenRevocado[]
+  // RF-03: permisos granulares por módulo
+  permisosModulos            UsuarioPermisoModulo[]
 
   @@map("usuario")
 }
@@ -800,4 +804,39 @@ model ConfiguracionSistema {
 
   @@unique([clave, cicloId])
   @@map("configuracion_sistema")
+}
+
+// ────────────────────────────────────────────────────────────
+// BLOQUE 11: RF-06 LOGOUT — LISTA NEGRA DE TOKENS
+// ────────────────────────────────────────────────────────────
+
+model TokenRevocado {
+  id         BigInt    @id @default(autoincrement())
+  jti        String    @unique @db.VarChar(36)
+  usuarioId  Int?      @map("usuario_id")
+  revocadoEn DateTime  @default(now()) @map("revocado_en") @db.Timestamptz()
+  expiraEn   DateTime  @map("expira_en") @db.Timestamptz()
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [usuarioId], onDelete: Cascade)
+
+  @@map("token_revocado")
+}
+
+// ────────────────────────────────────────────────────────────
+// BLOQUE 12: RF-03 PERMISOS GRANULARES POR MÓDULO
+// ────────────────────────────────────────────────────────────
+
+model UsuarioPermisoModulo {
+  permisoId    Int       @id @default(autoincrement()) @map("permiso_id")
+  usuarioId    Int       @map("usuario_id")
+  modulo       String    @db.VarChar(30)
+  nivel        String    @db.VarChar(10)
+  activo       Boolean   @default(true)
+  creadoEn     DateTime  @default(now()) @map("creado_en") @db.Timestamptz()
+  actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz()
+
+  usuario Usuario @relation(fields: [usuarioId], references: [usuarioId], onDelete: Cascade)
+
+  @@unique([usuarioId, modulo])
+  @@map("usuario_permiso_modulo")
 }

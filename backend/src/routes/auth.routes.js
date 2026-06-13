@@ -12,15 +12,16 @@ const router = Router();
 // POST /api/v1/auth/login
 router.post('/login', loginValidators, validate, authController.login);
 
+// POST /api/v1/auth/logout — revoca el token actual (RF-06)
+router.post('/logout', authenticate, authController.logout);
+
 // GET /api/v1/auth/me — requiere token
 router.get('/me', authenticate, authController.me);
 
-// POST /api/v1/auth/refresh — renueva el token (sin middleware authenticate;
-// acepta tokens expirados < 2h para renovación silenciosa)
+// POST /api/v1/auth/refresh
 router.post('/refresh', authController.refresh);
 
-// PATCH /api/v1/auth/usuarios/:id/reset-password — ADMIN restablece contraseña
-// Solo administradores pueden forzar el reset de contraseña de otro usuario
+// PATCH /api/v1/auth/usuarios/:id/reset-password
 router.patch('/usuarios/:id/reset-password', authenticate, soloAdmin, authController.resetPassword);
 
 module.exports = router;

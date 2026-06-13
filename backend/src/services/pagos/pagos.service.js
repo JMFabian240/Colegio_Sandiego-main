@@ -56,7 +56,7 @@ async function obtenerPorId(id) {
  * Si el alumno tiene diaLimitePago definido, se usa ese valor en lugar del
  * día de corte global (permite acuerdos individuales).
  */
-async function registrar(datos, usuarioId) {
+async function registrar(datos, usuarioId, auditCtx = {}) {
   const alumno = await alumnosRepository.findById(datos.alumnoId);
   if (!alumno) {
     throw Object.assign(new Error('Alumno no encontrado.'), { statusCode: 404 });
@@ -91,7 +91,7 @@ async function registrar(datos, usuarioId) {
     metodoPago:      datos.metodoPago ?? 'efectivo',
     tutorId:         datos.tutorId ?? null,
     calendarioPagoId:datos.calendarioPagoId ?? null,
-  });
+  }, auditCtx);
 }
 
 /**

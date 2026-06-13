@@ -103,7 +103,11 @@
       <div class="nav-section">Configuración</div>
       <div class="nav-link" :class="view==='cicloEscolar'?'active':''" @click="view='cicloEscolar'"><i data-lucide="calendar-range" class="w-4 h-4"></i> Ciclo escolar</div>
       <div class="nav-link" :class="view==='usuarios'?'active':''" @click="view='usuarios'"><i data-lucide="users-round" class="w-4 h-4"></i> Usuarios y roles</div>
+      <div class="nav-link" :class="view==='permisos'?'active':''" @click="cargarPermisos(); view='permisos'"><i data-lucide="shield-check" class="w-4 h-4"></i> Permisos Granulares</div>
       <div class="nav-link" :class="view==='reportes'?'active':''" @click="view='reportes'"><i data-lucide="bar-chart-2" class="w-4 h-4"></i> Reportes descargables</div>
+      
+      <div class="nav-section">Auditoría</div>
+      <div class="nav-link" :class="view==='bitacora'?'active':''" @click="cargarBitacora(); view='bitacora'"><i data-lucide="activity" class="w-4 h-4"></i> Bitácora del Sistema</div>
     </nav>
     <div class="p-4 border-t border-white/10 flex items-center gap-3">
       <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white text-sm flex-shrink-0" x-text="(saeApi.getUsuario()?.nombre||'').charAt(0).toUpperCase()||'?'">?</div>
@@ -238,6 +242,119 @@
                 </div>
               </div>
             </template>
+          </div>
+        </div>
+      </template>
+
+      <!-- ============================================================
+           PERMISOS GRANULARES
+           ============================================================ -->
+      <template x-if="view==='permisos'">
+        <div>
+          <h2 class="text-xl font-bold text-navy-800 mb-4">Permisos Granulares (GESTOR y MAESTRA)</h2>
+          <div class="grid grid-cols-3 gap-6">
+            <div class="col-span-1 card-clean overflow-hidden">
+              <div class="p-3 bg-gray-50 border-b font-semibold text-sm">Usuarios Configurable</div>
+              <ul class="divide-y text-sm">
+                <template x-for="u in listaUsuariosPermisos" :key="u.id">
+                  <li class="p-3 cursor-pointer hover:bg-navy-50 flex justify-between items-center" 
+                      :class="usuarioPermisosActivo?.id === u.id ? 'bg-navy-50 border-l-4 border-navy-600' : ''"
+                      @click="seleccionarUsuarioPermisos(u)">
+                    <div>
+                      <div class="font-medium text-navy-800" x-text="u.nombre"></div>
+                      <div class="text-xs text-gray-500" x-text="u.rol"></div>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400"></i>
+                  </li>
+                </template>
+                <li x-show="listaUsuariosPermisos.length===0" class="p-4 text-center text-gray-400 text-xs">No hay usuarios GESTOR o MAESTRA activos</li>
+              </ul>
+            </div>
+            
+            <div class="col-span-2 card-clean" x-show="usuarioPermisosActivo">
+              <div class="p-4 border-b flex justify-between items-center">
+                <div>
+                  <h3 class="font-bold text-navy-800" x-text="'Permisos para: ' + usuarioPermisosActivo?.nombre"></h3>
+                  <div class="text-xs text-gray-500" x-text="usuarioPermisosActivo?.rol"></div>
+                </div>
+                <button class="btn-primary text-xs py-1" @click="guardarPermisosUsuario(usuarioPermisosActivo.id)">Guardar cambios</button>
+              </div>
+              <div class="p-4 space-y-4">
+                <template x-for="mod in todosModulos" :key="mod">
+                  <div class="flex items-center justify-between py-2 border-b border-gray-50">
+                    <div class="font-medium text-sm text-gray-700 capitalize" x-text="mod"></div>
+                    <div class="flex gap-4">
+                      <label class="flex items-center gap-1 text-sm text-gray-600 cursor-pointer">
+                        <input type="radio" :name="'permiso_'+mod" value="NINGUNO" x-model="permisosEditando[mod]"> Ninguno
+                      </label>
+                      <label class="flex items-center gap-1 text-sm text-gray-600 cursor-pointer">
+                        <input type="radio" :name="'permiso_'+mod" value="lectura" x-model="permisosEditando[mod]"> Lectura
+                      </label>
+                      <label class="flex items-center gap-1 text-sm text-gray-600 cursor-pointer">
+                        <input type="radio" :name="'permiso_'+mod" value="escritura" x-model="permisosEditando[mod]"> Lectura / Edición
+                      </label>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- ============================================================
+           BITACORA DEL SISTEMA
+           ============================================================ -->
+      <template x-if="view==='bitacora'">
+        <div>
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-navy-800">Bitácora Transaccional (Auditoría)</h2>
+            <div class="flex gap-2">
+              <button class="btn-outline text-xs" @click="cargarBitacora()"><i data-lucide="refresh-cw" class="w-4 h-4 mr-1"></i>Actualizar</button>
+              <button class="btn-primary" @click="exportarBitacoraPDF()"><i data-lucide="download" class="w-4 h-4 mr-1"></i> Exportar a PDF</button>
+            </div>
+          </div>
+          <div class="card-clean overflow-hidden">
+            <table class="w-full text-xs text-left">
+              <thead class="bg-gray-100 text-gray-600">
+                <tr>
+                  <th class="p-3">ID</th>
+                  <th class="p-3">Fecha y Hora</th>
+                  <th class="p-3">Usuario</th>
+                  <th class="p-3">Acción</th>
+                  <th class="p-3">Tabla / Detalle</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <template x-for="log in bitacoraLogs" :key="log.id">
+                  <tr class="hover:bg-gray-50 transition">
+                    <td class="p-3 text-gray-400 font-mono" x-text="'#'+log.id"></td>
+                    <td class="p-3 whitespace-nowrap" x-text="new Date(log.fechaHora).toLocaleString('es-MX')"></td>
+                    <td class="p-3 font-medium text-navy-700">
+                      <span x-text="log.usuario?.nombre || '(sistema)'"></span>
+                    </td>
+                    <td class="p-3 font-bold"
+                        :class="{'text-emerald-600': log.accion==='INSERT', 'text-amber-600': log.accion==='UPDATE', 'text-crimson-600': log.accion==='DELETE', 'text-navy-600': !['INSERT','UPDATE','DELETE'].includes(log.accion)}"
+                        x-text="log.accion"></td>
+                    <td class="p-3 text-gray-600">
+                      <div class="font-medium" x-text="log.tabla + (log.registroId ? ' (ID: '+log.registroId+')' : '')"></div>
+                      <div class="text-[10px] text-gray-400 truncate max-w-sm mt-0.5" :title="log.descripcion" x-text="log.descripcion"></div>
+                    </td>
+                  </tr>
+                </template>
+                <tr x-show="bitacoraLogs.length===0">
+                  <td colspan="5" class="p-8 text-center text-gray-400 text-sm">No hay registros de auditoría disponibles.</td>
+                </tr>
+              </tbody>
+            </table>
+            
+            <div class="flex items-center justify-between p-3 border-t bg-gray-50" x-show="bitacoraPaginas > 1">
+              <span class="text-xs text-gray-500" x-text="`Página ${bitacoraPagina} de ${bitacoraPaginas} · ${bitacoraTotal} registros`"></span>
+              <div class="flex gap-2">
+                <button class="btn-outline text-xs py-1 px-3" :disabled="bitacoraPagina<=1" @click="cargarBitacora(bitacoraPagina-1)">← Anterior</button>
+                <button class="btn-outline text-xs py-1 px-3" :disabled="bitacoraPagina>=bitacoraPaginas" @click="cargarBitacora(bitacoraPagina+1)">Siguiente →</button>
+              </div>
+            </div>
           </div>
         </div>
       </template>
@@ -394,6 +511,16 @@
       pagoCoincidencias: [],
       mostrarSugerenciasPago: false,
 
+      // ── Bitácora ────────────────────────────────────────────────────────────
+      bitacoraLogs: [],
+      bitacoraPagina: 1, bitacoraTotal: 0, bitacoraPaginas: 1, limitBitacora: 20,
+
+      // ── Permisos ────────────────────────────────────────────────────────────
+      todosModulos: [],
+      listaUsuariosPermisos: [],
+      usuarioPermisosActivo: null,
+      permisosEditando: {},
+
       // ── Grupos ──────────────────────────────────────────────────────────────
       grupoExpandido: null,
 
@@ -426,6 +553,7 @@
           dashboard: 'Dashboard', pagos: 'Pagos', deudores: 'Deudores',
           alumnos: 'Alumnos', grupos: 'Grupos & Materias', calificaciones: 'Calificaciones',
           becas: 'Becas', cicloEscolar: 'Ciclo escolar', usuarios: 'Usuarios', reportes: 'Reportes',
+          bitacora: 'Bitácora del Sistema', permisos: 'Permisos Granulares'
         };
         return labels[this.view] || this.view;
       },
@@ -487,7 +615,6 @@
       },
 
       async _cargarDashboard() {
-        if (this._dashboardCargado) return;
         // Métricas desde datos ya en memoria
         this.dashSummary.alumnos  = this.listaAlumnos.length;
         this.dashSummary.deudores = this.listaAlumnos.filter(a => (a.mesesAdeudo || 0) > 0).length;
@@ -505,7 +632,69 @@
         if (resB.ok && resB.data) {
           this.dashSummary.becasActivas = resB.data.length;
         }
-        this._dashboardCargado = true;
+      },
+
+      // ── Bitácora ─────────────────────────────────────────────────────────────
+      async cargarBitacora(pagina) {
+        const p = pagina || 1;
+        const res = await window.saeApi.bitacora.listar(p, this.limitBitacora);
+        if (res.ok && res.data) {
+          this.bitacoraLogs = res.data.datos || [];
+          this.bitacoraPagina = res.data.pagina || 1;
+          this.bitacoraTotal = res.data.total || 0;
+          this.bitacoraPaginas = Math.ceil(res.data.total / this.limitBitacora) || 1;
+          
+          if (pagina === undefined) window.saeApi.toast('success', 'Bitácora actualizada');
+        } else if (!res.offline) {
+          window.saeApi.toast('error', res.message || 'Error al cargar bitácora');
+        }
+      },
+      exportarBitacoraPDF() {
+        const url = window.saeApi.bitacora.exportarURL('pdf');
+        window.open(url, '_blank');
+      },
+
+      // ── Permisos ─────────────────────────────────────────────────────────────
+      async cargarPermisos() {
+        // 1. Cargar la lista de módulos
+        if (this.todosModulos.length === 0) {
+          const resMod = await window.saeApi.permisos.modulos();
+          if (resMod.ok) this.todosModulos = resMod.data;
+        }
+        
+        // 2. Cargar usuarios GESTOR y MAESTRA
+        const resUsu = await window.saeApi.usuarios.listar();
+        if (resUsu.ok) {
+          this.listaUsuariosPermisos = resUsu.data.filter(u => u.rol === 'GESTOR' || u.rol === 'MAESTRA');
+        }
+      },
+      async seleccionarUsuarioPermisos(u) {
+        this.usuarioPermisosActivo = u;
+        // Inicializar vacío
+        const perms = {};
+        this.todosModulos.forEach(m => perms[m] = 'NINGUNO');
+        
+        // Cargar permisos del servidor
+        const res = await window.saeApi.permisos.obtenerUsuario(u.id);
+        if (res.ok && res.data) {
+          res.data.forEach(p => {
+            perms[p.modulo] = p.nivel;
+          });
+        }
+        this.permisosEditando = perms;
+      },
+      async guardarPermisosUsuario(usuarioId) {
+        // Convertir el objeto { modulo: "NIVEL" } a un array
+        const permisos = Object.keys(this.permisosEditando)
+          .filter(mod => this.permisosEditando[mod] !== 'NINGUNO')
+          .map(mod => ({ modulo: mod, nivel: this.permisosEditando[mod] }));
+          
+        const res = await window.saeApi.permisos.actualizar({ usuarioId, permisos });
+        if (res.ok) {
+          window.saeApi.toast('exito', 'Permisos actualizados correctamente');
+        } else {
+          window.saeApi.toast('error', res.message || 'Error al guardar permisos');
+        }
       },
 
       // ── Alumnos ─────────────────────────────────────────────────────────────

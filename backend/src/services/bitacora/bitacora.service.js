@@ -81,10 +81,19 @@ async function mapearAuditoria(registros) {
         entidad = `Usuario: "${vDespues.nombre_usuario || vAntes.nombre_usuario}"`;
         if (r.accion === 'UPDATE') {
           if (vAntes.activo !== vDespues.activo) {
-            detalle = `Estatus: ${vAntes.activo ? 'Activo' : 'Inactivo'} → ${vDespues.activo ? 'Activo' : 'Inactivo'}`;
+            detalle = `Estatus: ${vAntes.activo ? 'Activo' : 'Inactivo'} -> ${vDespues.activo ? 'Activo' : 'Inactivo'}`;
           } else {
             detalle = `Actualización de datos`;
           }
+        }
+        break;
+
+      case 'usuario_rol':
+        entidad = `Asignación de roles`;
+        if (r.accion === 'INSERT') {
+          detalle = `Rol asignado`;
+        } else if (r.accion === 'DELETE') {
+          detalle = `Rol revocado`;
         }
         break;
 
@@ -92,7 +101,7 @@ async function mapearAuditoria(registros) {
         const nombreUsuarioPermiso = usuariosMap[vDespues.usuario_id || vAntes.usuario_id] || 'Usuario';
         entidad = `Permisos de "${nombreUsuarioPermiso}"`;
         if (r.accion === 'UPDATE') {
-          detalle = `Módulo ${vDespues.modulo || vAntes.modulo}: ${vAntes.nivel} → ${vDespues.nivel}`;
+          detalle = `Módulo ${vDespues.modulo || vAntes.modulo}: ${vAntes.nivel} -> ${vDespues.nivel}`;
         } else if (r.accion === 'INSERT') {
           detalle = `Módulo ${vDespues.modulo}: asignado como ${vDespues.nivel}`;
         } else if (r.accion === 'DELETE') {
@@ -106,7 +115,7 @@ async function mapearAuditoria(registros) {
         if (r.accion === 'INSERT') {
           detalle = `Monto total: $${Number(vDespues.monto_total).toFixed(2)}`;
         } else if (r.accion === 'UPDATE') {
-          detalle = `Actualización de pago. Monto: $${Number(vAntes.monto_total).toFixed(2)} → $${Number(vDespues.monto_total).toFixed(2)}`;
+          detalle = `Actualización de pago. Monto: $${Number(vAntes.monto_total).toFixed(2)} -> $${Number(vDespues.monto_total).toFixed(2)}`;
         }
         break;
         
@@ -114,9 +123,9 @@ async function mapearAuditoria(registros) {
         entidad = `Colegiatura / Concepto: ${vDespues.concepto || vAntes.concepto}`;
         if (r.accion === 'UPDATE') {
           if (vAntes.monto_pagado !== vDespues.monto_pagado) {
-             detalle = `Monto pagado: $${Number(vAntes.monto_pagado).toFixed(2)} → $${Number(vDespues.monto_pagado).toFixed(2)}`;
+             detalle = `Monto pagado: $${Number(vAntes.monto_pagado).toFixed(2)} -> $${Number(vDespues.monto_pagado).toFixed(2)}`;
           } else if (vAntes.estado_cobro !== vDespues.estado_cobro) {
-             detalle = `Estado: ${vAntes.estado_cobro} → ${vDespues.estado_cobro}`;
+             detalle = `Estado: ${vAntes.estado_cobro} -> ${vDespues.estado_cobro}`;
           } else {
              detalle = 'Modificación de concepto';
           }
@@ -138,7 +147,7 @@ async function mapearAuditoria(registros) {
         } else if (r.accion === 'UPDATE' && !vDespues.activa && vAntes.activa) {
           detalle = `Beca retirada — motivo "${vDespues.motivo_retiro || 'mora reincidente (RF-28)'}"`;
         } else if (r.accion === 'UPDATE') {
-          detalle = `Modificación de beca: ${Number(vAntes.porcentaje_descuento)}% → ${Number(vDespues.porcentaje_descuento)}%`;
+          detalle = `Modificación de beca: ${Number(vAntes.porcentaje_descuento)}% -> ${Number(vDespues.porcentaje_descuento)}%`;
         } else if (r.accion === 'DELETE') {
            detalle = `Beca retirada`;
         }
@@ -148,7 +157,7 @@ async function mapearAuditoria(registros) {
         entidad = `Estatus alumno / Expediente "${vDespues.nombre_completo || vAntes.nombre_completo}"`;
         if (r.accion === 'UPDATE') {
            if (vAntes.estatus !== vDespues.estatus) {
-             detalle = `Estatus: ${vAntes.estatus} → ${vDespues.estatus}`;
+             detalle = `Estatus: ${vAntes.estatus} -> ${vDespues.estatus}`;
            } else {
              detalle = `Modificación de datos del alumno`;
            }

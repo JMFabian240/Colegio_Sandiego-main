@@ -249,7 +249,7 @@
   // ── Módulo: Bitácora ────────────────────────────────────────────────────────
   var bitacora = {
     listar: function(page, limit) {
-      var qs = '?page=' + (page || 1) + '&limite=' + (limit || 50);
+      var qs = '?pagina=' + (page || 1) + '&limite=' + (limit || 50);
       return request('GET', '/bitacora' + qs);
     },
     exportarURL: function(formato) {

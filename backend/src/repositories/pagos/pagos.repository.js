@@ -287,6 +287,17 @@ async function create(datos, auditCtx = {}) {
               liquidadoAt: estadoCobro === 'pagado' ? new Date() : null,
             },
           });
+
+          if (estadoCobro === 'pagado' && deuda.concepto === 'colegiatura' && deuda.cicloId) {
+            await tx.inscripcionCiclo.updateMany({
+              where: { 
+                alumnoId: Number(alumnoId), 
+                cicloId: deuda.cicloId, 
+                mesesAdeudo: { gt: 0 } 
+              },
+              data: { mesesAdeudo: { decrement: 1 } }
+            });
+          }
         }
       }
       

@@ -58,6 +58,28 @@
   .badge-amber { background: #FFFBEB; color: #B45309; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
   .badge-emerald { background: #ECFDF5; color: #047857; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
   .badge-navy { background: #EEF2F8; color: #003366; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
+
+  @media print {
+    body * {
+      visibility: hidden;
+    }
+    .print-area, .print-area * {
+      visibility: visible;
+    }
+    .print-area {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      margin: 0;
+      padding: 20px;
+      border: none;
+    }
+    .no-print, .no-print * {
+      display: none !important;
+    }
+  }
+
   .severity-critical { background: #FEF2F2; border-left: 4px solid #CC0000; }
   .severity-high { background: #FFFBEB; border-left: 4px solid #F59E0B; }
   .severity-medium { background: #F0FDF4; border-left: 4px solid #10B981; }
@@ -697,10 +719,10 @@
           </div>
 
           <!-- Corte de Caja -->
-          <div x-show="reporteActivo==='corte'" class="card-clean p-5">
+          <div x-show="reporteActivo==='corte'" class="card-clean p-5 print-area">
             <div class="flex justify-between items-center mb-4">
               <h3 class="font-semibold text-navy-800">Corte de Caja del Día — <span x-text="reporteCorte?.fecha || ''"></span></h3>
-              <button class="btn-outline text-sm" @click="window.print()">🖨️ Imprimir</button>
+              <button class="btn-outline text-sm no-print" @click="window.print()">🖨️ Imprimir</button>
             </div>
             <div class="grid grid-cols-3 gap-4 mb-5">
               <div class="bg-navy-50 p-4 rounded-xl text-center">
@@ -728,10 +750,13 @@
           </div>
 
           <!-- Ingresos Mensuales -->
-          <div x-show="reporteActivo==='ingresos'" class="card-clean p-5">
+          <div x-show="reporteActivo==='ingresos'" class="card-clean p-5 print-area">
             <div class="flex justify-between items-center mb-4">
               <h3 class="font-semibold text-navy-800">Ingresos Mensuales — <span x-text="reporteIngresos?.anio || ''"></span></h3>
-              <div class="text-lg font-bold text-emerald-700" x-text="'Total anual: $' + (reporteIngresos?.totalAnual || 0).toLocaleString('es-MX')"></div>
+              <div class="flex items-center gap-4">
+                <div class="text-lg font-bold text-emerald-700" x-text="'Total anual: $' + (reporteIngresos?.totalAnual || 0).toLocaleString('es-MX')"></div>
+                <button class="btn-outline text-sm no-print" @click="window.print()">🖨️ Imprimir</button>
+              </div>
             </div>
             <div class="space-y-2">
               <template x-for="(monto, mes) in (reporteIngresos?.meses || {})" :key="mes">
@@ -749,10 +774,10 @@
           </div>
 
           <!-- Lista de Deudores -->
-          <div x-show="reporteActivo==='deudores'" class="card-clean p-5">
+          <div x-show="reporteActivo==='deudores'" class="card-clean p-5 print-area">
             <div class="flex justify-between items-center mb-4">
               <h3 class="font-semibold text-navy-800">Lista de Deudores</h3>
-              <button class="btn-outline text-sm" @click="window.print()">🖨️ Imprimir</button>
+              <button class="btn-outline text-sm no-print" @click="window.print()">🖨️ Imprimir</button>
             </div>
             <table class="w-full text-sm">
               <thead class="bg-gray-50"><tr><th class="p-2 text-left">Alumno</th><th class="p-2 text-left">Matrícula</th><th class="p-2 text-left">Nivel</th><th class="p-2 text-center">Meses</th><th class="p-2 text-right">Monto Total</th><th class="p-2 text-left">Sanción</th></tr></thead>
@@ -773,8 +798,11 @@
           </div>
 
           <!-- Padres Facturables -->
-          <div x-show="reporteActivo==='facturables'" class="card-clean p-5">
-            <h3 class="font-semibold text-navy-800 mb-4">Directorio de Padres Facturables</h3>
+          <div x-show="reporteActivo==='facturables'" class="card-clean p-5 print-area">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="font-semibold text-navy-800">Directorio de Padres Facturables</h3>
+              <button class="btn-outline text-sm no-print" @click="window.print()">🖨️ Imprimir</button>
+            </div>
             <table class="w-full text-sm">
               <thead class="bg-gray-50"><tr><th class="p-2 text-left">Nombre</th><th class="p-2 text-left">RFC</th><th class="p-2 text-left">Régimen</th><th class="p-2 text-left">Correo Facturación</th><th class="p-2 text-left">Hijos</th></tr></thead>
               <tbody>
@@ -1045,7 +1073,7 @@
 
         <!-- Vista de Recibo (después de pagar) -->
         <div x-show="reciboGenerado" class="mt-6 border-t pt-4">
-          <div id="print-receipt-area" class="p-6 border-2 border-dashed border-gray-300 rounded-lg bg-white relative">
+          <div id="print-receipt-area" class="p-6 border-2 border-dashed border-gray-300 rounded-lg bg-white relative print-area">
             <div class="text-center mb-4">
               <div class="font-bold text-xl text-navy-800">COLEGIO SAN DIEGO</div>
               <div class="text-xs text-gray-500">Recibo de Pago No. <span x-text="reciboGenerado?.id"></span></div>
@@ -2166,6 +2194,10 @@
           };
           
           window.saeApi.toast('exito', `Pago de $${this.nuevoPago.monto} registrado para ${this.nuevoPago.alumno}${comprobanteMsj}.`);
+          
+          // Actualizar datos para que se quite de deudores y se sume al dashboard
+          if (typeof this.cargarAlumnos === 'function') this.cargarAlumnos();
+          if (typeof this._cargarDashboard === 'function') this._cargarDashboard();
           
           // Reset fields for the next form interaction
           this.nuevoPago.alumno = '';

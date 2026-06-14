@@ -292,13 +292,19 @@ async function create(datos, auditCtx = {}) { return withAudit(auditCtx.usuarioI
       where: { activo: true },
     });
     if (cicloActivo) {
+      // Buscar el primer plan de pago activo del ciclo (idealmente el de 10 o 12 meses por defecto)
+      const planDefault = await tx.planPago.findFirst({
+        where: { cicloId: cicloActivo.cicloId, activo: true }
+      });
+      
       await tx.inscripcionCiclo.upsert({
         where: { alumnoId_cicloId: { alumnoId: alumno.alumnoId, cicloId: cicloActivo.cicloId } },
-        update: { grupoId: Number(grupoId) },
+        update: { grupoId: Number(grupoId), planPagoId: planDefault?.planPagoId ?? null },
         create: {
           alumnoId: alumno.alumnoId,
           cicloId:  cicloActivo.cicloId,
           grupoId:  Number(grupoId),
+          planPagoId: planDefault?.planPagoId ?? null,
           estadoEnCiclo:    'activa',
           estadoFinanciero: 'al_corriente',
         },

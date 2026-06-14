@@ -17,6 +17,8 @@ const gruposRoutes        = require('./grupos.routes');
 const bitacoraRoutes      = require('./bitacora.routes');
 const permisosRoutes      = require('./permisos.routes');
 const tutoresRoutes       = require('./tutores.routes');
+const configuracionRoutes = require('./configuracion.routes');
+const reportesRoutes      = require('./reportes.routes');
 
 const router = Router();
 
@@ -30,6 +32,8 @@ router.use('/usuarios',      usuariosRoutes);
 router.use('/grupos',        gruposRoutes);
 router.use('/bitacora',      bitacoraRoutes);
 router.use('/permisos',      permisosRoutes);
+router.use('/configuracion', configuracionRoutes);
+router.use('/reportes',      reportesRoutes);
 
 module.exports = router;
 

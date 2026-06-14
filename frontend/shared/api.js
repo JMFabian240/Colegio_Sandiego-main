@@ -205,6 +205,35 @@
     },
     obtener:   function (id)    { return request('GET',  '/pagos/' + id); },
     registrar: function (datos) { return request('POST', '/pagos', datos); },
+    calendario: function(filtros) {
+      var params = new URLSearchParams();
+      if (filtros) {
+        if (filtros.alumnoId) params.set('alumnoId', filtros.alumnoId);
+        if (filtros.cicloId) params.set('cicloId', filtros.cicloId);
+        if (filtros.estadoCobro) params.set('estadoCobro', filtros.estadoCobro);
+      }
+      var qs = params.toString();
+      return request('GET', '/pagos/calendario' + (qs ? '?' + qs : ''));
+    },
+    subirComprobante: async function(pagoId, file) {
+      if (tokenProximoAExpirar(15)) await intentarRefresh();
+      var formData = new FormData();
+      formData.append('comprobante', file);
+      try {
+        var token = getToken();
+        var res = await fetch(getBase() + '/pagos/' + pagoId + '/comprobante', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token },
+          body: formData
+        });
+        return await res.json();
+      } catch(e) {
+        return { ok: false, message: 'Error de red al subir comprobante.' };
+      }
+    },
+    descargarComprobante: function(pagoId) {
+      return getBase() + '/pagos/' + pagoId + '/comprobante'; // Para <a> href directo o fetch
+    }
   };
 
   // ── Módulo: Becas ───────────────────────────────────────────────────────────
@@ -214,6 +243,12 @@
     solicitar:         function (datos)     { return request('POST',   '/becas/solicitudes', datos); },
     resolver:          function (id, datos) { return request('PATCH',  '/becas/solicitudes/' + id + '/resolver', datos); },
     desactivar:        function (id)        { return request('DELETE', '/becas/' + id); },
+    catalogo: {
+      listar:     function ()          { return request('GET',    '/becas/catalogo'); },
+      crear:      function (datos)     { return request('POST',   '/becas/catalogo', datos); },
+      actualizar: function (id, datos) { return request('PATCH',  '/becas/catalogo/' + id, datos); },
+      eliminar:   function (id)        { return request('DELETE', '/becas/catalogo/' + id); },
+    }
   };
 
   // ── Módulo: Calificaciones ──────────────────────────────────────────────────
@@ -284,6 +319,41 @@
     obtenerUsuario: function(usuarioId) { return request('GET', '/permisos/usuarios/' + usuarioId); },
     actualizar: function(datos) { return request('PUT', '/permisos/usuarios/' + datos.usuarioId, datos); }
   };
+
+  // ── Módulo: Configuración ───────────────────────────────────────────────────
+  var configuracion = {
+    listar: function() { return request('GET', '/configuracion'); },
+    actualizar: function(configs) { return request('PUT', '/configuracion', { configs: configs }); },
+  };
+
+  // ── Módulo: Reportes ────────────────────────────────────────────────────────
+  var reportes = {
+    corteCaja: function() { return request('GET', '/reportes/corte-caja'); },
+    ingresosMensuales: function(anio) { return request('GET', '/reportes/ingresos-mensuales' + (anio ? '?anio=' + anio : '')); },
+    deudores: function() { return request('GET', '/reportes/deudores'); },
+    facturables: function() { return request('GET', '/reportes/facturables'); },
+  };
+
+  // ── fetchApi: acceso directo a endpoints con auth ───────────────────────────
+  async function fetchApi(endpoint, opts) {
+    if (tokenProximoAExpirar(15) && endpoint !== '/auth/refresh') {
+      await intentarRefresh();
+    }
+    var headers = opts && opts.headers ? opts.headers : {};
+    if (!headers['Content-Type'] && !(opts && opts.body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json';
+    }
+    var token = getToken();
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    var fetchOpts = Object.assign({}, opts || {}, { headers: headers });
+    var res = await fetch(getBase() + endpoint, fetchOpts);
+    if (res.status === 401) {
+      clearSession();
+      global.location.replace('/auth/login.html');
+      return null;
+    }
+    return res.json();
+  }
 
   // ── Mappers: API → formato frontend ────────────────────────────────────────
 
@@ -408,7 +478,10 @@
     // Módulos
     auth: auth, alumnos: alumnos, tutores: tutores, pagos: pagos, becas: becas,
     calificaciones: calificaciones, grupos: grupos, usuarios: usuarios,
-    bitacora: bitacora, permisos: permisos,
+    bitacora: bitacora, permisos: permisos, configuracion: configuracion,
+    reportes: reportes,
+    // Fetch directo
+    fetchApi: fetchApi,
     // Mappers
     mapAlumno: mapAlumno, mapGrupo: mapGrupo, mapPago: mapPago,
     // Constantes

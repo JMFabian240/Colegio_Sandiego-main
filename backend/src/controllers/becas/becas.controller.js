@@ -15,6 +15,36 @@ async function listarBecas(req, res, next) {
   } catch (err) { next(err); }
 }
 
+// ── CATÁLOGO DE BECAS ─────────────────────────────────────────
+
+async function listarCatalogoBecas(req, res, next) {
+  try {
+    const catalogo = await becasService.listarCatalogoBecas();
+    return success(res, catalogo, `${catalogo.length} tipos de beca en el catálogo.`);
+  } catch (err) { next(err); }
+}
+
+async function crearCatalogoBeca(req, res, next) {
+  try {
+    const nuevaBeca = await becasService.crearCatalogoBeca(req.body);
+    return created(res, nuevaBeca, 'Beca agregada al catálogo exitosamente.');
+  } catch (err) { next(err); }
+}
+
+async function actualizarCatalogoBeca(req, res, next) {
+  try {
+    const becaActualizada = await becasService.actualizarCatalogoBeca(req.params.id, req.body);
+    return success(res, becaActualizada, 'Beca del catálogo actualizada correctamente.');
+  } catch (err) { next(err); }
+}
+
+async function eliminarCatalogoBeca(req, res, next) {
+  try {
+    await becasService.eliminarCatalogoBeca(req.params.id);
+    return success(res, null, 'Beca eliminada del catálogo correctamente.');
+  } catch (err) { next(err); }
+}
+
 async function listarSolicitudes(req, res, next) {
   try {
     const { estado } = req.query;
@@ -54,4 +84,7 @@ async function desactivarBeca(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { listarBecas, listarSolicitudes, solicitarBeca, resolverSolicitud, desactivarBeca };
+module.exports = { 
+  listarBecas, listarSolicitudes, solicitarBeca, resolverSolicitud, desactivarBeca,
+  listarCatalogoBecas, crearCatalogoBeca, actualizarCatalogoBeca, eliminarCatalogoBeca
+};

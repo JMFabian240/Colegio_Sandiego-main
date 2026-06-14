@@ -1,3 +1,4 @@
+
 # Escenarios de Caso de Uso — Luis Ángel Reyes Mendoza
 ## Renumerados y corregidos conforme al documento de Requisitos vigente
 

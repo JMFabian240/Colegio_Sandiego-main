@@ -8,9 +8,7 @@ const crearSolicitudBecaValidators = [
     .isInt({ min: 1 }).withMessage('El alumnoId es obligatorio.'),
 
   body('tipo')
-    .notEmpty().withMessage('El tipo de beca es obligatorio.')
-    .isIn(TIPOS_BECA_VALIDOS)
-    .withMessage(`El tipo debe ser: ${TIPOS_BECA_VALIDOS.join(', ')}.`),
+    .notEmpty().withMessage('El tipo de beca es obligatorio.'),
 
   body('motivo')
     .trim()

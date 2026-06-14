@@ -7,10 +7,29 @@
 
 const becasRepository   = require('../../repositories/becas/becas.repository');
 const alumnosRepository = require('../../repositories/alumnos/alumnos.repository');
+const calendarioPagoService = require('../pagos/calendarioPago.service');
 const { PORCENTAJES_BECA } = require('../../utils/constants');
 
 async function listarBecasActivas() {
   return becasRepository.findBecasActivas();
+}
+
+// ── CATÁLOGO DE BECAS ─────────────────────────────────────────
+
+async function listarCatalogoBecas() {
+  return becasRepository.getCatalogoBecas();
+}
+
+async function crearCatalogoBeca(datos) {
+  return becasRepository.createCatalogoBeca(datos);
+}
+
+async function actualizarCatalogoBeca(id, datos) {
+  return becasRepository.updateCatalogoBeca(id, datos);
+}
+
+async function eliminarCatalogoBeca(id) {
+  return becasRepository.deleteCatalogoBeca(id);
 }
 
 async function listarSolicitudes(filtros) {
@@ -60,15 +79,28 @@ async function resolverSolicitud(solicitudId, { estado, observaciones }, aprobad
   }
 
   // resolverSolicitud ya crea la asignacion_beca si estado === 'aprobada'
-  return becasRepository.resolverSolicitud(solicitudId, {
+  const resultado = await becasRepository.resolverSolicitud(solicitudId, {
     estado,
     aprobadoPorId,
     observaciones,
   }, auditCtx);
+
+  // Si fue aprobada, recalcular colegiaturas del alumno
+  if (estado.toLowerCase() === 'aprobada') {
+    if (resultado && resultado.alumnoId) {
+      await calendarioPagoService.recalcularPorBeca(resultado.alumnoId);
+    }
+  }
+
+  return resultado;
 }
 
 async function desactivarBeca(becaId, auditCtx = {}) {
-  return becasRepository.deactivateBeca(becaId, auditCtx);
+  const resultado = await becasRepository.deactivateBeca(becaId, auditCtx);
+  if (resultado && resultado.alumnoId) {
+    await calendarioPagoService.recalcularPorBeca(resultado.alumnoId);
+  }
+  return resultado;
 }
 
 module.exports = {
@@ -77,4 +109,8 @@ module.exports = {
   solicitarBeca,
   resolverSolicitud,
   desactivarBeca,
+  listarCatalogoBecas,
+  crearCatalogoBeca,
+  actualizarCatalogoBeca,
+  eliminarCatalogoBeca,
 };

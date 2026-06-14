@@ -2,6 +2,7 @@
 
 const { Router }                   = require('express');
 const alumnosController            = require('../controllers/alumnos/alumnos.controller');
+const cierreController             = require('../controllers/alumnos/cierre.controller');
 const { authenticate }             = require('../middleware/auth.middleware');
 const { authorize }                = require('../middleware/rbac.middleware');
 const { validate }                 = require('../middleware/validate.middleware');
@@ -15,6 +16,12 @@ const router = Router();
 
 // Todos los endpoints de alumnos requieren autenticación
 router.use(authenticate);
+
+// POST /api/v1/alumnos/cierre-ciclo — solo ADMIN
+router.post('/cierre-ciclo',
+  authorize('ADMIN'),
+  cierreController.cerrarCiclo
+);
 
 // GET /api/v1/alumnos — ADMIN y GESTOR pueden listar
 router.get('/', buscarAlumnoValidators, validate,

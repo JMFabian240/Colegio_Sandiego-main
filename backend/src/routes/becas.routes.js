@@ -17,6 +17,13 @@ router.use(authenticate);
 // GET /api/v1/becas — becas activas (todos los roles)
 router.get('/', authorize('ADMIN', 'GESTOR', 'MAESTRA'), becasController.listarBecas);
 
+// ── CATÁLOGO DE BECAS ─────────────────────────────────────────
+router.get('/catalogo', authorize('ADMIN', 'GESTOR'), becasController.listarCatalogoBecas);
+router.post('/catalogo', authorize('ADMIN'), becasController.crearCatalogoBeca);
+router.patch('/catalogo/:id', authorize('ADMIN'), becasController.actualizarCatalogoBeca);
+router.delete('/catalogo/:id', authorize('ADMIN'), becasController.eliminarCatalogoBeca);
+// ─────────────────────────────────────────────────────────────
+
 // GET /api/v1/becas/solicitudes — ADMIN ve todas; GESTOR ve las suyas
 router.get('/solicitudes', authorize('ADMIN', 'GESTOR'), becasController.listarSolicitudes);
 

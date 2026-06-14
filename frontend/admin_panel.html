@@ -98,7 +98,7 @@
 
       <div class="nav-section">Académico</div>
       <div class="nav-link" :class="view==='calificaciones'?'active':''" @click="view='calificaciones'"><i data-lucide="star" class="w-4 h-4"></i> Calificaciones</div>
-      <div class="nav-link" :class="view==='becas'?'active':''" @click="view='becas'"><i data-lucide="award" class="w-4 h-4"></i> Gestión de Becas</div>
+      <div class="nav-link" :class="view==='becas'?'active':''" @click="cargarBecasAsignadas(); cargarCatalogoBecas(); view='becas'"><i data-lucide="award" class="w-4 h-4"></i> Gestión de Becas</div>
 
       <div class="nav-section">Configuración</div>
       <div class="nav-link" :class="view==='cicloEscolar'?'active':''" @click="view='cicloEscolar'"><i data-lucide="calendar-range" class="w-4 h-4"></i> Ciclo escolar</div>
@@ -214,6 +214,7 @@
                   </div>
                   <div class="mt-4 space-y-2">
                     <button class="btn-primary w-full" @click="abrirModalPagoDesdeAlumno(alumnoActualFicha)">Registrar Pago</button>
+                    <button class="btn-success w-full" @click="abrirModalBecaDesdeAlumno(alumnoActualFicha)"><i data-lucide="award" class="w-4 h-4 inline mr-1"></i> Asignar Beca</button>
                     <button class="btn-outline w-full" @click="alumnoSeleccionado=false">Volver al listado</button>
                   </div>
                 </div>
@@ -253,8 +254,21 @@
                     </div>
                   </div>
                   <div class="flex justify-between items-center mt-6">
-                    <button class="btn-outline text-crimson-600 border-crimson-200" @click="confirmarBajaAlumno()">Dar de Baja Definitiva</button>
-                    <button class="btn-primary" @click="guardarCambiosAlumno()">Guardar Expediente</button>
+                    <div class="flex gap-2">
+                      <template x-if="alumnoActualFicha?.estado === 'Activo'">
+                        <button class="btn-outline text-amber-600 border-amber-200" @click="cambiarEstadoAlumno('Baja Temporal')">Dar Baja Temporal</button>
+                      </template>
+                      <template x-if="alumnoActualFicha?.estado === 'Baja Temporal'">
+                        <div class="flex gap-2">
+                          <button class="btn-outline text-emerald-600 border-emerald-200" @click="cambiarEstadoAlumno('Activo')">Reactivar</button>
+                          <button class="btn-outline text-crimson-600 border-crimson-200" @click="confirmarBajaDefinitiva()">Dar Baja Definitiva</button>
+                        </div>
+                      </template>
+                      <template x-if="alumnoActualFicha?.estado === 'Baja Definitiva'">
+                        <span class="text-xs font-bold text-crimson-600">Expediente Cerrado (Baja Definitiva)</span>
+                      </template>
+                    </div>
+                    <button class="btn-primary" x-show="alumnoActualFicha?.estado !== 'Baja Definitiva'" @click="guardarCambiosAlumno()">Guardar Expediente</button>
                   </div>
                 </div>
 
@@ -383,7 +397,41 @@
                     </div>
                     <div>
                       <label class="text-xs font-medium text-gray-600">Régimen Fiscal (Código)</label>
-                      <input type="text" class="input-modern" placeholder="Ej: 605, 612..." x-model="tutorFichaEditable.regimenFiscal">
+                      <select class="input-modern" x-model="tutorFichaEditable.regimenFiscal">
+                        <option value="">Seleccionar...</option>
+                        <option value="601">601 - General de Ley PM</option>
+                        <option value="603">603 - Personas Morales Fines No Lucrativos</option>
+                        <option value="605">605 - Sueldos y Salarios</option>
+                        <option value="606">606 - Arrendamiento</option>
+                        <option value="608">608 - Demás ingresos</option>
+                        <option value="610">610 - Residentes en el Extranjero</option>
+                        <option value="612">612 - Personas Físicas con Actividades Empresariales</option>
+                        <option value="616">616 - Sin obligaciones fiscales</option>
+                        <option value="621">621 - Incorporación Fiscal</option>
+                        <option value="625">625 - Régimen Simplificado de Confianza (RESICO)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="text-xs font-medium text-gray-600">Uso de CFDI</label>
+                      <select class="input-modern" x-model="tutorFichaEditable.usoCfdi">
+                        <option value="">Seleccionar...</option>
+                        <option value="G01">G01 - Adquisición de mercancías</option>
+                        <option value="G03">G03 - Gastos en general</option>
+                        <option value="D01">D01 - Honorarios médicos</option>
+                        <option value="D02">D02 - Gastos médicos por incapacidad</option>
+                        <option value="D05">D05 - Seguros de Gastos Médicos</option>
+                        <option value="D10">D10 - Pagos por servicios educativos (colegiaturas)</option>
+                        <option value="S01">S01 - Sin efectos fiscales</option>
+                        <option value="CP01">CP01 - Pagos</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="text-xs font-medium text-gray-600">Código Postal Fiscal</label>
+                      <input type="text" class="input-modern" maxlength="5" placeholder="Ej: 37000" x-model="tutorFichaEditable.codigoPostal">
+                    </div>
+                    <div class="col-span-2">
+                      <label class="text-xs font-medium text-gray-600">Dirección Fiscal</label>
+                      <textarea class="input-modern" rows="2" placeholder="Calle, número, colonia, ciudad, estado" x-model="tutorFichaEditable.direccionFiscal"></textarea>
                     </div>
                     <div class="col-span-2">
                       <label class="text-xs font-medium text-gray-600">Correo para envío de CFDI</label>
@@ -434,7 +482,99 @@
       <template x-if="view==='calificaciones'"><div><h2 class="text-xl font-bold text-navy-800 mb-3">Calificaciones · Buscador inteligente</h2><div class="grid md:grid-cols-2 gap-4 mb-5"><div><label class="text-xs font-medium text-gray-600">Alumno (más de 100 registros)</label><input type="text" class="input-modern" placeholder="Escribe nombre o matrícula..." x-model="busquedaCalif" @input="buscarAlumnoCalif"></div><div><label class="text-xs font-medium text-gray-600">Periodo</label><select class="input-modern" x-model="periodoCalif"><option>Trimestre 1</option><option>Trimestre 2</option><option>Trimestre 3</option></select></div></div><div class="card-clean p-5" x-show="alumnoSeleccionadoCalif"><div class="font-bold text-lg text-navy-700" x-text="alumnoActualCalif?.nombre"></div><div class="text-sm text-gray-500 mb-3" x-text="alumnoActualCalif?.grupo"></div><div class="space-y-3"><div class="flex justify-between items-center border-b py-2"><span class="font-medium">Matemáticas</span><input class="w-28 input-modern text-center" x-model="calificacionesTemp.matematicas" type="number" step="0.1"></div><div class="flex justify-between items-center border-b py-2"><span class="font-medium">Español</span><input class="w-28 input-modern text-center" x-model="calificacionesTemp.espanol"></div><div class="flex justify-between items-center border-b py-2"><span class="font-medium">Ciencias</span><input class="w-28 input-modern text-center" x-model="calificacionesTemp.ciencias"></div></div><div class="flex justify-end gap-3 mt-5"><button class="btn-outline" @click="alumnoSeleccionadoCalif=false">Cancelar</button><button class="btn-primary" @click="guardarCalificacion()">Guardar</button></div></div><div class="text-gray-400 text-sm text-center py-6" x-show="!alumnoSeleccionadoCalif && busquedaCalif.length>2 && alumnosCoincidencias.length===0">No se encontraron alumnos</div><div class="grid gap-2 mt-3" x-show="!alumnoSeleccionadoCalif && busquedaCalif.length>1"><template x-for="al in alumnosCoincidencias.slice(0,6)"><div class="card-clean p-3 flex justify-between items-center cursor-pointer hover:bg-navy-50 transition" @click="seleccionarAlumnoCalif(al)"><div><span class="font-medium text-navy-700" x-text="al.nombre"></span><div class="text-xs text-gray-400" x-text="al.matricula"></div></div><button class="btn-primary text-xs">Seleccionar</button></div></template></div></div></template>
 
       <!-- BECAS -->
-      <template x-if="view==='becas'"><div><div class="flex justify-between items-center mb-5"><h2 class="text-xl font-bold text-navy-800">Gestión de Becas</h2><button class="btn-success" @click="abrirModalBeca()"><i data-lucide="award"></i> Asignar nueva beca</button></div><div class="grid grid-cols-3 gap-5 mb-5"><div class="card-clean p-5 text-center"><div class="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-3"><i data-lucide="users" class="w-6 h-6 text-emerald-600"></i></div><div class="font-bold text-gray-800">Beca por hermanos</div><div class="text-3xl font-bold text-emerald-600 mt-1">15%</div><div class="text-xs text-gray-500 mt-1">2+ alumnos en el colegio</div></div><div class="card-clean p-5 text-center"><div class="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-3"><i data-lucide="star" class="w-6 h-6 text-amber-600"></i></div><div class="font-bold text-gray-800">Excelencia académica</div><div class="text-3xl font-bold text-amber-600 mt-1">20%</div><div class="text-xs text-gray-500">Promedio >= 9.5</div></div><div class="card-clean p-5 text-center"><div class="w-12 h-12 rounded-full bg-navy-50 flex items-center justify-center mx-auto mb-3"><i data-lucide="calendar" class="w-6 h-6 text-navy-600"></i></div><div class="font-bold text-gray-800">Inscripción temprana</div><div class="text-3xl font-bold text-navy-600 mt-1">10%</div><div class="text-xs text-gray-500">Pago antes del 30 abril</div></div></div><div class="card-clean p-5"><h3 class="font-semibold text-gray-700 mb-3">Becas asignadas actualmente</h3><table class="w-full text-sm"><tr class="border-b border-gray-100"><td class="py-2 font-medium">María González</td><td>Beca por hermanos</td><td><span class="badge-emerald">Activa 15%</span></td></tr><tr class="border-b border-gray-100"><td class="py-2 font-medium">Carlos Fernández</td><td>Excelencia académica</td><td><span class="badge-amber">Activa 20%</span></td></tr></table></div></div></template>
+      <template x-if="view==='becas'">
+        <div>
+          <div class="flex justify-between items-center mb-5">
+            <h2 class="text-xl font-bold text-navy-800">Gestión de Becas</h2>
+            <button class="btn-success" @click="abrirModalBeca()"><i data-lucide="award" class="mr-2"></i> Asignar nueva beca</button>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5" x-show="catalogoBecas.length > 0">
+            <template x-for="beca in catalogoBecas" :key="beca.becaId">
+              <div class="card-clean p-5 text-center">
+                <div class="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" 
+                     :class="{'bg-emerald-50': beca.criterio==='hermanos', 'bg-amber-50': beca.criterio==='calificacion', 'bg-navy-50': beca.criterio!=='hermanos'&&beca.criterio!=='calificacion'}">
+                  <i data-lucide="star" class="w-6 h-6"
+                     :class="{'text-emerald-600': beca.criterio==='hermanos', 'text-amber-600': beca.criterio==='calificacion', 'text-navy-600': beca.criterio!=='hermanos'&&beca.criterio!=='calificacion'}"></i>
+                </div>
+                <div class="font-bold text-gray-800" x-text="beca.nombreBeca"></div>
+                <div class="text-3xl font-bold mt-1" 
+                     :class="{'text-emerald-600': beca.criterio==='hermanos', 'text-amber-600': beca.criterio==='calificacion', 'text-navy-600': beca.criterio!=='hermanos'&&beca.criterio!=='calificacion'}" 
+                     x-text="beca.porcentaje + '%'"></div>
+                <div class="text-xs text-gray-500 mt-1" x-text="beca.descripcion || beca.criterio"></div>
+              </div>
+            </template>
+          </div>
+          <div x-show="catalogoBecas.length === 0" class="text-center p-8 bg-white rounded-xl border border-gray-100 mb-5">
+            <i data-lucide="award" class="w-8 h-8 mx-auto text-gray-300 mb-2"></i>
+            <p class="text-gray-500">No hay becas en el catálogo. Configúralas en la sección de opciones.</p>
+          </div>
+
+          <div class="card-clean p-5">
+            <h3 class="font-semibold text-gray-700 mb-3">Becas asignadas actualmente</h3>
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="p-2 text-left">Alumno</th>
+                  <th class="p-2 text-left">Beca (Tipo)</th>
+                  <th class="p-2 text-left">Estado</th>
+                  <th class="p-2 text-right">Descuento</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="asig in becasAsignadas" :key="asig.id">
+                  <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="py-3 font-medium" x-text="asig.alumno?.nombre || asig.alumnoId"></td>
+                    <td class="py-3" x-text="asig.nombre || asig.tipo"></td>
+                    <td class="py-3">
+                      <span class="badge-emerald" x-show="asig.activa">Activa</span>
+                      <span class="badge-gray" x-show="!asig.activa" x-text="asig.estado"></span>
+                    </td>
+                    <td class="py-3 text-right font-bold text-navy-700" x-text="asig.porcentaje + '%'"></td>
+                  </tr>
+                </template>
+                <tr x-show="becasAsignadas.length === 0">
+                  <td colspan="4" class="p-4 text-center text-gray-500">No hay becas asignadas a alumnos en este ciclo.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          </div>
+
+          <!-- AUTORIZACIONES PENDIENTES (Solo Admin) -->
+          <div class="card-clean p-5 mt-5" x-show="saeApi.getUsuario()?.rol === 'Administrador'">
+            <h3 class="font-semibold text-gray-700 mb-3">Autorizaciones Pendientes</h3>
+            <div x-show="!solicitudesBeca || solicitudesBeca.length === 0" class="text-sm text-gray-400 py-4">No hay solicitudes pendientes de autorización.</div>
+            <table class="w-full text-sm" x-show="solicitudesBeca && solicitudesBeca.length > 0">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="p-2 text-left">Alumno</th>
+                  <th class="p-2 text-left">Tipo</th>
+                  <th class="p-2 text-left">Solicitante</th>
+                  <th class="p-2 text-left">Motivo</th>
+                  <th class="p-2 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="sol in solicitudesBeca" :key="sol.id">
+                  <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="py-3 font-medium" x-text="sol.alumno?.nombreCompleto || sol.alumnoId"></td>
+                    <td class="py-3" x-text="sol.tipo === 'ASIGNACION' ? 'Asignar: ' + (sol.beca?.nombre || '') : 'Retirar Beca'"></td>
+                    <td class="py-3" x-text="sol.solicitante?.nombreCompleto || sol.solicitanteId"></td>
+                    <td class="py-3 text-gray-600 truncate max-w-[200px]" x-text="sol.motivo" :title="sol.motivo"></td>
+                    <td class="py-3 text-right">
+                      <div class="flex justify-end gap-2">
+                        <button class="btn-success px-2 py-1 text-xs" @click="resolverSolicitudBeca(sol.id, 'APROBADA')">Aprobar</button>
+                        <button class="btn-outline border-crimson-200 text-crimson-600 px-2 py-1 text-xs" @click="resolverSolicitudBeca(sol.id, 'RECHAZADA')">Rechazar</button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </template>
 
       <!-- USUARIOS -->
       <template x-if="view==='usuarios'">
@@ -544,10 +684,127 @@
       </template>
 
       <!-- REPORTES -->
-      <template x-if="view==='reportes'"><div><h2 class="text-xl font-bold text-navy-800 mb-4">Reportes descargables (PDF)</h2><div class="grid md:grid-cols-2 gap-5"><div class="card-clean p-5 border-l-4 border-navy-500"><h3 class="font-semibold text-gray-800">Reporte financiero</h3><p class="text-sm text-gray-500 my-2">Listado de ingresos y pagos del periodo</p><button class="btn-primary" @click="generarPDF('pagos')"><i data-lucide="download"></i> Descargar PDF</button></div><div class="card-clean p-5 border-l-4 border-emerald-500"><h3 class="font-semibold text-gray-800">Reporte de alumnos</h3><p class="text-sm text-gray-500 my-2">Directorio completo con padres y contacto</p><button class="btn-primary" @click="generarPDF('alumnos')"><i data-lucide="users"></i> Descargar PDF</button></div><div class="card-clean p-5 border-l-4 border-amber-500"><h3 class="font-semibold text-gray-800">Reporte de becas</h3><p class="text-sm text-gray-500 my-2">Beneficiarios y porcentajes asignados</p><button class="btn-primary" @click="generarPDF('becas')">Descargar PDF</button></div><div class="card-clean p-5 border-l-4 border-gray-300"><h3 class="font-semibold text-gray-800">Configuración ciclo</h3><p class="text-sm text-gray-500 my-2">Planes de pago activos</p><button class="btn-outline" @click="descargarCicloConfig">Exportar</button></div></div></div></template>
+      <template x-if="view==='reportes'">
+        <div>
+          <h2 class="text-xl font-bold text-navy-800 mb-4">Reportes Financieros</h2>
+          
+          <!-- Sub-navegación de reportes -->
+          <div class="flex gap-2 mb-5">
+            <button class="btn-outline text-sm" :class="reporteActivo==='corte' ? 'bg-navy-700 text-white border-navy-700' : ''" @click="reporteActivo='corte'; cargarReporteCorte()">Corte de Caja</button>
+            <button class="btn-outline text-sm" :class="reporteActivo==='ingresos' ? 'bg-navy-700 text-white border-navy-700' : ''" @click="reporteActivo='ingresos'; cargarReporteIngresos()">Ingresos Mensuales</button>
+            <button class="btn-outline text-sm" :class="reporteActivo==='deudores' ? 'bg-navy-700 text-white border-navy-700' : ''" @click="reporteActivo='deudores'; cargarReporteDeudores()">Lista de Deudores</button>
+            <button class="btn-outline text-sm" :class="reporteActivo==='facturables' ? 'bg-navy-700 text-white border-navy-700' : ''" @click="reporteActivo='facturables'; cargarReporteFacturables()">Padres Facturables</button>
+          </div>
+
+          <!-- Corte de Caja -->
+          <div x-show="reporteActivo==='corte'" class="card-clean p-5">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="font-semibold text-navy-800">Corte de Caja del Día — <span x-text="reporteCorte?.fecha || ''"></span></h3>
+              <button class="btn-outline text-sm" @click="window.print()">🖨️ Imprimir</button>
+            </div>
+            <div class="grid grid-cols-3 gap-4 mb-5">
+              <div class="bg-navy-50 p-4 rounded-xl text-center">
+                <div class="text-xs text-gray-500">Total del día</div>
+                <div class="text-2xl font-bold text-navy-700" x-text="'$' + (reporteCorte?.resumen?.total || 0).toLocaleString('es-MX')"></div>
+              </div>
+              <div class="bg-emerald-50 p-4 rounded-xl text-center">
+                <div class="text-xs text-gray-500">Pagos registrados</div>
+                <div class="text-2xl font-bold text-emerald-700" x-text="reporteCorte?.cantidadPagos || 0"></div>
+              </div>
+              <div class="bg-amber-50 p-4 rounded-xl text-center">
+                <div class="text-xs text-gray-500">Efectivo</div>
+                <div class="text-2xl font-bold text-amber-700" x-text="'$' + (reporteCorte?.resumen?.porMetodo?.efectivo || 0).toLocaleString('es-MX')"></div>
+              </div>
+            </div>
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50"><tr><th class="p-2 text-left">Alumno</th><th class="p-2 text-left">Matrícula</th><th class="p-2 text-left">Método</th><th class="p-2 text-left">Registrado por</th><th class="p-2 text-right">Monto</th></tr></thead>
+              <tbody>
+                <template x-for="p in (reporteCorte?.pagos || [])" :key="p.pagoId">
+                  <tr class="border-b"><td class="p-2 font-medium" x-text="p.alumno"></td><td class="p-2 text-gray-500" x-text="p.matricula"></td><td class="p-2" x-text="p.metodoPago"></td><td class="p-2 text-gray-500" x-text="p.registradoPor"></td><td class="p-2 text-right font-mono font-bold" x-text="'$'+p.monto.toLocaleString('es-MX')"></td></tr>
+                </template>
+              </tbody>
+            </table>
+            <div x-show="!reporteCorte?.pagos?.length" class="text-center text-gray-400 py-6">Sin pagos registrados hoy.</div>
+          </div>
+
+          <!-- Ingresos Mensuales -->
+          <div x-show="reporteActivo==='ingresos'" class="card-clean p-5">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="font-semibold text-navy-800">Ingresos Mensuales — <span x-text="reporteIngresos?.anio || ''"></span></h3>
+              <div class="text-lg font-bold text-emerald-700" x-text="'Total anual: $' + (reporteIngresos?.totalAnual || 0).toLocaleString('es-MX')"></div>
+            </div>
+            <div class="space-y-2">
+              <template x-for="(monto, mes) in (reporteIngresos?.meses || {})" :key="mes">
+                <div class="flex items-center gap-3">
+                  <span class="w-10 text-sm font-medium text-gray-600" x-text="mes"></span>
+                  <div class="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
+                    <div class="h-6 bg-gradient-to-r from-navy-500 to-navy-700 rounded-full transition-all duration-500 flex items-center justify-end pr-2"
+                         :style="'width:' + (reporteIngresos?.totalAnual > 0 ? Math.max(2, (monto / reporteIngresos.totalAnual) * 100) : 0) + '%'">
+                      <span class="text-[10px] text-white font-bold" x-show="monto > 0" x-text="'$'+monto.toLocaleString('es-MX')"></span>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Lista de Deudores -->
+          <div x-show="reporteActivo==='deudores'" class="card-clean p-5">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="font-semibold text-navy-800">Lista de Deudores</h3>
+              <button class="btn-outline text-sm" @click="window.print()">🖨️ Imprimir</button>
+            </div>
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50"><tr><th class="p-2 text-left">Alumno</th><th class="p-2 text-left">Matrícula</th><th class="p-2 text-left">Nivel</th><th class="p-2 text-center">Meses</th><th class="p-2 text-right">Monto Total</th><th class="p-2 text-left">Sanción</th></tr></thead>
+              <tbody>
+                <template x-for="d in (reporteDeudores || [])" :key="d.alumnoId">
+                  <tr class="border-b" :class="{'bg-crimson-50': d.mesesAdeudo>=3, 'bg-amber-50': d.mesesAdeudo===2}">
+                    <td class="p-2 font-medium" x-text="d.nombre"></td>
+                    <td class="p-2 text-gray-500" x-text="d.matricula"></td>
+                    <td class="p-2" x-text="d.nivel"></td>
+                    <td class="p-2 text-center font-bold" :class="{'text-crimson-600': d.mesesAdeudo>=3, 'text-amber-600': d.mesesAdeudo===2}" x-text="d.mesesAdeudo"></td>
+                    <td class="p-2 text-right font-mono font-bold text-crimson-600" x-text="'$'+d.montoTotal.toLocaleString('es-MX', {minimumFractionDigits:2})"></td>
+                    <td class="p-2"><span class="text-xs font-bold px-2 py-0.5 rounded-full" :class="{'bg-crimson-100 text-crimson-700': d.sancion==='Baja temporal', 'bg-amber-100 text-amber-700': d.sancion==='Examen restringido', 'bg-gray-100 text-gray-700': d.sancion==='Aviso preventivo'}" x-text="d.sancion"></span></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+            <div x-show="!reporteDeudores?.length" class="text-center text-gray-400 py-6">No hay deudores registrados.</div>
+          </div>
+
+          <!-- Padres Facturables -->
+          <div x-show="reporteActivo==='facturables'" class="card-clean p-5">
+            <h3 class="font-semibold text-navy-800 mb-4">Directorio de Padres Facturables</h3>
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50"><tr><th class="p-2 text-left">Nombre</th><th class="p-2 text-left">RFC</th><th class="p-2 text-left">Régimen</th><th class="p-2 text-left">Correo Facturación</th><th class="p-2 text-left">Hijos</th></tr></thead>
+              <tbody>
+                <template x-for="t in (reporteFacturables || [])" :key="t.tutorId">
+                  <tr class="border-b hover:bg-gray-50">
+                    <td class="p-2 font-medium" x-text="t.nombreCompleto"></td>
+                    <td class="p-2 font-mono text-gray-600" x-text="t.rfc || 'Sin RFC'"></td>
+                    <td class="p-2" x-text="t.regimenFiscal || '—'"></td>
+                    <td class="p-2 text-gray-600" x-text="t.correoFacturacion || t.correoElectronico || '—'"></td>
+                    <td class="p-2"><template x-for="h in t.hijos"><span class="badge-emerald text-[10px] mr-1" x-text="h.nombre"></span></template></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+            <div x-show="!reporteFacturables?.length" class="text-center text-gray-400 py-6">No hay tutores marcados como facturables.</div>
+          </div>
+        </div>
+      </template>
 
       <!-- CICLO ESCOLAR -->
-      <template x-if="view==='cicloEscolar'"><div class="card-clean p-6"><h2 class="font-bold text-xl text-navy-800">Configuración del ciclo escolar 2026-2027</h2><div class="mt-4 space-y-5"><div class="grid md:grid-cols-2 gap-5"><div><label class="text-sm font-medium text-gray-700">Ciclo activo</label><select class="input-modern mt-1"><option selected>Ciclo 2026-2027 (Activo)</option><option>Ciclo 2025-2026 (Histórico)</option></select><label class="text-sm font-medium text-gray-700 mt-3 block">Fecha límite de pago sin recargo</label><input class="input-modern mt-1" value="Día 5 de cada mes"></div><div class="bg-gray-50 p-4 rounded-xl"><div class="font-semibold text-gray-700">⚠️ Política de recargos automáticos</div><p class="text-sm text-gray-600 mt-1">Después del día 5, se aplica <strong class="text-crimson-600">recargo de $400</strong> a la colegiatura.</p><p class="text-sm text-gray-600 mt-2">Alumnos con 3 meses consecutivos de adeudo cambian a <strong class="text-crimson-600">"Baja temporal"</strong> y pierden su beca.</p></div></div><div class="border-t pt-4"><h3 class="font-semibold text-gray-800 mb-3">Planes de pago disponibles</h3><div class="grid grid-cols-2 gap-4"><div class="border rounded-xl p-3 bg-white"><div class="font-bold text-navy-700">Plan 10 meses</div><div class="text-2xl font-bold text-navy-700">$4,000 <span class="text-sm font-normal text-gray-500">/ mes</span></div><div class="text-xs text-gray-500 mt-1">Agosto - Mayo · Diciembre cobro doble $8,000</div><div class="text-xs text-emerald-600 mt-2">98 alumnos inscritos</div></div><div class="border rounded-xl p-3 bg-white"><div class="font-bold text-navy-700">Plan 12 meses</div><div class="text-2xl font-bold text-navy-700">$3,500 <span class="text-sm font-normal text-gray-500">/ mes</span></div><div class="text-xs text-gray-500 mt-1">Agosto - Julio · Diciembre cobro doble $7,000</div><div class="text-xs text-emerald-600 mt-2">145 alumnos inscritos</div></div></div></div><div class="flex justify-end gap-3 mt-5"><button class="btn-outline">Cancelar</button><button class="btn-primary">Guardar configuración</button></div></div></div></template>
+      <template x-if="view==='cicloEscolar'"><div class="card-clean p-6"><h2 class="font-bold text-xl text-navy-800">Configuración del ciclo escolar 2026-2027</h2><div class="mt-4 space-y-5"><div class="grid md:grid-cols-2 gap-5"><div><label class="text-sm font-medium text-gray-700">Ciclo activo</label><select class="input-modern mt-1"><option selected>Ciclo 2026-2027 (Activo)</option><option>Ciclo 2025-2026 (Histórico)</option></select><label class="text-sm font-medium text-gray-700 mt-3 block">Fecha límite de pago sin recargo</label><input class="input-modern mt-1" value="Día 5 de cada mes"></div><div class="bg-gray-50 p-4 rounded-xl"><div class="font-semibold text-gray-700">⚠️ Política de recargos automáticos</div><p class="text-sm text-gray-600 mt-1">Después del día 5, se aplica <strong class="text-crimson-600">recargo de $400</strong> a la colegiatura.</p><p class="text-sm text-gray-600 mt-2">Alumnos con 3 meses consecutivos de adeudo cambian a <strong class="text-crimson-600">"Baja temporal"</strong> y pierden su beca.</p></div></div><div class="border-t pt-4"><h3 class="font-semibold text-gray-800 mb-3">Planes de pago disponibles</h3><div class="grid grid-cols-2 gap-4"><div class="border rounded-xl p-3 bg-white"><div class="font-bold text-navy-700">Plan 10 meses</div><div class="text-2xl font-bold text-navy-700">$4,000 <span class="text-sm font-normal text-gray-500">/ mes</span></div><div class="text-xs text-gray-500 mt-1">Agosto - Mayo · Diciembre cobro doble $8,000</div><div class="text-xs text-emerald-600 mt-2">98 alumnos inscritos</div></div><div class="border rounded-xl p-3 bg-white"><div class="font-bold text-navy-700">Plan 12 meses</div><div class="text-2xl font-bold text-navy-700">$3,500 <span class="text-sm font-normal text-gray-500">/ mes</span></div><div class="text-xs text-gray-500 mt-1">Agosto - Julio · Diciembre cobro doble $7,000</div><div class="text-xs text-emerald-600 mt-2">145 alumnos inscritos</div></div></div></div>
+          
+          <!-- Cierre de Ciclo Escolar -->
+          <div class="border-t pt-5 mt-5" x-show="saeApi.getUsuario()?.rol === 'Administrador'">
+            <h3 class="font-semibold text-crimson-700 mb-2">Operaciones Críticas: Cierre de Ciclo Escolar</h3>
+            <p class="text-sm text-gray-600 mb-4">Esta acción promoverá masivamente a los alumnos regulares y retendrá a los alumnos con adeudos. El ciclo escolar actual se cerrará irrevocablemente.</p>
+            <button class="btn-outline text-crimson-600 border-crimson-200" @click="ejecutarCierreCiclo()">⚠️ Ejecutar Cierre de Ciclo</button>
+          </div>
+
+          <div class="flex justify-end gap-3 mt-5"><button class="btn-outline">Cancelar</button><button class="btn-primary">Guardar configuración</button></div></div></div></template>
 
       <!-- ============================================================
            GRUPOS & MATERIAS – Vista jerárquica con expansión
@@ -732,9 +989,31 @@
           </div>
         </div>
 
+        <!-- Estado de cuenta (Adeudos) -->
+        <div x-show="nuevoPago.alumno" class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+          <div class="text-xs font-bold text-gray-700 mb-2">Adeudos Pendientes</div>
+          <div x-show="pagoCalculando" class="text-xs text-gray-400">Consultando estado de cuenta...</div>
+          <div x-show="!pagoCalculando && pagoAdeudos.length === 0" class="text-xs text-emerald-600 font-medium">No hay adeudos pendientes. El alumno está al corriente.</div>
+          
+          <div class="space-y-2 max-h-40 overflow-y-auto" x-show="!pagoCalculando && pagoAdeudos.length > 0">
+            <template x-for="adeudo in pagoAdeudos" :key="adeudo.calendarioPagoId">
+              <div class="flex justify-between items-center text-xs p-2 bg-white rounded border border-gray-100 cursor-pointer hover:bg-navy-50" @click="seleccionarAdeudoIndividual(adeudo)">
+                <div>
+                  <div class="font-medium text-navy-800" x-text="adeudo.concepto + ' (' + adeudo.mes + ')'"></div>
+                  <div class="text-gray-500" x-text="'Vencimiento: ' + new Date(adeudo.fechaVencimiento).toLocaleDateString('es-MX')"></div>
+                </div>
+                <div class="text-right">
+                  <div class="font-bold text-crimson-600" x-text="'$' + (Number(adeudo.montoOriginal) + Number(adeudo.montoRecargo) - Number(adeudo.montoPagado)).toFixed(2)"></div>
+                  <div x-show="Number(adeudo.montoRecargo) > 0" class="text-[10px] text-amber-600" x-text="'Incluye recargo: $' + adeudo.montoRecargo"></div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
         <div>
           <label class="text-xs font-medium text-gray-600">Concepto</label>
-          <select class="input-modern" x-model="nuevoPago.concepto">
+          <select class="input-modern" x-model="nuevoPago.concepto" @change="autofillMonto()">
             <option>Colegiatura</option>
             <option>Inscripción</option>
             <option>Material didáctico</option>
@@ -752,16 +1031,79 @@
           <input type="date" class="input-modern" x-model="nuevoPago.fecha">
         </div>
 
-        <div class="flex justify-end gap-2 mt-5">
-          <button class="btn-outline" @click="modal=null">Cancelar</button>
+        <div>
+          <label class="flex items-center gap-1 text-xs font-medium text-gray-600">
+            <i data-lucide="paperclip" class="w-3 h-3"></i> Adjuntar comprobante (Opcional)
+          </label>
+          <input type="file" id="comprobanteInputPago" class="input-modern text-sm mt-1" accept=".pdf,image/jpeg,image/png,image/webp">
+        </div>
+
+        <div class="flex justify-end gap-2 mt-5" x-show="!reciboGenerado">
+          <button class="btn-outline" @click="modal=null; reciboGenerado=null">Cancelar</button>
           <button class="btn-primary" @click="agregarPago()">Registrar</button>
+        </div>
+
+        <!-- Vista de Recibo (después de pagar) -->
+        <div x-show="reciboGenerado" class="mt-6 border-t pt-4">
+          <div id="print-receipt-area" class="p-6 border-2 border-dashed border-gray-300 rounded-lg bg-white relative">
+            <div class="text-center mb-4">
+              <div class="font-bold text-xl text-navy-800">COLEGIO SAN DIEGO</div>
+              <div class="text-xs text-gray-500">Recibo de Pago No. <span x-text="reciboGenerado?.id"></span></div>
+            </div>
+            <div class="space-y-2 text-sm text-gray-700">
+              <div class="flex justify-between"><span class="font-medium">Fecha:</span> <span x-text="reciboGenerado?.fecha"></span></div>
+              <div class="flex justify-between"><span class="font-medium">Alumno:</span> <span x-text="reciboGenerado?.alumno"></span></div>
+              <div class="flex justify-between"><span class="font-medium">Concepto:</span> <span x-text="reciboGenerado?.concepto"></span></div>
+              <div class="flex justify-between pt-2 border-t font-bold text-lg text-navy-800"><span class="font-medium">Total Pagado:</span> <span x-text="'$' + reciboGenerado?.monto"></span></div>
+            </div>
+          </div>
+          <div class="flex justify-end gap-2 mt-4 no-print">
+            <button class="btn-outline" @click="modal=null; reciboGenerado=null">Cerrar</button>
+            <button class="btn-primary" @click="imprimirRecibo()"><i data-lucide="printer" class="w-4 h-4 mr-1"></i> Imprimir Recibo</button>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
   <!-- MODAL BECA -->
-  <div x-show="modalBecaActiva" x-cloak class="modal-mask" @click.self="modalBecaActiva=false"><div class="modal-container p-6"><div class="font-bold text-lg text-navy-800">Asignar nueva beca</div><p class="text-xs text-gray-500 mt-1">Selecciona el alumno y el tipo de beca. El administrador aprueba en el mismo acto.</p><select class="input-modern mt-3" x-model="nuevaBeca.alumnoId"><option value="">— Selecciona un alumno —</option><template x-for="a in listaAlumnos" :key="a.id"><option :value="a.id" x-text="a.nombre"></option></template></select><select class="input-modern mt-2" x-model="nuevaBeca.tipo"><option>Beca por hermanos (15%)</option><option>Excelencia académica (20%)</option><option>Inscripción temprana (10%)</option></select><div class="flex justify-end gap-2 mt-5"><button class="btn-outline" @click="modalBecaActiva=false">Cancelar</button><button class="btn-success" @click="asignarBeca()">Asignar beca</button></div></div></div>
+  <!-- MODAL BECA -->
+  <div x-show="modalBecaActiva" x-cloak class="modal-mask" @click.self="modalBecaActiva=false">
+    <div class="modal-container p-6">
+      <div class="font-bold text-lg text-navy-800">Asignar nueva beca</div>
+      <p class="text-xs text-gray-500 mt-1">Selecciona el alumno y el tipo de beca. El administrador aprueba en el mismo acto.</p>
+      
+      <div class="mt-3 relative">
+        <input type="text" class="input-modern" placeholder="Buscar alumno (nombre o matrícula)..." x-model="busquedaAlumnoBeca" @input="filtrarAlumnosBeca()">
+        <div x-show="busquedaAlumnoBeca.length > 0 && nuevaBeca.alumnoId === null" class="absolute z-10 w-full bg-white border border-gray-200 mt-1 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+          <template x-for="a in alumnosBecaFiltrados" :key="a.id">
+            <div class="px-3 py-2 hover:bg-gray-50 cursor-pointer border-b text-sm" @click="nuevaBeca.alumnoId = a.id; busquedaAlumnoBeca = a.nombre + ' (' + a.matricula + ')'">
+              <div class="font-medium text-navy-800" x-text="a.nombre"></div>
+              <div class="text-xs text-gray-500" x-text="a.matricula"></div>
+            </div>
+          </template>
+          <div x-show="alumnosBecaFiltrados.length === 0" class="px-3 py-2 text-sm text-gray-500">No se encontraron alumnos</div>
+        </div>
+        <div x-show="nuevaBeca.alumnoId !== null" class="absolute right-2 top-2">
+          <button class="text-gray-400 hover:text-crimson-600" @click="nuevaBeca.alumnoId = null; busquedaAlumnoBeca = ''; filtrarAlumnosBeca()" title="Limpiar selección"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+      </div>
+      
+      <select class="input-modern mt-2" x-model="nuevaBeca.becaId">
+        <option value="">— Selecciona un tipo de beca —</option>
+        <template x-for="b in catalogoBecas" :key="b.becaId">
+          <option :value="b.becaId" x-text="b.nombreBeca + ' (' + b.porcentaje + '%)'"></option>
+        </template>
+      </select>
+
+      <textarea class="input-modern mt-2" placeholder="Observaciones o motivo de asignación (Opcional)" x-model="nuevaBeca.observaciones" rows="2"></textarea>
+      
+      <div class="flex justify-end gap-2 mt-5">
+        <button class="btn-outline" @click="modalBecaActiva=false">Cancelar</button>
+        <button class="btn-success" @click="asignarBeca()">Asignar beca</button>
+      </div>
+    </div>
+  </div>
 
   <!-- MODAL USUARIO -->
   <div x-show="modalUsuario" x-cloak class="modal-mask" @click.self="modalUsuario=false">
@@ -941,8 +1283,17 @@
       verInactivos: false,
       cargando: false,
 
+      // ── Reportes ──────────────────────────────────────────────────────────────
+      reporteActivo: 'corte',
+      reporteCorte: null,
+      reporteIngresos: null,
+      reporteDeudores: null,
+      reporteFacturables: null,
+
       // ── Búsquedas ───────────────────────────────────────────────────────────
       busquedaAlumno: '',
+      busquedaAlumnoBeca: '',
+      alumnosBecaFiltrados: [],
       busquedaCalif: '',
       periodoCalif: 'Trimestre 1',
 
@@ -978,6 +1329,9 @@
       nuevaBeca:      { alumnoId: null, tipo: 'Beca por hermanos (15%)' },
       nuevoUsuario:   { nombre: '', rol: 'Estándar (Maestra)' },
       nuevoPago:      { alumno: '', alumnoId: null, concepto: 'Colegiatura', monto: '', fecha: new Date().toISOString().slice(0,10) },
+      pagoAdeudos:    [],
+      pagoCalculando: false,
+      reciboGenerado: null,
       nuevoAlumnoData:{ nombre: '', matricula: '', curp: '', grupoId: null, padre: '', telefono: '', tutorId: null },
       erroresNuevoAlumno: {},
       sugerenciasTutor: [],
@@ -1255,8 +1609,12 @@
             nombreCompleto: this.tutorFichaEditable.nombreCompleto,
             telefono: this.tutorFichaEditable.telefono,
             correoElectronico: this.tutorFichaEditable.correoElectronico,
+            direccion: this.tutorFichaEditable.direccion,
             rfc: this.tutorFichaEditable.rfc,
             regimenFiscal: this.tutorFichaEditable.regimenFiscal,
+            usoCfdi: this.tutorFichaEditable.usoCfdi,
+            direccionFiscal: this.tutorFichaEditable.direccionFiscal,
+            codigoPostal: this.tutorFichaEditable.codigoPostal,
             correoFacturacion: this.tutorFichaEditable.correoFacturacion,
             requiereFactura: this.tutorFichaEditable.requiereFactura,
           };
@@ -1338,13 +1696,30 @@
           window.saeApi.toast('error', 'Error de red');
         }
       },
-      async confirmarBajaAlumno() {
-        if (!confirm('¿Estás seguro de dar de BAJA DEFINITIVA a este alumno?')) return;
+      async cambiarEstadoAlumno(nuevoEstado) {
+        if (!confirm(`¿Estás seguro de cambiar el estado a ${nuevoEstado}?`)) return;
+        try {
+          const res = await window.saeApi.alumnos.actualizar(this.alumnoActualFicha.id, { estado: nuevoEstado });
+          if (res && res.ok) {
+            window.saeApi.toast('exito', `Estado actualizado a ${nuevoEstado}`);
+            this.alumnoSeleccionado = false;
+            this.alumnoActualFicha = null;
+            this._cargarAlumnosAPI();
+          } else {
+            window.saeApi.toast('error', res?.message || 'Error al cambiar estado');
+          }
+        } catch (e) {
+          window.saeApi.toast('error', 'Error de red');
+        }
+      },
+      async confirmarBajaDefinitiva() {
+        if (!confirm('¿Estás seguro de dar de BAJA DEFINITIVA a este alumno? El expediente quedará cerrado.')) return;
         try {
           const res = await window.saeApi.alumnos.eliminar(this.alumnoActualFicha.id);
           if (res && res.ok) {
             window.saeApi.toast('exito', 'Alumno dado de baja definitivamente');
             this.alumnoSeleccionado = false;
+            this.alumnoActualFicha = null;
             this._cargarAlumnosAPI();
           } else {
             window.saeApi.toast('error', res?.message || 'Error al dar de baja');
@@ -1352,6 +1727,61 @@
         } catch (e) {
           window.saeApi.toast('error', 'Error de red');
         }
+      },
+      filtrarAlumnosBeca() {
+        const q = this.busquedaAlumnoBeca.toLowerCase();
+        if (q.trim() === '') {
+          this.alumnosBecaFiltrados = [];
+          return;
+        }
+        this.alumnosBecaFiltrados = this.listaAlumnos.filter(a =>
+          a.nombre.toLowerCase().includes(q) ||
+          a.matricula.toLowerCase().includes(q)
+        );
+      },
+      async ejecutarCierreCiclo() {
+        if (!confirm('¿ESTÁS ABSOLUTAMENTE SEGURO de ejecutar el Cierre de Ciclo Escolar?\n\nEsta operación promoverá a los alumnos, egresará a quienes terminen su nivel, y retendrá a los deudores.')) return;
+        
+        try {
+          window.saeApi.toast('info', 'Ejecutando cierre de ciclo... Por favor espera.');
+          const res = await window.saeApi.fetchApi('/alumnos/cierre-ciclo', { method: 'POST' });
+          if (res && res.ok) {
+            const result = res.data;
+            alert(`Cierre de ciclo completado con éxito:\n\n- Ciclo Cerrado: ${result.cicloCerrado}\n- Promovidos: ${result.promovidos}\n- Egresados: ${result.egresados}\n- Retenidos (Deudores): ${result.retenidos}`);
+            window.location.reload();
+          } else {
+            window.saeApi.toast('error', res?.message || 'Error al ejecutar cierre de ciclo');
+          }
+        } catch (e) {
+          console.error(e);
+          window.saeApi.toast('error', 'Error de red o timeout');
+        }
+      },
+
+      // ── Reportes Financieros ───────────────────────────────────────────────
+      async cargarReporteCorte() {
+        try {
+          const res = await window.saeApi.reportes.corteCaja();
+          if (res && res.ok) this.reporteCorte = res.data;
+        } catch (e) { console.error('Error cargando corte de caja', e); }
+      },
+      async cargarReporteIngresos() {
+        try {
+          const res = await window.saeApi.reportes.ingresosMensuales();
+          if (res && res.ok) this.reporteIngresos = res.data;
+        } catch (e) { console.error('Error cargando ingresos', e); }
+      },
+      async cargarReporteDeudores() {
+        try {
+          const res = await window.saeApi.reportes.deudores();
+          if (res && res.ok) this.reporteDeudores = res.data;
+        } catch (e) { console.error('Error cargando deudores', e); }
+      },
+      async cargarReporteFacturables() {
+        try {
+          const res = await window.saeApi.reportes.facturables();
+          if (res && res.ok) this.reporteFacturables = res.data;
+        } catch (e) { console.error('Error cargando facturables', e); }
       },
 
       // ── Alumnos ─────────────────────────────────────────────────────────────
@@ -1521,34 +1951,89 @@
           this.alumnoSeleccionadoCalif = false;
           window.saeApi.toast('exito', `${lote.length} calificación(es) guardada(s) para ${this.alumnoActualCalif.nombre}.`);
         } else {
-          window.saeApi.toast('error', res.message || 'Error al guardar calificaciones.');
+            window.saeApi.toast('error', res.message || 'Error al guardar calificaciones.');
         }
       },
 
       // ── Becas ────────────────────────────────────────────────────────────────
+      catalogoBecas:  [],
+      becasAsignadas: [],
+      solicitudesBeca: [],
+      async cargarCatalogoBecas() {
+        const res = await window.saeApi.becas.catalogo.listar();
+        if (res.ok) this.catalogoBecas = res.data;
+      },
+      async cargarBecasAsignadas() {
+        const res = await window.saeApi.becas.listar();
+        if (res.ok) this.becasAsignadas = res.data;
+        if (this.saeApi.getUsuario()?.rol === 'Administrador') {
+          this.cargarSolicitudesBeca();
+        }
+      },
+      async cargarSolicitudesBeca() {
+        try {
+          const res = await window.saeApi.fetchApi('/becas/solicitudes');
+          if (res && res.data) {
+            this.solicitudesBeca = res.data;
+          }
+        } catch (e) {
+          console.error("Error al cargar solicitudes de beca", e);
+        }
+      },
+      async resolverSolicitudBeca(solicitudId, decision) {
+        if (!confirm(`¿Estás seguro de ${decision === 'APROBADA' ? 'APROBAR' : 'RECHAZAR'} esta solicitud?`)) return;
+        try {
+          const res = await window.saeApi.fetchApi(`/becas/solicitudes/${solicitudId}/resolver`, {
+            method: 'PATCH',
+            body: JSON.stringify({ estado: decision, comentariosAdmin: '' })
+          });
+          if (res) {
+            window.saeApi.toast('exito', `Solicitud ${decision.toLowerCase()} con éxito`);
+            this.cargarSolicitudesBeca();
+            this.cargarBecasAsignadas(); // Por si se asignó la beca
+          }
+        } catch (e) {
+          window.saeApi.toast('error', 'Error al resolver solicitud');
+        }
+      },
       abrirModalBeca() {
         this.modalBecaActiva = true;
-        this.nuevaBeca       = { alumnoId: null, tipo: 'Beca por hermanos (15%)' };
+        this.nuevaBeca       = { alumnoId: null, becaId: null, observaciones: '' };
+        this.busquedaAlumnoBeca = '';
+        this.alumnosBecaFiltrados = [];
+        this.cargarCatalogoBecas();
+      },
+      abrirModalBecaDesdeAlumno(alumno) {
+        this.abrirModalBeca();
+        this.nuevaBeca.alumnoId = alumno.id;
+        this.busquedaAlumnoBeca = alumno.nombre + ' (' + alumno.matricula + ')';
       },
       async asignarBeca() {
         if (!this.nuevaBeca.alumnoId) {
           window.saeApi.toast('advertencia', 'Selecciona un alumno de la lista.');
           return;
         }
+        if (!this.nuevaBeca.becaId) {
+          window.saeApi.toast('advertencia', 'Selecciona un tipo de beca del catálogo.');
+          return;
+        }
         const alumnoObj = this.listaAlumnos.find(a => a.id === Number(this.nuevaBeca.alumnoId));
-        const tipo      = window.saeApi.TIPO_BECA_MAP[this.nuevaBeca.tipo] || 'OTRO';
+        const becaObj = this.catalogoBecas.find(b => b.becaId === Number(this.nuevaBeca.becaId));
         const res       = await window.saeApi.becas.solicitar({
           alumnoId: Number(this.nuevaBeca.alumnoId),
-          tipo,
+          tipo: becaObj.criterio, // backward compat
+          nombre: becaObj.nombreBeca,
+          porcentaje: becaObj.porcentaje,
           motivo: 'Asignación directa por administrador.',
         });
         if (res.ok) {
           await window.saeApi.becas.resolver(res.data.id, {
             estado:       'APROBADA',
-            observaciones:'Aprobada en el mismo acto por el Administrador.',
+            observaciones:'Aprobada en el mismo acto por el Administrador. ' + (this.nuevaBeca.observaciones || ''),
           });
           this.modalBecaActiva = false;
-          window.saeApi.toast('exito', `Beca "${this.nuevaBeca.tipo}" asignada a ${alumnoObj?.nombre || 'alumno'}.`);
+          this.cargarBecasAsignadas(); // Refresh list
+          window.saeApi.toast('exito', `Beca "${becaObj.nombreBeca}" asignada a ${alumnoObj?.nombre || 'alumno'}.`);
         } else {
           window.saeApi.toast('error', res.message || 'Error al asignar beca.');
         }
@@ -1580,12 +2065,64 @@
           this.nuevoPago.alumnoId = null;
         }
       },
-      seleccionarPagoAlumno(al) {
+      async seleccionarPagoAlumno(al) {
         this.nuevoPago.alumno       = al.nombre;
         this.nuevoPago.alumnoId     = al.id;
         this.busquedaPagoAlumno     = al.nombre;
         this.mostrarSugerenciasPago = false;
         this.pagoCoincidencias      = [];
+        this.pagoAdeudos            = [];
+        
+        // Fetch pending debts (Estado de Cuenta)
+        this.pagoCalculando = true;
+        try {
+          const res = await window.saeApi.pagos.calendario({ alumnoId: al.id, estadoCobro: 'pendiente' });
+          if (res.ok && res.data) {
+            this.pagoAdeudos = res.data;
+            // Sum up total debt as suggested amount
+            let total = 0;
+            res.data.forEach(d => {
+              const deuda = Number(d.montoOriginal) + Number(d.montoRecargo) - Number(d.montoPagado);
+              total += Math.max(0, deuda);
+            });
+            this.nuevoPago.monto = total.toFixed(2);
+            // Default to first concept if applicable
+            if (res.data.length > 0) {
+              const firstA = res.data[0];
+              const cMap = { 'COLEGIATURA': 'Colegiatura', 'INSCRIPCION': 'Inscripción', 'MATERIAL_DIDACTICO': 'Material didáctico', 'UNIFORME': 'Uniforme' };
+              const mappedC = cMap[firstA.concepto.toUpperCase()];
+              if (mappedC) this.nuevoPago.concepto = mappedC;
+            }
+          }
+        } catch (e) {
+          console.error(e);
+        } finally {
+          this.pagoCalculando = false;
+        }
+      },
+      seleccionarAdeudoIndividual(adeudo) {
+        const cMap = { 'COLEGIATURA': 'Colegiatura', 'INSCRIPCION': 'Inscripción', 'MATERIAL_DIDACTICO': 'Material didáctico', 'UNIFORME': 'Uniforme' };
+        this.nuevoPago.concepto = cMap[adeudo.concepto.toUpperCase()] || 'Colegiatura';
+        this.nuevoPago.monto = (Number(adeudo.montoOriginal) + Number(adeudo.montoRecargo) - Number(adeudo.montoPagado)).toFixed(2);
+      },
+      autofillMonto() {
+        if (!this.pagoAdeudos || this.pagoAdeudos.length === 0) return;
+        const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(' ', '_');
+        const targetMap = { 'COLEGIATURA': 'COLEGIATURA', 'INSCRIPCION': 'INSCRIPCION', 'MATERIAL_DIDACTICO': 'MATERIAL_DIDACTICO', 'UNIFORME': 'UNIFORME' };
+        let targetCode = targetMap[normalize(this.nuevoPago.concepto)] || 'OTRO';
+        
+        const adeudosDelConcepto = this.pagoAdeudos.filter(a => a.concepto.toUpperCase() === targetCode || a.concepto.toUpperCase() === normalize(this.nuevoPago.concepto));
+        
+        if (adeudosDelConcepto.length > 0) {
+          let total = 0;
+          adeudosDelConcepto.forEach(d => {
+             const deuda = Number(d.montoOriginal) + Number(d.montoRecargo) - Number(d.montoPagado);
+             total += Math.max(0, deuda);
+          });
+          this.nuevoPago.monto = total.toFixed(2);
+        } else {
+          this.nuevoPago.monto = '';
+        }
       },
       async agregarPago() {
         if (!this.nuevoPago.alumnoId) {
@@ -1604,12 +2141,45 @@
           fecha:     this.nuevoPago.fecha,
         });
         if (res.ok) {
+          const pagoId = res.data.pagoId || res.data.id;
+          const fileInput = document.getElementById('comprobanteInputPago');
+          let comprobanteMsj = '';
+          
+          if (fileInput && fileInput.files && fileInput.files.length > 0) {
+            const uploadRes = await window.saeApi.pagos.subirComprobante(pagoId, fileInput.files[0]);
+            if (!uploadRes.ok) {
+              window.saeApi.toast('advertencia', 'Pago registrado, pero falló la subida del comprobante.');
+            } else {
+              comprobanteMsj = ' con comprobante adjunto';
+            }
+          }
+          
           this.pagosRegistrados.unshift(window.saeApi.mapPago(res.data));
-          this.modal = null;
-          window.saeApi.toast('exito', `Pago de $${this.nuevoPago.monto} registrado para ${this.nuevoPago.alumno}.`);
+          
+          // Generar recibo visual
+          this.reciboGenerado = {
+            id: pagoId || Math.floor(Math.random() * 10000),
+            alumno: this.nuevoPago.alumno,
+            concepto: this.nuevoPago.concepto,
+            fecha: new Date().toLocaleString('es-MX'),
+            monto: parseFloat(this.nuevoPago.monto).toFixed(2)
+          };
+          
+          window.saeApi.toast('exito', `Pago de $${this.nuevoPago.monto} registrado para ${this.nuevoPago.alumno}${comprobanteMsj}.`);
+          
+          // Reset fields for the next form interaction
+          this.nuevoPago.alumno = '';
+          this.nuevoPago.alumnoId = null;
+          this.nuevoPago.monto = '';
+          this.busquedaPagoAlumno = '';
+          this.pagoAdeudos = [];
+          if (fileInput) fileInput.value = '';
         } else {
           window.saeApi.toast('error', res.message || 'Error al registrar pago.');
         }
+      },
+      imprimirRecibo() {
+        window.print();
       },
 
       // ── Usuarios ─────────────────────────────────────────────────────────────

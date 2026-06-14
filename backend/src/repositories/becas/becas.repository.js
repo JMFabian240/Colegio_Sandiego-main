@@ -291,7 +291,47 @@ async function resolverSolicitud(id, { estado, aprobadoPorId, observaciones }, a
 });
 }
 
+// ── CATÁLOGO DE BECAS ─────────────────────────────────────────
+
+async function getCatalogoBecas() {
+  return prisma.beca.findMany({
+    where: { eliminadoEn: null },
+    orderBy: { creadoEn: 'desc' },
+  });
+}
+
+async function createCatalogoBeca({ nombreBeca, criterio, porcentaje, descripcion }) {
+  return prisma.beca.create({
+    data: {
+      nombreBeca,
+      criterio,
+      porcentaje: Number(porcentaje),
+      descripcion,
+    },
+  });
+}
+
+async function updateCatalogoBeca(id, { nombreBeca, criterio, porcentaje, descripcion }) {
+  return prisma.beca.update({
+    where: { becaId: Number(id) },
+    data: { 
+      nombreBeca, 
+      criterio, 
+      porcentaje: porcentaje !== undefined ? Number(porcentaje) : undefined, 
+      descripcion 
+    },
+  });
+}
+
+async function deleteCatalogoBeca(id) {
+  return prisma.beca.update({
+    where: { becaId: Number(id) },
+    data: { eliminadoEn: new Date() },
+  });
+}
+
 module.exports = {
   findBecasActivas, findBecaByAlumno, createBeca, deactivateBeca,
   findSolicitudes, findSolicitudById, createSolicitud, resolverSolicitud,
+  getCatalogoBecas, createCatalogoBeca, updateCatalogoBeca, deleteCatalogoBeca,
 };

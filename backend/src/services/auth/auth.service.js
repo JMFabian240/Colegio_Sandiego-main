@@ -110,6 +110,7 @@ async function login(username, password, ip = '0.0.0.0', userAgent = '') {
     nombre:   usuario.nombre,
     username: usuario.username,
     rol:      usuario.rol,
+    permisos: usuario.permisos || {},
   };
 
   const token = jwtUtils.generateToken(payload);

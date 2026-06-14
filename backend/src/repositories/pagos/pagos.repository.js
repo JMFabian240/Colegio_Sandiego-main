@@ -226,9 +226,33 @@ async function create(datos, auditCtx = {}) {
         orderBy: { fechaVencimiento: 'asc' },
       });
 
+      // Buscar si el alumno tiene una beca activa
+      const asignacionBeca = await tx.asignacionBeca.findFirst({
+        where: { alumnoId: Number(alumnoId), estado: 'activa' },
+        include: { beca: true },
+      });
+      const porcentajeBeca = asignacionBeca && asignacionBeca.beca ? Number(asignacionBeca.beca.porcentaje) : 0;
+
       // 4. Algoritmo de Distribución de Pagos a Saldos Vencidos Primero
       for (const deuda of deudasPendientes) {
         if (montoRestante <= 0) break;
+
+        // Si el concepto es colegiatura y el alumno tiene beca, aplicamos el descuento internamente
+        // para reflejarlo en el saldo a pagar
+        if (deuda.concepto === 'colegiatura' && porcentajeBeca > 0) {
+           const descuento = (Number(deuda.montoOriginal) * porcentajeBeca) / 100;
+           const nuevoMonto = Number(deuda.montoOriginal) - descuento;
+           
+           // Actualizamos el monto original en la base de datos de manera definitiva
+           // para que cuadre con el pago ingresado
+           await tx.calendarioPago.update({
+             where: { calendarioPagoId: deuda.calendarioPagoId },
+             data: { montoOriginal: nuevoMonto }
+           });
+           
+           // Actualizamos nuestro objeto en memoria para los siguientes cálculos
+           deuda.montoOriginal = nuevoMonto;
+        }
 
         // Calcular deuda real actual
         const totalOriginal = Number(deuda.montoOriginal);
@@ -345,6 +369,14 @@ async function findCalendario({ alumnoId, cicloId, estadoCobro } = {}) {
     where,
     include: {
       recargos: { where: { estado: 'aplicado' } },
+      alumno: {
+        select: {
+          asignacionesBeca: {
+            where: { estado: 'activa' },
+            include: { beca: true }
+          }
+        }
+      }
     },
     orderBy: [{ fechaVencimiento: 'asc' }],
   });

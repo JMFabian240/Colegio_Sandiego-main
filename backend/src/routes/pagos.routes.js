@@ -7,7 +7,7 @@ const pagosController       = require('../controllers/pagos/pagos.controller');
 const documentosController  = require('../controllers/pagos/documentos.controller');
 const recargosController    = require('../controllers/pagos/recargos.controller');
 const { authenticate }      = require('../middleware/auth.middleware');
-const { authorize }         = require('../middleware/rbac.middleware');
+const { authorize, authorizePermiso } = require('../middleware/rbac.middleware');
 const { validate }          = require('../middleware/validate.middleware');
 const { crearPagoValidators } = require('../utils/validators/pagos.validator');
 
@@ -39,42 +39,42 @@ const router = Router();
 router.use(authenticate);
 
 // GET /api/v1/pagos
-router.get('/', authorize('ADMIN', 'GESTOR'), pagosController.listar);
+router.get('/', authorizePermiso('pagos', 'lectura'), pagosController.listar);
 
 // GET /api/v1/pagos/calendario — calendar entries (must come BEFORE /:id)
-router.get('/calendario', authorize('ADMIN', 'GESTOR'), pagosController.calendario);
+router.get('/calendario', authorizePermiso('pagos', 'lectura'), pagosController.calendario);
 
 // GET /api/v1/pagos/total/:alumnoId — suma total de pagos de un alumno
-router.get('/total/:alumnoId', authorize('ADMIN', 'GESTOR'), pagosController.totalPorAlumno);
+router.get('/total/:alumnoId', authorizePermiso('pagos', 'lectura'), pagosController.totalPorAlumno);
 
-// PATCH /api/v1/pagos/recargos/:recargoId — modificar/condonar recargo
+// PATCH /api/v1/pagos/recargos/:recargoId — modificar/condonar recargo (solo ADMIN)
 router.patch('/recargos/:recargoId', authorize('ADMIN'), recargosController.modificarRecargo);
 
 // GET /api/v1/pagos/:id
-router.get('/:id', authorize('ADMIN', 'GESTOR'), pagosController.obtener);
+router.get('/:id', authorizePermiso('pagos', 'lectura'), pagosController.obtener);
 
-// POST /api/v1/pagos — ADMIN y GESTOR pueden registrar pagos
+// POST /api/v1/pagos
 router.post('/', crearPagoValidators, validate,
-  authorize('ADMIN', 'GESTOR'),
+  authorizePermiso('pagos', 'escritura'),
   pagosController.registrar
 );
 
 // POST /api/v1/pagos/:pagoId/comprobante — subir comprobante digital
 router.post('/:pagoId/comprobante',
-  authorize('ADMIN', 'GESTOR'),
+  authorizePermiso('pagos', 'escritura'),
   upload.single('comprobante'),
   documentosController.subirComprobante
 );
 
 // GET /api/v1/pagos/:pagoId/comprobante — descargar comprobante
 router.get('/:pagoId/comprobante',
-  authorize('ADMIN', 'GESTOR'),
+  authorizePermiso('pagos', 'lectura'),
   documentosController.descargarComprobante
 );
 
 // GET /api/v1/pagos/:pagoId/tiene-comprobante
 router.get('/:pagoId/tiene-comprobante',
-  authorize('ADMIN', 'GESTOR'),
+  authorizePermiso('pagos', 'lectura'),
   documentosController.tieneComprobante
 );
 

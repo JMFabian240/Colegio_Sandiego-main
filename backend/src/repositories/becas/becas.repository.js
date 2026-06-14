@@ -20,6 +20,7 @@ function mapAsignacion(asig) {
   return {
     id:         asig.asignacionId,
     alumnoId:   asig.alumnoId,
+    becaId:     asig.becaId,
     tipo:       asig.beca?.criterio?.toUpperCase() ?? 'OTRO',
     nombre:     asig.beca?.nombreBeca ?? null,
     porcentaje: Number(asig.beca?.porcentaje ?? 0),
@@ -48,6 +49,7 @@ function mapSolicitud(sol) {
     tipo:            sol.beca?.criterio?.toUpperCase() ?? 'OTRO',
     nombre:          sol.beca?.nombreBeca ?? null,
     porcentaje:      Number(sol.beca?.porcentaje ?? 0),
+    tipoSolicitud:   sol.tipoSolicitud,
     motivo:          sol.motivo,
     estado:          sol.estado?.toUpperCase() ?? 'PENDIENTE',
     aprobadoPorId:   sol.resueltaPor,
@@ -167,6 +169,39 @@ async function createBeca(datos) {
   return mapAsignacion(asignacion);
 }
 
+async function createAsignacionDirecta(datos, asignadaPorId, auditCtx = {}) { return withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
+  const { alumnoId, becaId, cicloId } = datos;
+
+  const ciclo = cicloId
+    ? await tx.cicloEscolar.findUnique({ where: { cicloId: Number(cicloId) } })
+    : await getCicloActivo();
+
+  if (!ciclo) throw Object.assign(new Error('No hay ciclo escolar activo.'), { statusCode: 422 });
+
+  const beca = await tx.beca.findUnique({ where: { becaId: Number(becaId) } });
+  if (!beca) throw Object.assign(new Error('Beca no encontrada.'), { statusCode: 404 });
+
+  // Desactivar becas anteriores del alumno en este ciclo
+  await tx.asignacionBeca.updateMany({
+    where: { alumnoId: Number(alumnoId), cicloId: ciclo.cicloId, estado: 'activa' },
+    data: { estado: 'retirada', fechaRetiro: new Date(), motivoRetiro: 'Reemplazada por una nueva beca' }
+  });
+
+  const asignacion = await tx.asignacionBeca.create({
+    data: {
+      alumnoId:    Number(alumnoId),
+      becaId:      beca.becaId,
+      cicloId:     ciclo.cicloId,
+      estado:      'activa',
+      asignadaPor: asignadaPorId ? Number(asignadaPorId) : null,
+    },
+    include: INCLUDE_ASIGNACION,
+  });
+
+  return mapAsignacion(asignacion);
+});
+}
+
 /**
  * Retira (desactiva) una beca de un alumno.
  */
@@ -174,6 +209,21 @@ async function deactivateBeca(id, auditCtx = {}) { return withAudit(auditCtx.usu
   const asignacion = await tx.asignacionBeca.update({
     where: { asignacionId: Number(id) },
     data:  { estado: 'retirada', fechaRetiro: new Date() },
+    include: INCLUDE_ASIGNACION,
+  });
+  return mapAsignacion(asignacion);
+});
+}
+
+async function retirarAsignacionDirecta(asignacionId, motivo, retiradaPorId, auditCtx = {}) { return withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
+  const asignacion = await tx.asignacionBeca.update({
+    where: { asignacionId: Number(asignacionId) },
+    data:  { 
+      estado: 'retirada', 
+      fechaRetiro: new Date(),
+      motivoRetiro: motivo,
+      retiradaPor: retiradaPorId ? Number(retiradaPorId) : null 
+    },
     include: INCLUDE_ASIGNACION,
   });
   return mapAsignacion(asignacion);
@@ -206,12 +256,8 @@ async function findSolicitudById(id) {
   return sol ? mapSolicitud(sol) : null;
 }
 
-/**
- * Crea una solicitud de beca.
- * Acepta el mismo formato: { alumnoId, tipo, porcentaje, motivo, solicitadoPorId }
- */
 async function createSolicitud(datos, auditCtx = {}) { return withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
-  const { alumnoId, tipo, porcentaje, motivo, solicitadoPorId, nombre, cicloId } = datos;
+  const { alumnoId, becaId, tipoSolicitud, motivo, solicitadoPorId, cicloId } = datos;
 
   const ciclo = cicloId
     ? await tx.cicloEscolar.findUnique({ where: { cicloId: Number(cicloId) } })
@@ -219,29 +265,15 @@ async function createSolicitud(datos, auditCtx = {}) { return withAudit(auditCtx
 
   if (!ciclo) throw Object.assign(new Error('No hay ciclo escolar activo.'), { statusCode: 422 });
 
-  // Buscar beca del catálogo
-  const criterioMap = {
-    HERMANOS:             'hermanos',
-    EXCELENCIA:           'calificacion',
-    INSCRIPCION_TEMPRANA: 'inscripcion_temprana',
-    OTRO:                 'otro',
-  };
-
-  let beca = nombre
-    ? await tx.beca.findFirst({ where: { nombreBeca: { equals: nombre, mode: 'insensitive' }, eliminadoEn: null } })
-    : await tx.beca.findFirst({ where: { criterio: criterioMap[tipo] ?? tipo?.toLowerCase() ?? 'otro', eliminadoEn: null } });
-
-  if (!beca) {
-    beca = await tx.beca.create({
-      data: { nombreBeca: nombre ?? tipo ?? 'Otro', criterio: 'otro', porcentaje: porcentaje ?? 0 },
-    });
-  }
+  const beca = await tx.beca.findUnique({ where: { becaId: Number(becaId) } });
+  if (!beca) throw Object.assign(new Error('Beca no encontrada en el catálogo.'), { statusCode: 404 });
 
   const sol = await tx.solicitudBeca.create({
     data: {
       alumnoId:   Number(alumnoId),
       becaId:     beca.becaId,
       cicloId:    ciclo.cicloId,
+      tipoSolicitud: tipoSolicitud || 'asignacion',
       motivo:     motivo ?? '',
       estado:     'pendiente',
       solicitadaPor: solicitadoPorId ? Number(solicitadoPorId) : null,
@@ -271,20 +303,38 @@ async function resolverSolicitud(id, { estado, aprobadoPorId, observaciones }, a
     include: INCLUDE_SOLICITUD,
   });
 
-  // Si se aprueba, materializar la asignación de beca
+  // Si se aprueba, materializar la acción de beca
   if (estadoNorm === 'aprobada') {
-    await tx.asignacionBeca.upsert({
-      where: { alumnoId_becaId_cicloId: { alumnoId: sol.alumnoId, becaId: sol.becaId, cicloId: sol.cicloId } },
-      update: { estado: 'activa', fechaRetiro: null, motivoRetiro: null },
-      create: {
-        alumnoId:    sol.alumnoId,
-        becaId:      sol.becaId,
-        cicloId:     sol.cicloId,
-        solicitudId: sol.solicitudId,
-        estado:      'activa',
-        asignadaPor: aprobadoPorId ? Number(aprobadoPorId) : null,
-      },
-    });
+    if (sol.tipoSolicitud === 'asignacion') {
+      // Desactivar becas anteriores del alumno en este ciclo
+      await tx.asignacionBeca.updateMany({
+        where: { alumnoId: sol.alumnoId, cicloId: sol.cicloId, estado: 'activa', becaId: { not: sol.becaId } },
+        data: { estado: 'retirada', fechaRetiro: new Date(), motivoRetiro: 'Reemplazada por nueva beca autorizada' }
+      });
+
+      await tx.asignacionBeca.upsert({
+        where: { alumnoId_becaId_cicloId: { alumnoId: sol.alumnoId, becaId: sol.becaId, cicloId: sol.cicloId } },
+        update: { estado: 'activa', fechaRetiro: null, motivoRetiro: null },
+        create: {
+          alumnoId:    sol.alumnoId,
+          becaId:      sol.becaId,
+          cicloId:     sol.cicloId,
+          solicitudId: sol.solicitudId,
+          estado:      'activa',
+          asignadaPor: aprobadoPorId ? Number(aprobadoPorId) : null,
+        },
+      });
+    } else if (sol.tipoSolicitud === 'retiro') {
+      await tx.asignacionBeca.updateMany({
+        where: { alumnoId: sol.alumnoId, becaId: sol.becaId, cicloId: sol.cicloId, estado: 'activa' },
+        data: { 
+          estado: 'retirada', 
+          fechaRetiro: new Date(),
+          motivoRetiro: sol.motivo,
+          retiradaPor: aprobadoPorId ? Number(aprobadoPorId) : null 
+        }
+      });
+    }
   }
 
   return mapSolicitud(sol);
@@ -300,8 +350,8 @@ async function getCatalogoBecas() {
   });
 }
 
-async function createCatalogoBeca({ nombreBeca, criterio, porcentaje, descripcion }) {
-  return prisma.beca.create({
+async function createCatalogoBeca({ nombreBeca, criterio, porcentaje, descripcion }, auditCtx = {}) { return withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
+  return tx.beca.create({
     data: {
       nombreBeca,
       criterio,
@@ -309,18 +359,20 @@ async function createCatalogoBeca({ nombreBeca, criterio, porcentaje, descripcio
       descripcion,
     },
   });
+});
 }
 
-async function updateCatalogoBeca(id, { nombreBeca, criterio, porcentaje, descripcion }) {
-  return prisma.beca.update({
+async function updateCatalogoBeca(id, { nombreBeca, criterio, porcentaje, descripcion }, auditCtx = {}) { return withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
+  return tx.beca.update({
     where: { becaId: Number(id) },
-    data: { 
-      nombreBeca, 
-      criterio, 
-      porcentaje: porcentaje !== undefined ? Number(porcentaje) : undefined, 
-      descripcion 
+    data: {
+      ...(nombreBeca && { nombreBeca }),
+      ...(criterio && { criterio }),
+      ...(porcentaje && { porcentaje: Number(porcentaje) }),
+      ...(descripcion !== undefined && { descripcion }),
     },
   });
+});
 }
 
 async function deleteCatalogoBeca(id) {
@@ -331,7 +383,8 @@ async function deleteCatalogoBeca(id) {
 }
 
 module.exports = {
-  findBecasActivas, findBecaByAlumno, createBeca, deactivateBeca,
+  findBecasActivas, findBecaByAlumno, deactivateBeca,
+  createAsignacionDirecta, retirarAsignacionDirecta,
   findSolicitudes, findSolicitudById, createSolicitud, resolverSolicitud,
   getCatalogoBecas, createCatalogoBeca, updateCatalogoBeca, deleteCatalogoBeca,
 };

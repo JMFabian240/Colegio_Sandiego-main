@@ -58,6 +58,10 @@ async function findByUsername(username) {
           rol: { select: { codigo: true } },
         },
       },
+      permisosModulos: {
+        where: { activo: true },
+        select: { modulo: true, nivel: true }
+      }
     },
   });
 
@@ -73,6 +77,7 @@ async function findByUsername(username) {
     activo:   usuario.activo,
     bloqueadoHasta:   usuario.bloqueadoHasta,
     intentosFallidos: usuario.intentosFallidos,
+    permisos: usuario.permisosModulos?.reduce((acc, p) => { acc[p.modulo] = p.nivel; return acc; }, {}) || {}
   };
 }
 

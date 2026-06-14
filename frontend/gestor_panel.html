@@ -92,7 +92,7 @@
 
       <div class="nav-section">Finanzas</div>
       <div class="nav-link" :class="view==='pagos'?'active':''" @click="view='pagos'"><i data-lucide="credit-card" class="w-4 h-4"></i> Registro de pagos</div>
-      <div class="nav-link" :class="view==='deudores'?'active':''" @click="view='deudores'"><i data-lucide="alert-triangle" class="w-4 h-4"></i> Deudores <span class="ml-auto bg-crimson-500 text-white text-[10px] px-1.5 rounded-full">7</span></div>
+      <div class="nav-link" :class="view==='deudores'?'active':''" @click="view='deudores'"><i data-lucide="alert-triangle" class="w-4 h-4"></i> Deudores <span class="ml-auto bg-crimson-500 text-white text-[10px] px-1.5 rounded-full" x-show="dashSummary && dashSummary.deudores > 0" x-text="dashSummary.deudores"></span></div>
       <!-- Becas: el gestor puede solicitar, no autorizar -->
       <div class="nav-link" :class="view==='becas'?'active':''" @click="view='becas'"><i data-lucide="award" class="w-4 h-4"></i> Gestión de Becas</div>
 
@@ -143,10 +143,10 @@
         <div class="space-y-5">
           <!-- Mismas métricas que el admin — el gestor tiene lectura global (RF-04) -->
           <div class="grid grid-cols-4 gap-5">
-            <div class="card-clean p-5"><div class="text-xs text-gray-400">Ingresos hoy</div><div class="text-2xl font-bold text-navy-700">$12,400</div></div>
-            <div class="card-clean p-5"><div class="text-xs text-gray-400">Deudores</div><div class="text-2xl font-bold text-crimson-600">7</div></div>
-            <div class="card-clean p-5"><div class="text-xs text-gray-400">Alumnos activos</div><div class="text-2xl font-bold text-navy-700">243</div></div>
-            <div class="card-clean p-5"><div class="text-xs text-gray-400">Becas activas</div><div class="text-2xl font-bold text-emerald-600">34</div></div>
+            <div class="card-clean p-5"><div class="text-xs text-gray-400">Ingresos hoy</div><div class="text-2xl font-bold text-navy-700" x-text="'$' + (dashSummary?.ingresosHoy || 0).toLocaleString()"></div></div>
+            <div class="card-clean p-5"><div class="text-xs text-gray-400">Deudores</div><div class="text-2xl font-bold text-crimson-600" x-text="dashSummary?.deudores || 0"></div></div>
+            <div class="card-clean p-5"><div class="text-xs text-gray-400">Alumnos activos</div><div class="text-2xl font-bold text-navy-700" x-text="dashSummary?.alumnosActivos || 0"></div></div>
+            <div class="card-clean p-5"><div class="text-xs text-gray-400">Becas activas</div><div class="text-2xl font-bold text-emerald-600" x-text="dashSummary?.becasActivas || 0"></div></div>
           </div>
 
           <!-- Aviso de solicitudes pendientes de beca enviadas por este gestor (RF-22) -->
@@ -161,11 +161,16 @@
             </div>
           </div>
 
-          <div class="card-clean p-5">
+          <div class="card-clean p-5" x-show="dashUltimosPagos && dashUltimosPagos.length > 0">
             <h3 class="font-semibold mb-2">Últimos pagos registrados</h3>
             <table class="w-full text-sm">
-              <tr class="border-b"><td class="py-2">María González</td><td class="font-mono">$4,000</td><td>04/01/2025</td></tr>
-              <tr class="border-b"><td class="py-2">Juan Pérez</td><td class="font-mono text-crimson-600">$4,400</td><td>07/01/2025</td></tr>
+              <template x-for="p in dashUltimosPagos" :key="p.id">
+                <tr class="border-b">
+                  <td class="py-2" x-text="p.alumno"></td>
+                  <td class="font-mono" :class="p.recargo ? 'text-crimson-600 font-bold' : ''" x-text="'$' + p.monto"></td>
+                  <td x-text="p.fecha"></td>
+                </tr>
+              </template>
             </table>
           </div>
         </div>
@@ -592,8 +597,9 @@
 
       // ── Paginación alumnos ────────────────────────────────────────────────
       paginaAlumnos: 1, limitAlumnos: 20, totalAlumnos: 0, paginasAlumnos: 1,
-      // ── Paginación pagos ──────────────────────────────────────────────────
-      paginaPagos: 1, limitPagos: 25, totalPagos: 0, paginasPagos: 1,
+      // ── Dashboard ───────────────────────────────────────────────────────────
+      dashSummary: { ingresosHoy: 0, deudores: 0, alumnosActivos: 0, becasActivas: 0 },
+      dashUltimosPagos: [],
 
       // ── Computed ────────────────────────────────────────────────────────────
       get fechaActual() {
@@ -611,6 +617,20 @@
       },
 
       // ── Carga de datos ────────────────────────────────────────────────────────
+      async _cargarDashboard() {
+        try {
+          const res = await window.saeApi.fetchApi('/dashboard/resumen');
+          if (res && res.data) {
+            this.dashSummary = res.data;
+          }
+          const pagosRes = await window.saeApi.fetchApi('/dashboard/pagos-recientes');
+          if (pagosRes && pagosRes.data) {
+            this.dashUltimosPagos = pagosRes.data;
+          }
+        } catch (e) {
+          console.error("Error cargando dashboard:", e);
+        }
+      },
       async _cargarAlumnosAPI(pagina, q) {
         const p   = pagina || this.paginaAlumnos;
         const res = await window.saeApi.alumnos.listar({ page: p, limit: this.limitAlumnos, q });
@@ -882,11 +902,15 @@
       // ── Init ──────────────────────────────────────────────────────────────────
       async init() {
         const safeIcons = () => { if (typeof lucide !== 'undefined') lucide.createIcons(); };
-
+        lucide.createIcons();
+        window.saeApi.setLoading(true);
         await Promise.all([
+          this._cargarDashboard(),
           this._cargarAlumnosAPI(),
           this._cargarGruposAPI(),
+          this._cargarPagosAPI()
         ]);
+        window.saeApi.setLoading(false);
 
         this.$watch('view', async (newView) => {
           this.$nextTick(safeIcons);

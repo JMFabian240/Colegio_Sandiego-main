@@ -16,5 +16,6 @@ router.get('/:id', authorize('ADMIN', 'GESTOR', 'MAESTRA'), gruposController.obt
 // Modificaciones — solo ADMIN y GESTOR
 router.post('/',   authorize('ADMIN', 'GESTOR'), gruposController.crear);
 router.put('/:id', authorize('ADMIN', 'GESTOR'), gruposController.actualizar);
+router.delete('/:id', authorize('ADMIN', 'GESTOR'), gruposController.eliminar);
 
 module.exports = router;

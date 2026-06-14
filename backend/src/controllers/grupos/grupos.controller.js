@@ -38,4 +38,12 @@ async function actualizar(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { listar, obtener, crear, actualizar };
+async function eliminar(req, res, next) {
+  try {
+    const auditCtx = { usuarioId: req.usuario?.id, ip: req.ip };
+    await gruposService.eliminar(req.params.id, auditCtx);
+    return success(res, null, 'Grupo eliminado correctamente.');
+  } catch (err) { next(err); }
+}
+
+module.exports = { listar, obtener, crear, actualizar, eliminar };

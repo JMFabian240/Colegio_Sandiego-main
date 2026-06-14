@@ -22,6 +22,14 @@ const crearAlumnoValidators = [
   body('grupoId')
     .optional({ nullable: true })
     .isInt({ min: 1 }).withMessage('El grupoId debe ser un número entero válido.'),
+
+  body('fechaNacimiento')
+    .optional({ nullable: true })
+    .isISO8601().toDate().withMessage('La fecha de nacimiento debe tener un formato válido.'),
+
+  body('autorizadosRecoger')
+    .optional({ nullable: true })
+    .isString().trim(),
 ];
 
 const actualizarAlumnoValidators = [

@@ -564,7 +564,7 @@
           </div>
 
           <!-- AUTORIZACIONES PENDIENTES (Solo Admin) -->
-          <div class="card-clean p-5 mt-5" x-show="saeApi.getUsuario()?.rol === 'Administrador'">
+          <div class="card-clean p-5 mt-5" x-show="saeApi.getUsuario()?.rol === 'ADMIN'">
             <h3 class="font-semibold text-gray-700 mb-3">Autorizaciones Pendientes</h3>
             <div x-show="!solicitudesBeca || solicitudesBeca.length === 0" class="text-sm text-gray-400 py-4">No hay solicitudes pendientes de autorización.</div>
             <table class="w-full text-sm" x-show="solicitudesBeca && solicitudesBeca.length > 0">
@@ -826,7 +826,7 @@
       <template x-if="view==='cicloEscolar'"><div class="card-clean p-6"><h2 class="font-bold text-xl text-navy-800">Configuración del ciclo escolar 2026-2027</h2><div class="mt-4 space-y-5"><div class="grid md:grid-cols-2 gap-5"><div><label class="text-sm font-medium text-gray-700">Ciclo activo</label><select class="input-modern mt-1"><option selected>Ciclo 2026-2027 (Activo)</option><option>Ciclo 2025-2026 (Histórico)</option></select><label class="text-sm font-medium text-gray-700 mt-3 block">Fecha límite de pago sin recargo</label><input class="input-modern mt-1" value="Día 5 de cada mes"></div><div class="bg-gray-50 p-4 rounded-xl"><div class="font-semibold text-gray-700">⚠️ Política de recargos automáticos</div><p class="text-sm text-gray-600 mt-1">Después del día 5, se aplica <strong class="text-crimson-600">recargo de $400</strong> a la colegiatura.</p><p class="text-sm text-gray-600 mt-2">Alumnos con 3 meses consecutivos de adeudo cambian a <strong class="text-crimson-600">"Baja temporal"</strong> y pierden su beca.</p></div></div><div class="border-t pt-4"><h3 class="font-semibold text-gray-800 mb-3">Planes de pago disponibles</h3><div class="grid grid-cols-2 gap-4"><div class="border rounded-xl p-3 bg-white"><div class="font-bold text-navy-700">Plan 10 meses</div><div class="text-2xl font-bold text-navy-700">$4,000 <span class="text-sm font-normal text-gray-500">/ mes</span></div><div class="text-xs text-gray-500 mt-1">Agosto - Mayo · Diciembre cobro doble $8,000</div><div class="text-xs text-emerald-600 mt-2">98 alumnos inscritos</div></div><div class="border rounded-xl p-3 bg-white"><div class="font-bold text-navy-700">Plan 12 meses</div><div class="text-2xl font-bold text-navy-700">$3,500 <span class="text-sm font-normal text-gray-500">/ mes</span></div><div class="text-xs text-gray-500 mt-1">Agosto - Julio · Diciembre cobro doble $7,000</div><div class="text-xs text-emerald-600 mt-2">145 alumnos inscritos</div></div></div></div>
           
           <!-- Cierre de Ciclo Escolar -->
-          <div class="border-t pt-5 mt-5" x-show="saeApi.getUsuario()?.rol === 'Administrador'">
+          <div class="border-t pt-5 mt-5" x-show="saeApi.getUsuario()?.rol === 'ADMIN'">
             <h3 class="font-semibold text-crimson-700 mb-2">Operaciones Críticas: Cierre de Ciclo Escolar</h3>
             <p class="text-sm text-gray-600 mb-4">Esta acción promoverá masivamente a los alumnos regulares y retendrá a los alumnos con adeudos. El ciclo escolar actual se cerrará irrevocablemente.</p>
             <button class="btn-outline text-crimson-600 border-crimson-200" @click="ejecutarCierreCiclo()">⚠️ Ejecutar Cierre de Ciclo</button>
@@ -1994,15 +1994,15 @@
       async cargarBecasAsignadas() {
         const res = await window.saeApi.becas.listar();
         if (res.ok) this.becasAsignadas = res.data;
-        if (this.saeApi.getUsuario()?.rol === 'Administrador') {
+        if (window.saeApi.getUsuario()?.rol === 'ADMIN') {
           this.cargarSolicitudesBeca();
         }
       },
       async cargarSolicitudesBeca() {
         try {
-          const res = await window.saeApi.fetchApi('/becas/solicitudes');
+          const res = await window.saeApi.becas.listarSolicitudes();
           if (res && res.data) {
-            this.solicitudesBeca = res.data;
+            this.solicitudesBeca = res.data.filter(s => s.estado === 'PENDIENTE');
           }
         } catch (e) {
           console.error("Error al cargar solicitudes de beca", e);
@@ -2011,14 +2011,13 @@
       async resolverSolicitudBeca(solicitudId, decision) {
         if (!confirm(`¿Estás seguro de ${decision === 'APROBADA' ? 'APROBAR' : 'RECHAZAR'} esta solicitud?`)) return;
         try {
-          const res = await window.saeApi.fetchApi(`/becas/solicitudes/${solicitudId}/resolver`, {
-            method: 'PATCH',
-            body: JSON.stringify({ estado: decision, comentariosAdmin: '' })
-          });
-          if (res) {
+          const res = await window.saeApi.becas.resolver(solicitudId, { estado: decision, comentariosAdmin: '' });
+          if (res && res.ok) {
             window.saeApi.toast('exito', `Solicitud ${decision.toLowerCase()} con éxito`);
             this.cargarSolicitudesBeca();
             this.cargarBecasAsignadas(); // Por si se asignó la beca
+          } else {
+            window.saeApi.toast('error', res?.message || 'Error al resolver solicitud');
           }
         } catch (e) {
           window.saeApi.toast('error', 'Error al resolver solicitud');

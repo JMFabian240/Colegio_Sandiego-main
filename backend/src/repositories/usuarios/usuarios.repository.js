@@ -175,33 +175,18 @@ async function create(datos, auditCtx = {}) {
       },
     });
 
-    // Asignar permisos predefinidos según el rol (RF-01)
-    let defaultPermisos = [];
-    if (codigoRol === 'empleado') { // GESTOR
-      defaultPermisos = [
-        { modulo: 'alumnos', nivel: 'escritura' },
-        { modulo: 'tutores', nivel: 'escritura' },
-        { modulo: 'pagos', nivel: 'escritura' },
-        { modulo: 'becas', nivel: 'escritura' },
-        { modulo: 'colegiaturas', nivel: 'escritura' },
-        { modulo: 'reportes', nivel: 'escritura' },
-      ];
-    } else if (codigoRol === 'docente') { // MAESTRA
-      defaultPermisos = [
-        { modulo: 'alumnos', nivel: 'lectura' },
-        { modulo: 'calificaciones', nivel: 'escritura' },
-      ];
+    // Crear permisos por defecto según el rol
+    const defaultPermisos = [];
+    if (codigoRol === 'empleado' || rol === 'GESTOR') {
+      ['alumnos', 'tutores', 'pagos', 'becas', 'calificaciones', 'configuracion', 'colegiaturas'].forEach(m => defaultPermisos.push({ usuarioId: u.usuarioId, modulo: m, nivel: 'escritura', activo: true }));
+      defaultPermisos.push({ usuarioId: u.usuarioId, modulo: 'reportes', nivel: 'lectura', activo: true });
+    } else if (codigoRol === 'docente' || rol === 'MAESTRA') {
+      defaultPermisos.push({ usuarioId: u.usuarioId, modulo: 'tutores', nivel: 'lectura', activo: true });
+      defaultPermisos.push({ usuarioId: u.usuarioId, modulo: 'calificaciones', nivel: 'escritura', activo: true });
     }
 
     if (defaultPermisos.length > 0) {
-      await tx.usuarioPermisoModulo.createMany({
-        data: defaultPermisos.map(p => ({
-          usuarioId: u.usuarioId,
-          modulo: p.modulo,
-          nivel: p.nivel,
-          activo: true,
-        })),
-      });
+      await tx.usuarioPermisoModulo.createMany({ data: defaultPermisos });
     }
 
     return u;

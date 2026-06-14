@@ -35,7 +35,7 @@ const INCLUDE_COMPLETO = {
     orderBy: { ciclo: { nombre: 'desc' } },
     take: 1,
     include: {
-      grupo: { select: { grupoId: true, nombre: true, nivel: { select: { codigo: true } } } },
+      grupo: { select: { grupoId: true, nombre: true, grado: true, seccion: true, nivel: { select: { codigo: true } } } },
       ciclo: { select: { cicloId: true, nombre: true, activo: true } },
       planDepago: { select: { planPagoId: true, nombre: true, meses: true } },
     },
@@ -81,6 +81,8 @@ function mapAlumno(a) {
           id:    inscripcionActual.grupo.grupoId,
           nombre:inscripcionActual.grupo.nombre,
           nivel: inscripcionActual.grupo.nivel?.codigo ?? null,
+          grado: inscripcionActual.grupo.grado,
+          seccion: inscripcionActual.grupo.seccion,
         }
       : null,
     cicloActual: inscripcionActual?.ciclo ?? null,
@@ -108,12 +110,14 @@ function mapAlumno(a) {
  * @returns {Array|{data, pagination}} Sin page → array plano. Con page → { data, pagination }
  */
 async function findAll({ q, grupoId, nivel, estado, page, limit } = {}) {
-  const where = {
-    eliminadoEn: null,
-  };
+  const where = {};
 
-  if (estado) {
+  if (estado && estado !== 'Todos') {
+    // Filtramos exactamente por el estado solicitado (Activo, Baja Temporal, Baja Definitiva, Egresado)
     where.estado = estado;
+  } else if (!estado) {
+    // Comportamiento por defecto al cargar sin filtros: ocultamos bajas definitivas
+    where.eliminadoEn = null;
   }
 
   if (nivel) {
@@ -181,7 +185,7 @@ async function findAll({ q, grupoId, nivel, estado, page, limit } = {}) {
  */
 async function findById(id) {
   const alumno = await prisma.alumno.findFirst({
-    where: { alumnoId: Number(id), eliminadoEn: null },
+    where: { alumnoId: Number(id) },
     include: INCLUDE_COMPLETO,
   });
   return alumno ? mapAlumno(alumno) : null;
@@ -321,7 +325,7 @@ async function create(datos, auditCtx = {}) { return withAudit(auditCtx.usuarioI
  * Actualiza un alumno por ID.
  */
 async function update(id, datos, auditCtx = {}) { return withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
-  const { padres, nombre, nivel, ...rest } = datos;
+  const { padres, nombre, nivel, grupoId, ...rest } = datos;
 
   let nivelId;
   if (nivel) {
@@ -331,18 +335,43 @@ async function update(id, datos, auditCtx = {}) { return withAudit(auditCtx.usua
     nivelId = nivelReg?.nivelId;
   }
 
+  // Update alumno table
   await tx.alumno.update({
     where: { alumnoId: Number(id) },
     data: {
       ...(nombre ? { nombreCompleto: nombre } : {}),
       ...(nivelId ? { nivelId } : {}),
-      ...(rest.curp ? { curp: rest.curp } : {}),
+      ...(rest.curp !== undefined ? { curp: rest.curp } : {}),
       ...(rest.estado ? { estado: rest.estado } : {}),
-      ...(rest.fechaNacimiento !== undefined ? { fechaNacimiento: rest.fechaNacimiento } : {}),
+      ...(rest.fechaNacimiento !== undefined ? { fechaNacimiento: rest.fechaNacimiento ? new Date(rest.fechaNacimiento) : null } : {}),
       ...(rest.diaLimitePago !== undefined ? { diaLimitePago: rest.diaLimitePago } : {}),
       ...(rest.observaciones !== undefined ? { observaciones: rest.observaciones } : {}),
     },
   });
+
+  // Handle inscripcion_ciclo if grupoId was sent
+  if (grupoId !== undefined && grupoId !== null) {
+    const cicloActivo = await tx.cicloEscolar.findFirst({
+      where: { activo: true },
+    });
+    if (cicloActivo) {
+      const planDefault = await tx.planPago.findFirst({
+        where: { cicloId: cicloActivo.cicloId, activo: true }
+      });
+      await tx.inscripcionCiclo.upsert({
+        where: { alumnoId_cicloId: { alumnoId: Number(id), cicloId: cicloActivo.cicloId } },
+        update: { grupoId: Number(grupoId) },
+        create: {
+          alumnoId: Number(id),
+          cicloId: cicloActivo.cicloId,
+          grupoId: Number(grupoId),
+          planPagoId: planDefault?.planPagoId ?? null,
+          estadoFinanciero: 'Al Corriente',
+          mesesAdeudo: 0,
+        }
+      });
+    }
+  }
 
   return findById(id);
 });

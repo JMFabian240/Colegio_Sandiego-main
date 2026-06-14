@@ -20,12 +20,26 @@ async function listarCatalogoBecas() {
   return becasRepository.getCatalogoBecas();
 }
 
-async function crearCatalogoBeca(datos) {
-  return becasRepository.createCatalogoBeca(datos);
+async function crearCatalogoBeca(datos, auditCtx = {}) {
+  try {
+    return await becasRepository.createCatalogoBeca(datos, auditCtx);
+  } catch (err) {
+    if (err.code === 'P2002' && err.meta?.target?.includes('nombre_beca')) {
+      throw Object.assign(new Error('Ya existe un tipo de beca con ese nombre. Ingrese un nombre diferente.'), { statusCode: 409 });
+    }
+    throw err;
+  }
 }
 
-async function actualizarCatalogoBeca(id, datos) {
-  return becasRepository.updateCatalogoBeca(id, datos);
+async function actualizarCatalogoBeca(id, datos, auditCtx = {}) {
+  try {
+    return await becasRepository.updateCatalogoBeca(id, datos, auditCtx);
+  } catch (err) {
+    if (err.code === 'P2002' && err.meta?.target?.includes('nombre_beca')) {
+      throw Object.assign(new Error('Ya existe un tipo de beca con ese nombre. Ingrese uno diferente.'), { statusCode: 409 });
+    }
+    throw err;
+  }
 }
 
 async function eliminarCatalogoBeca(id) {
@@ -47,15 +61,30 @@ async function solicitarBeca(datos, solicitadoPorId, auditCtx = {}) {
     throw Object.assign(new Error('Alumno no encontrado.'), { statusCode: 404 });
   }
 
-  const porcentaje = PORCENTAJES_BECA[datos.tipo] ?? 0;
-
   return becasRepository.createSolicitud({
     alumnoId:        Number(datos.alumnoId),
-    tipo:            datos.tipo,
-    porcentaje,
+    becaId:          Number(datos.becaId),
+    tipoSolicitud:   datos.tipoSolicitud || 'asignacion',
     motivo:          datos.motivo,
     solicitadoPorId,
   }, auditCtx);
+}
+
+async function asignarBecaDirecta(datos, asignadoPorId, auditCtx = {}) {
+  const alumno = await alumnosRepository.findById(datos.alumnoId);
+  if (!alumno) throw Object.assign(new Error('Alumno no encontrado.'), { statusCode: 404 });
+
+  const asignacion = await becasRepository.createAsignacionDirecta(datos, asignadoPorId, auditCtx);
+  await calendarioPagoService.recalcularPorBeca(asignacion.alumnoId);
+  return asignacion;
+}
+
+async function retirarBecaDirecta(asignacionId, motivo, retiradoPorId, auditCtx = {}) {
+  const asignacion = await becasRepository.retirarAsignacionDirecta(asignacionId, motivo, retiradoPorId, auditCtx);
+  if (asignacion && asignacion.alumnoId) {
+    await calendarioPagoService.recalcularPorBeca(asignacion.alumnoId);
+  }
+  return asignacion;
 }
 
 /**
@@ -105,12 +134,14 @@ async function desactivarBeca(becaId, auditCtx = {}) {
 
 module.exports = {
   listarBecasActivas,
-  listarSolicitudes,
-  solicitarBeca,
-  resolverSolicitud,
-  desactivarBeca,
   listarCatalogoBecas,
   crearCatalogoBeca,
   actualizarCatalogoBeca,
   eliminarCatalogoBeca,
+  listarSolicitudes,
+  solicitarBeca,
+  asignarBecaDirecta,
+  retirarBecaDirecta,
+  resolverSolicitud,
+  desactivarBeca
 };

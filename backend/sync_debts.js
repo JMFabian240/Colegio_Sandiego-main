@@ -9,6 +9,7 @@ async function syncDeudas() {
         cicloId: ins.cicloId,
         concepto: 'colegiatura',
         estadoCobro: { not: 'pagado' },
+        fechaVencimiento: { lt: new Date() },
         eliminadoEn: null
       }
     });

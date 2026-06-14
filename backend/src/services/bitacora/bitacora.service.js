@@ -164,6 +164,37 @@ async function mapearAuditoria(registros) {
         }
         break;
 
+      case 'beca':
+        entidad = `Catálogo de Becas: "${vDespues.nombre_beca || vAntes.nombre_beca}"`;
+        if (r.accion === 'INSERT') {
+          detalle = `Nueva beca registrada: ${vDespues.porcentaje}% (${vDespues.criterio})`;
+        } else if (r.accion === 'UPDATE') {
+          detalle = `Actualización de beca`;
+        }
+        break;
+
+      case 'ciclo_escolar':
+        entidad = `Ciclo Escolar: "${vDespues.nombre || vAntes.nombre}"`;
+        if (r.accion === 'INSERT') {
+          detalle = `Ciclo creado`;
+        } else if (r.accion === 'UPDATE') {
+          if (vAntes.activo !== undefined && vAntes.activo !== vDespues.activo) {
+            detalle = `Estatus cambiado a: ${vDespues.activo ? 'Activo' : 'Inactivo'}`;
+          } else {
+            detalle = `Actualización de ciclo escolar`;
+          }
+        }
+        break;
+
+      case 'tarifa':
+        entidad = `Tarifa: ${vDespues.concepto || vAntes.concepto}`;
+        if (r.accion === 'INSERT') {
+          detalle = `Tarifa registrada: $${Number(vDespues.monto).toFixed(2)}`;
+        } else if (r.accion === 'UPDATE') {
+          detalle = `Tarifa actualizada: $${Number(vAntes.monto).toFixed(2)} -> $${Number(vDespues.monto).toFixed(2)}`;
+        }
+        break;
+
       default:
         entidad = r.tablaAfectada;
         detalle = r.accion === 'DELETE' ? 'Registro eliminado' : '—';

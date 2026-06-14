@@ -10,7 +10,7 @@ const calendarioPagoService = require('../../services/pagos/calendarioPago.servi
  */
 async function cerrarCiclo(req, res) {
   try {
-    const usuarioId = req.user.usuarioId;
+    const usuarioId = req.usuario?.id;
     const ip = req.ip;
 
     const resultado = await withAudit(usuarioId, ip, async (tx) => {
@@ -35,8 +35,7 @@ async function cerrarCiclo(req, res) {
             include: {
               nivel: true,
               calendariosPago: {
-                where: { cicloId: cicloActivo.cicloId },
-                include: { colegiaturas: true }
+                where: { cicloId: cicloActivo.cicloId }
               }
             }
           },
@@ -57,11 +56,10 @@ async function cerrarCiclo(req, res) {
         // Validar adeudos
         let tieneAdeudo = false;
         if (alumno.calendariosPago && alumno.calendariosPago.length > 0) {
-          const calendario = alumno.calendariosPago[0];
-          const colegiaturasVencidas = calendario.colegiaturas.filter(c => 
-            c.estado !== 'Pagado' && new Date(c.fechaVencimiento) < new Date()
+          const adeudosVencidos = alumno.calendariosPago.filter(c => 
+            c.estadoCobro === 'pendiente' && new Date(c.fechaVencimiento) < new Date()
           );
-          if (colegiaturasVencidas.length > 0) {
+          if (adeudosVencidos.length > 0) {
             tieneAdeudo = true;
           }
         }

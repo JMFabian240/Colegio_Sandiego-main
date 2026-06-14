@@ -243,6 +243,8 @@
     solicitar:         function (datos)     { return request('POST',   '/becas/solicitudes', datos); },
     resolver:          function (id, datos) { return request('PATCH',  '/becas/solicitudes/' + id + '/resolver', datos); },
     desactivar:        function (id)        { return request('DELETE', '/becas/' + id); },
+    asignar:           function (datos)     { return request('POST',   '/becas/asignar', datos); },
+    retirar:           function (id, datos) { return request('POST',   '/becas/asignaciones/' + id + '/retirar', datos); },
     catalogo: {
       listar:     function ()          { return request('GET',    '/becas/catalogo'); },
       crear:      function (datos)     { return request('POST',   '/becas/catalogo', datos); },
@@ -278,6 +280,7 @@
     obtener:    function (id)          { return request('GET',  '/grupos/' + id); },
     crear:      function (datos)       { return request('POST', '/grupos', datos); },
     actualizar: function (id, datos)   { return request('PUT',  '/grupos/' + id, datos); },
+    eliminar:   function (id)          { return request('DELETE', '/grupos/' + id); },
   };
 
   // ── Módulo: Usuarios (Solo ADMIN) ───────────────────────────────────────────
@@ -392,6 +395,8 @@
       id:      g.id,
       nombre:  g.nombre,
       nivel:   g.nivel,
+      grado:   g.grado,
+      seccion: g.seccion,
       titular: g.titular,
       activo:  g.activo,
       alumnos: (g._count && g._count.alumnos) ? g._count.alumnos : 0,

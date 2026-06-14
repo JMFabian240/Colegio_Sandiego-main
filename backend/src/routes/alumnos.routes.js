@@ -4,7 +4,7 @@ const { Router }                   = require('express');
 const alumnosController            = require('../controllers/alumnos/alumnos.controller');
 const cierreController             = require('../controllers/alumnos/cierre.controller');
 const { authenticate }             = require('../middleware/auth.middleware');
-const { authorize }                = require('../middleware/rbac.middleware');
+const { authorize, authorizePermiso } = require('../middleware/rbac.middleware');
 const { validate }                 = require('../middleware/validate.middleware');
 const {
   crearAlumnoValidators,
@@ -23,27 +23,27 @@ router.post('/cierre-ciclo',
   cierreController.cerrarCiclo
 );
 
-// GET /api/v1/alumnos — ADMIN y GESTOR pueden listar
+// GET /api/v1/alumnos — Listar (requiere permiso de lectura)
 router.get('/', buscarAlumnoValidators, validate,
-  authorize('ADMIN', 'GESTOR'),
+  authorizePermiso('alumnos', 'lectura'),
   alumnosController.listar
 );
 
 // GET /api/v1/alumnos/:id
 router.get('/:id',
-  authorize('ADMIN', 'GESTOR', 'MAESTRA'),
+  authorizePermiso('alumnos', 'lectura'),
   alumnosController.obtener
 );
 
-// POST /api/v1/alumnos — solo ADMIN y GESTOR pueden crear
+// POST /api/v1/alumnos — Crear (requiere permiso de escritura)
 router.post('/', crearAlumnoValidators, validate,
-  authorize('ADMIN', 'GESTOR'),
+  authorizePermiso('alumnos', 'escritura'),
   alumnosController.crear
 );
 
-// PUT /api/v1/alumnos/:id
+// PUT /api/v1/alumnos/:id — Actualizar (requiere permiso de escritura)
 router.put('/:id', actualizarAlumnoValidators, validate,
-  authorize('ADMIN', 'GESTOR'),
+  authorizePermiso('alumnos', 'escritura'),
   alumnosController.actualizar
 );
 

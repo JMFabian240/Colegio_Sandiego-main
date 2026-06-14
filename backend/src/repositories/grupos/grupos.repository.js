@@ -25,6 +25,8 @@ function mapGrupo(g) {
     id:      g.grupoId,
     nombre:  g.nombre,
     nivel:   g.nivel?.codigo ?? null,
+    grado:   g.grado,
+    seccion: g.seccion,
     cicloId: g.cicloId,
     activo:  g.eliminadoEn === null,
     titular: g.docenteTitular?.nombreCompleto ?? null,

@@ -8,6 +8,10 @@ const { validate }           = require('../middleware/validate.middleware');
 const {
   crearSolicitudBecaValidators,
   resolverSolicitudValidators,
+  crearCatalogoBecaValidators,
+  actualizarCatalogoBecaValidators,
+  asignarBecaValidators,
+  retirarBecaValidators
 } = require('../utils/validators/becas.validator');
 
 const router = Router();
@@ -19,15 +23,37 @@ router.get('/', authorize('ADMIN', 'GESTOR', 'MAESTRA'), becasController.listarB
 
 // ── CATÁLOGO DE BECAS ─────────────────────────────────────────
 router.get('/catalogo', authorize('ADMIN', 'GESTOR'), becasController.listarCatalogoBecas);
-router.post('/catalogo', authorize('ADMIN'), becasController.crearCatalogoBeca);
-router.patch('/catalogo/:id', authorize('ADMIN'), becasController.actualizarCatalogoBeca);
+router.post('/catalogo', 
+  crearCatalogoBecaValidators, validate,
+  authorize('ADMIN', 'GESTOR'), 
+  becasController.crearCatalogoBeca
+);
+router.patch('/catalogo/:id',
+  actualizarCatalogoBecaValidators, validate,
+  authorize('ADMIN', 'GESTOR'),
+  becasController.actualizarCatalogoBeca
+);
 router.delete('/catalogo/:id', authorize('ADMIN'), becasController.eliminarCatalogoBeca);
+// ─────────────────────────────────────────────────────────────
+
+// ── ASIGNACIONES DIRECTAS (ADMIN y GESTOR) ────────────────────────────
+router.post('/asignar',
+  asignarBecaValidators, validate,
+  authorize('ADMIN', 'GESTOR'),
+  becasController.asignarBecaDirecta
+);
+
+router.post('/asignaciones/:id/retirar',
+  retirarBecaValidators, validate,
+  authorize('ADMIN', 'GESTOR'),
+  becasController.retirarBecaDirecta
+);
 // ─────────────────────────────────────────────────────────────
 
 // GET /api/v1/becas/solicitudes — ADMIN ve todas; GESTOR ve las suyas
 router.get('/solicitudes', authorize('ADMIN', 'GESTOR'), becasController.listarSolicitudes);
 
-// POST /api/v1/becas/solicitudes — GESTOR y ADMIN pueden solicitar (RF-21)
+// POST /api/v1/becas/solicitudes — GESTOR y ADMIN pueden solicitar (RF-21, 26, 28)
 router.post('/solicitudes',
   crearSolicitudBecaValidators, validate,
   authorize('ADMIN', 'GESTOR'),

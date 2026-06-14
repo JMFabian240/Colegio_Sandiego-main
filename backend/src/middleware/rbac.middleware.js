@@ -42,6 +42,42 @@ function authorize(...rolesPermitidos) {
   };
 }
 
+function authorizePermiso(modulo, nivel) {
+  return (req, res, next) => {
+    if (!req.usuario) {
+      return res.status(401).json({
+        ok: false,
+        message: 'No autenticado. Ejecuta authenticate antes de authorizePermiso.',
+      });
+    }
+
+    const rolUsuario = req.usuario.rol;
+    // ADMIN y GESTOR tienen acceso a todos los módulos operativos por defecto
+    if (rolUsuario === 'ADMIN' || rolUsuario === 'GESTOR') {
+      return next();
+    }
+
+    const permisos = req.usuario.permisos || {};
+    const permisoUsuario = permisos[modulo];
+
+    if (!permisoUsuario || permisoUsuario === 'NINGUNO') {
+      return res.status(403).json({
+        ok: false,
+        message: `Acceso denegado. No tienes permisos para el módulo ${modulo}.`,
+      });
+    }
+
+    if (nivel === 'escritura' && permisoUsuario !== 'escritura') {
+       return res.status(403).json({
+        ok: false,
+        message: `Acceso denegado. Necesitas permisos de escritura para el módulo ${modulo}.`,
+      });
+    }
+
+    next();
+  };
+}
+
 /**
  * Atajos de autorización por combinaciones de roles frecuentes
  */
@@ -49,4 +85,4 @@ const soloAdmin           = authorize('ADMIN');
 const adminOGestor        = authorize('ADMIN', 'GESTOR');
 const todosLosRoles       = authorize('ADMIN', 'GESTOR', 'MAESTRA');
 
-module.exports = { authorize, soloAdmin, adminOGestor, todosLosRoles };
+module.exports = { authorize, authorizePermiso, soloAdmin, adminOGestor, todosLosRoles };

@@ -157,12 +157,8 @@
       },
 
       _redirigirPorRol(rol) {
-        var rutas = {
-          ADMIN:   '/admin_panel.html',
-          GESTOR:  '/gestor_panel.html',
-          MAESTRA: '/maestra_panel.html',
-        };
-        window.location.replace(rutas[rol] || '/admin_panel.html');
+        // Todos los roles van al panel unificado
+        window.location.replace('/panel.html');
       },
     }));
   });

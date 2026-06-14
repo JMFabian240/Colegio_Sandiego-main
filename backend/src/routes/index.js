@@ -19,10 +19,13 @@ const permisosRoutes      = require('./permisos.routes');
 const tutoresRoutes       = require('./tutores.routes');
 const configuracionRoutes = require('./configuracion.routes');
 const reportesRoutes      = require('./reportes.routes');
+const tarifasRoutes       = require('./tarifas.routes');
+const planesRoutes        = require('./v1/planes.routes');
 
 const router = Router();
 
 router.use('/auth',          authRoutes);
+router.use('/alumnos/:id/planes', planesRoutes);
 router.use('/alumnos',       alumnosRoutes);
 router.use('/tutores',       tutoresRoutes);
 router.use('/pagos',         pagosRoutes);
@@ -34,6 +37,7 @@ router.use('/bitacora',      bitacoraRoutes);
 router.use('/permisos',      permisosRoutes);
 router.use('/configuracion', configuracionRoutes);
 router.use('/reportes',      reportesRoutes);
+router.use('/tarifas',       tarifasRoutes);
 
 module.exports = router;
 

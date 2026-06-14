@@ -104,7 +104,7 @@ const limiter = rateLimit({
     message: 'Demasiadas solicitudes. Intenta de nuevo en 15 minutos.',
   },
 });
-app.use('/api', limiter);
+// app.use('/api', limiter); // Deshabilitado a petición del usuario
 
 // ── Rate Limit estricto para auth ────────────────────────────
 const authLimiter = rateLimit({
@@ -115,7 +115,7 @@ const authLimiter = rateLimit({
     message: 'Demasiados intentos de inicio de sesión. Intenta en 15 minutos.',
   },
 });
-app.use('/api/v1/auth', authLimiter);
+// app.use('/api/v1/auth', authLimiter); // Deshabilitado a petición del usuario
 
 // ── Parsers ───────────────────────────────────────────────────
 app.use(express.json({ limit: '1mb' }));
@@ -183,14 +183,16 @@ app.use(
 // Placeholder temporal hasta que se implemente la pantalla de login.
 // Una vez que exista /auth/login.html, este redirect apuntará ahí.
 app.get('/', (req, res) => {
-  res.redirect('/admin_panel.html');
+  res.redirect('/panel.html');
 });
 
 // ── Accesos directos explícitos a cada panel ──────────────────
 // Permite acceder mediante rutas limpias además de la URL directa al .html
-app.get('/admin',   (req, res) => res.sendFile(path.join(frontendPath, 'admin_panel.html')));
-app.get('/gestor',  (req, res) => res.sendFile(path.join(frontendPath, 'gestor_panel.html')));
-app.get('/maestra', (req, res) => res.sendFile(path.join(frontendPath, 'maestra_panel.html')));
+app.get('/panel',   (req, res) => res.sendFile(path.join(frontendPath, 'panel.html')));
+// Legacy routes — redirect to unified panel
+app.get('/admin',   (req, res) => res.redirect('/panel.html'));
+app.get('/gestor',  (req, res) => res.redirect('/panel.html'));
+app.get('/maestra', (req, res) => res.redirect('/panel.html'));
 
 // ── Rutas API ─────────────────────────────────────────────────
 app.use('/api/v1', router);

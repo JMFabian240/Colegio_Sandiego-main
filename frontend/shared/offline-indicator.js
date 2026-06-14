@@ -62,8 +62,8 @@
   // ── Sondeo al endpoint /health ───────────────────────────────
 
   function verificarConectividad() {
-    var base = (window.SAE_CONFIG && window.SAE_CONFIG.SERVER_IP)
-      ? 'http://' + window.SAE_CONFIG.SERVER_IP + ':' + (window.SAE_CONFIG.PORT || 3000)
+    var base = (window.SAE_CONFIG && window.SAE_CONFIG.API_BASE)
+      ? window.SAE_CONFIG.API_BASE.replace('/api/v1', '')
       : '';
 
     fetch(base + '/health', { method: 'GET', cache: 'no-store' })

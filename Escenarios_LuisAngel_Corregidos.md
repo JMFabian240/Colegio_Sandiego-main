@@ -230,6 +230,37 @@
 
 ---
 
+## RF-19: Gestionar Grupos y Materias
+*(Agregado durante implementación)*
+
+| Campo | Descripción |
+|---|---|
+| **Autor** | Antigravity AI |
+| **Actor** | Administrador y Gestor Administrativo |
+| **Objetivo** | Permitir la creación, edición y eliminación de grupos escolares, así como la asignación de materias, docentes y horarios a cada grupo. |
+| **Flujo Principal** | 1. El actor ingresa al panel principal y se dirige a la vista "Grupos y materias".<br>2. El sistema despliega un listado con los grupos registrados agrupados o listados por su nivel.<br>3. El actor hace clic en "Nuevo Grupo" o en "Editar" sobre un grupo existente.<br>4. El sistema abre un modal de registro de grupos y materias.<br>5. El actor ingresa o modifica el Nivel Educativo, Grado, Sección y el Docente Titular.<br>6. El actor agrega de forma dinámica las materias correspondientes al grupo, indicando nombre de la materia, docente asignado, horario y aula.<br>7. El actor hace clic en "Guardar Grupo".<br>8. El sistema valida que los campos obligatorios (Nivel, Grado, Sección) estén completos y tengan el formato adecuado.<br>9. El sistema almacena/actualiza el grupo en la base de datos y despliega un mensaje de éxito. |
+| **Flujo Alterno** | **A. Eliminación de grupo:**<br>1. En el paso 3, el actor hace clic en el botón "Eliminar" correspondiente a un grupo.<br>2. El sistema muestra una alerta de confirmación advirtiendo que la eliminación lo ocultará del sistema.<br>3. El actor confirma la eliminación.<br>4. El sistema ejecuta un borrado lógico ("soft delete") para no afectar los historiales de inscripciones y confirma la acción en pantalla. |
+| **Precondiciones** | El actor debe tener sesión iniciada con rol de Administrador o Gestor Administrativo y permisos de escritura en el módulo de grupos. |
+| **Postcondiciones** | El grupo queda registrado o actualizado en la base de datos, estando disponible de inmediato para vincular nuevos alumnos durante su inscripción (RF-14). |
+| **Reglas de negocio involucradas** | • Un grupo es la entidad base a la que se asocian las inscripciones, por tanto, es obligatorio definir el **Nivel**, **Grado** y **Sección**.<br>• El nombre del grupo se autogenera combinando grado, sección y nivel (Ej. "1°A Primaria") para estandarización.<br>• La eliminación de grupos siempre debe ser un **borrado lógico (soft delete)** para preservar el historial académico de los alumnos inscritos previamente. |
+
+---
+
+## RF-30: Configurar los montos para un nuevo ciclo escolar
+
+| Campo | Descripción |
+|---|---|
+| **Autor** | Diana Jareth Ritt Martinez |
+| **Actor** | Administrador y Gestor Administrativo |
+| **Objetivo** | Permitir al personal administrativo configurar los montos de colegiatura, inscripción, aranceles y materiales para un ciclo escolar determinado, diferenciándolos por nivel educativo y conservando sin cambios la información de ciclos anteriores. |
+| **Flujo Principal** | 1. El usuario ingresa al módulo de ciclo escolar.<br>2. El sistema muestra los ciclos escolares disponibles.<br>3. El usuario selecciona el ciclo escolar que desea configurar.<br>4. El sistema muestra los niveles educativos registrados.<br>5. El usuario selecciona un nivel educativo.<br>6. El sistema muestra los conceptos configurables: colegiatura, inscripción, aranceles y materiales.<br>7. El usuario captura los montos correspondientes para cada concepto.<br>8. El sistema valida que los montos ingresados sean correctos.<br>9. El sistema muestra un resumen con el ciclo escolar, nivel educativo y montos registrados.<br>10. El usuario revisa la información capturada.<br>11. El usuario selecciona la opción Guardar.<br>12. El sistema solicita confirmación para registrar los cambios.<br>13. El usuario confirma la operación.<br>14. El sistema guarda la configuración de montos para el ciclo escolar seleccionado.<br>15. El sistema registra la operación en la bitácora y muestra un mensaje de confirmación. |
+| **Flujo Alterno** | **A — Existen datos incompletos**<br>1. El usuario intenta guardar la configuración.<br>2. El sistema detecta que uno o más conceptos obligatorios no tienen monto.<br>3. El sistema señala los datos faltantes.<br>4. El sistema no guarda la configuración.<br>5. El usuario completa la información.<br>6. El flujo continúa desde el paso 9 del flujo principal.<br><br>**B — Se ingresó un monto inválido**<br>1. El usuario ingresa un monto negativo, igual a cero o con un formato no permitido.<br>2. El sistema informa que el monto no es válido.<br>3. El sistema solicita corregir el dato.<br>4. El usuario ingresa un nuevo monto.<br>5. El sistema vuelve a validar la información.<br><br>**C — Ya existen tarifas para el ciclo y nivel**<br>1. El usuario selecciona un ciclo y nivel que ya tienen montos configurados.<br>2. El sistema muestra los montos actuales.<br>3. El usuario modifica uno o más valores.<br>4. El sistema muestra un resumen de los cambios.<br>5. El sistema solicita confirmación.<br>6. El usuario confirma.<br>7. El sistema actualiza los montos del ciclo indicado.<br>8. Los registros históricos de ciclos anteriores permanecen sin cambios.<br><br>**D — El ciclo escolar está cerrado**<br>1. El usuario selecciona un ciclo escolar.<br>2. El sistema detecta que el ciclo está cerrado.<br>3. El sistema informa que no se pueden modificar sus tarifas.<br>4. El sistema permite únicamente consultar los montos registrados.<br>5. El caso de uso termina sin realizar cambios.<br><br>**E — El usuario cancela la operación**<br>1. El usuario ingresa o modifica los montos.<br>2. Antes de confirmar, selecciona Cancelar.<br>3. El sistema descarta los cambios no guardados.<br>4. Los montos anteriores permanecen sin modificaciones.<br>5. El sistema regresa a la consulta de configuración financiera. |
+| **Precondiciones** | • El usuario debe haber iniciado sesión.<br>• El usuario debe tener rol de Administrador o Gestor Administrativo.<br>• El ciclo escolar que será configurado debe estar registrado.<br>• Los niveles educativos deben estar registrados en el sistema.<br>• El ciclo escolar no debe estar cerrado.<br>• El usuario debe contar con permisos para configurar montos financieros. |
+| **Postcondiciones** | **Si la configuración se guarda correctamente:**<br>• Los montos quedan relacionados con el ciclo escolar y nivel educativo indicados.<br>• Los montos quedan disponibles para la generación de cobros del nuevo ciclo.<br>• Los ciclos escolares anteriores permanecen sin cambios.<br>• La configuración queda registrada en la bitácora.<br><br>**Si la operación no se completa:**<br>• Los montos anteriores permanecen sin cambios.<br>• No se crean registros incompletos.<br>• El usuario recibe información sobre el error. |
+| **Reglas de negocio involucradas** | • Las tarifas deben definirse por ciclo escolar.<br>• Las tarifas deben diferenciarse por nivel educativo.<br>• Los conceptos configurables incluyen colegiatura, inscripción, aranceles y materiales.<br>• Los nuevos montos solo deben aplicarse al ciclo indicado.<br>• Los cambios no deben alterar los históricos de ciclos anteriores.<br>• El sistema debe solicitar confirmación antes de guardar.<br>• Los montos deben ser mayores que cero.<br>• Un ciclo escolar cerrado no puede modificarse.<br>• Toda configuración o modificación debe registrarse en la bitácora. |
+
+---
+
 ## Notas pendientes
 
 Estos puntos quedaron identificados durante la corrección, pero requieren una decisión antes de cerrar el documento definitivo:

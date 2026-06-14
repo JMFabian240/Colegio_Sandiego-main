@@ -27,4 +27,9 @@ async function actualizar(id, datos, auditCtx = {}) {
   return gruposRepository.update(id, datos, auditCtx);
 }
 
-module.exports = { listar, obtenerPorId, crear, actualizar };
+async function eliminar(id, auditCtx = {}) {
+  await obtenerPorId(id);
+  return gruposRepository.softDelete(id, auditCtx);
+}
+
+module.exports = { listar, obtenerPorId, crear, actualizar, eliminar };

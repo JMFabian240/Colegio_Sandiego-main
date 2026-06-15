@@ -224,4 +224,98 @@ async function facturables(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { corteCaja, ingresosMensuales, deudores, facturables };
+/**
+ * GET /api/v1/reportes/examen-restringido
+ * Lista de alumnos que tienen restringido el acceso a exámenes
+ * por tener adeudos mayores a 60 días antes del inicio del periodo seleccionado.
+ */
+async function examenRestringido(req, res, next) {
+  try {
+    const { periodo } = req.query; // e.g. "TRIMESTRE_1"
+
+    // 1. Obtener ciclo escolar activo
+    const cicloActivo = await prisma.cicloEscolar.findFirst({
+      where: { activo: true },
+      orderBy: { fechaInicio: 'desc' }
+    });
+    if (!cicloActivo) {
+      return res.status(404).json({ ok: false, message: 'No hay ciclo escolar activo' });
+    }
+
+    // 2. Obtener el periodo de evaluación (asumiendo que los tipos son los valores del front o números)
+    // El frontend normalmente mapea 'Trimestre 1' a 'TRIMESTRE_1'. 
+    // Buscaremos cualquier periodo que coincida con ese numero o nombre.
+    let numeroPeriodo = 1;
+    if (periodo && periodo.includes('2')) numeroPeriodo = 2;
+    if (periodo && periodo.includes('3')) numeroPeriodo = 3;
+
+    const periodoEval = await prisma.periodoEvaluacion.findFirst({
+      where: { cicloId: cicloActivo.cicloId, numero: numeroPeriodo },
+      orderBy: { fechaInicio: 'asc' }
+    });
+
+    // Si no encontramos un periodo configurado, tomaremos la fecha de HOY como fallback.
+    const fechaReferencia = periodoEval ? new Date(periodoEval.fechaInicio) : new Date();
+
+    // 3. Calcular la fecha límite de morosidad (60 días ANTES de la referencia)
+    const fechaLimite = new Date(fechaReferencia);
+    fechaLimite.setDate(fechaLimite.getDate() - 60);
+
+    // 4. Buscar alumnos con deudas (estado pendiente o parcial) cuya fecha de vencimiento sea anterior a fechaLimite
+    const calendariosDeudores = await prisma.calendarioPago.findMany({
+      where: {
+        estadoCobro: { in: ['pendiente', 'parcial'] },
+        eliminadoEn: null,
+        fechaVencimiento: { lt: fechaLimite },
+        cicloId: cicloActivo.cicloId // restringimos a adeudos del ciclo activo o dejamos abierto a pasados
+      },
+      include: {
+        alumno: {
+          select: {
+            alumnoId: true,
+            matricula: true,
+            nombreCompleto: true,
+            estado: true,
+            nivel: { select: { nombre: true } }
+          }
+        }
+      }
+    });
+
+    // 5. Agrupar la deuda bloqueante por alumno
+    const porAlumno = {};
+    for (const cal of calendariosDeudores) {
+      if (cal.alumno.estado !== 'Activo' && cal.alumno.estado !== 'activo') continue; // Solo nos importan alumnos activos
+      
+      const key = cal.alumnoId;
+      if (!porAlumno[key]) {
+        porAlumno[key] = {
+          alumnoId: cal.alumno.alumnoId,
+          matricula: cal.alumno.matricula,
+          nombreCompleto: cal.alumno.nombreCompleto,
+          nivel: cal.alumno.nivel?.nombre || 'Sin Nivel',
+          deudaBloqueante: 0,
+          conceptosBloqueantes: 0
+        };
+      }
+      porAlumno[key].deudaBloqueante += Number(cal.saldoPendiente);
+      porAlumno[key].conceptosBloqueantes++;
+    }
+
+    const listaRestringidos = Object.values(porAlumno).sort((a, b) => a.nombreCompleto.localeCompare(b.nombreCompleto));
+
+    res.json({
+      ok: true,
+      data: {
+        periodoNombre: periodoEval ? periodoEval.nombre : `Periodo ${numeroPeriodo}`,
+        fechaReferencia: fechaReferencia.toISOString().slice(0, 10),
+        fechaLimiteMorosidad: fechaLimite.toISOString().slice(0, 10),
+        alumnosRestringidos: listaRestringidos
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { corteCaja, ingresosMensuales, deudores, facturables, examenRestringido };

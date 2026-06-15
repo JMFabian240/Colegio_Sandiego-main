@@ -308,12 +308,15 @@ async function create(datos, auditCtx = {}) { return withAudit(auditCtx.usuarioI
       
       await tx.inscripcionCiclo.upsert({
         where: { alumnoId_cicloId: { alumnoId: alumno.alumnoId, cicloId: cicloActivo.cicloId } },
-        update: { grupoId: Number(grupoId), planPagoId: planDefault?.planPagoId ?? null },
+        update: { 
+          grupoId: Number(grupoId), 
+          planPagoId: datos.planPagoId ? Number(datos.planPagoId) : (planDefault?.planPagoId ?? null) 
+        },
         create: {
           alumnoId: alumno.alumnoId,
           cicloId:  cicloActivo.cicloId,
           grupoId:  Number(grupoId),
-          planPagoId: planDefault?.planPagoId ?? null,
+          planPagoId: datos.planPagoId ? Number(datos.planPagoId) : (planDefault?.planPagoId ?? null),
           estadoEnCiclo:    'activa',
           estadoFinanciero: 'al_corriente',
         },
@@ -368,12 +371,15 @@ async function update(id, datos, auditCtx = {}) { return withAudit(auditCtx.usua
       });
       await tx.inscripcionCiclo.upsert({
         where: { alumnoId_cicloId: { alumnoId: Number(id), cicloId: cicloActivo.cicloId } },
-        update: { grupoId: Number(grupoId) },
+        update: { 
+          grupoId: Number(grupoId),
+          ...(datos.planPagoId ? { planPagoId: Number(datos.planPagoId) } : {})
+        },
         create: {
           alumnoId: Number(id),
           cicloId: cicloActivo.cicloId,
           grupoId: Number(grupoId),
-          planPagoId: planDefault?.planPagoId ?? null,
+          planPagoId: datos.planPagoId ? Number(datos.planPagoId) : (planDefault?.planPagoId ?? null),
           estadoFinanciero: 'al_corriente',
           mesesAdeudo: 0,
         }

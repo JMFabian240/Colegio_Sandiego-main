@@ -693,6 +693,7 @@
               <div class="card-clean col-span-2">
                 <div class="flex border-b overflow-x-auto whitespace-nowrap">
                   <button class="px-4 py-3 text-sm font-medium flex items-center" :class="tabTutorFicha==='alumnos'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabTutorFicha='alumnos'"><i data-lucide="users" class="w-4 h-4 mr-2"></i> Familia / Alumnos</button>
+                  <button class="px-4 py-3 text-sm font-medium flex items-center" :class="tabTutorFicha==='estado_cuenta_consolidado'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabTutorFicha='estado_cuenta_consolidado'; _cargarEstadoCuentaConsolidado()"><i data-lucide="wallet" class="w-4 h-4 mr-2"></i> Estado de Cuenta Consolidado</button>
                   <button class="px-4 py-3 text-sm font-medium flex items-center" :class="tabTutorFicha==='historial_pagos'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabTutorFicha='historial_pagos'; _cargarPagosTutorFicha()"><i data-lucide="receipt" class="w-4 h-4 mr-2"></i> Historial de Pagos</button>
                   <button class="px-4 py-3 text-sm font-medium" :class="tabTutorFicha==='informacion'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabTutorFicha='informacion'">Información del Tutor</button>
                 </div>
@@ -835,6 +836,27 @@
                     <div class="col-span-2">
                       <label class="text-xs font-medium text-gray-600">Correo para envío de CFDI</label>
                       <input type="email" class="input-modern" x-model="tutorFichaEditable.correoFacturacion" :readonly="!editandoFacturacionTutor" :class="errorFacturacion && (!tutorFichaEditable.correoFacturacion || !tutorFichaEditable.correoFacturacion.includes('@')) ? 'border-crimson-500 ring-crimson-500' : ''">
+                    </div>
+                  </div>
+
+                  <!-- Campos informativos para CFDI Educativo -->
+                  <div class="mt-6 border-t pt-4">
+                    <h4 class="text-sm font-bold text-navy-800 mb-2">Información para Complemento Educativo (CFDI)</h4>
+                    <p class="text-xs text-gray-500 mb-3">Estos datos son extraídos automáticamente de los expedientes de los alumnos vinculados a este tutor.</p>
+                    <div class="space-y-2">
+                      <template x-for="al in tutorActualFicha?.alumnos" :key="al.alumno.alumnoId">
+                        <div class="bg-gray-50 p-3 rounded-lg border border-gray-100 flex justify-between items-center">
+                          <div>
+                            <div class="font-bold text-xs text-navy-700" x-text="al.alumno.nombreCompleto"></div>
+                            <div class="text-[10px] text-gray-500" x-text="'Nivel: ' + al.alumno.nivel?.nombre"></div>
+                          </div>
+                          <div class="text-right">
+                            <div class="text-xs font-mono" x-text="'CURP: ' + (al.alumno.curp || 'No registrada')"></div>
+                            <div class="text-xs text-gray-600" x-text="'RVOE: ' + (al.alumno.nivel?.rvoe || 'No registrado')"></div>
+                          </div>
+                        </div>
+                      </template>
+                      <div x-show="!tutorActualFicha?.alumnos || tutorActualFicha.alumnos.length === 0" class="text-xs text-gray-400 italic">No hay alumnos vinculados.</div>
                     </div>
                   </div>
                   <div class="flex justify-end mt-4 pt-4 border-t border-gray-200">
@@ -1055,6 +1077,7 @@
             <button class="btn-outline text-sm" :class="reporteActivo==='ingresos' ? 'bg-navy-700 text-white border-navy-700' : ''" @click="reporteActivo='ingresos'; cargarReporteIngresos()">Ingresos Mensuales</button>
             <button class="btn-outline text-sm" :class="reporteActivo==='deudores' ? 'bg-navy-700 text-white border-navy-700' : ''" @click="reporteActivo='deudores'; cargarReporteDeudores()">Lista de Deudores</button>
             <button class="btn-outline text-sm" :class="reporteActivo==='facturables' ? 'bg-navy-700 text-white border-navy-700' : ''" @click="reporteActivo='facturables'; cargarReporteFacturables()">Padres Facturables</button>
+              <button class="btn-outline text-sm" :class="reporteActivo==='examen' ? 'bg-navy-700 text-white border-navy-700' : ''" @click="reporteActivo='examen'; cargarReporteExamenRestringido()">Exámenes Restringidos</button>
           </div>
 
           <!-- Corte de Caja -->
@@ -2597,7 +2620,88 @@ reporteCorte: null,
           }
         } catch(e) { window.saeApi.toast('error', 'Error de red'); }
       },
-      async desvincularTutor(tutorId) {
+      async _cargarEstadoCuentaConsolidado() {
+          if (!this.tutorActualFicha) return;
+          try {
+            // Obtenemos los alumnos del tutor
+            const alumnosIds = this.tutorActualFicha.alumnos.map(a => a.alumno.alumnoId);
+            if (!alumnosIds.length) {
+              this.estadoCuentaConsolidado = [];
+              this.totalDeudaConsolidada = 0;
+              return;
+            }
+
+            // Llamamos al endpoint calendario con múltiples alumnos si se puede, 
+            // sino hacemos fetch manual para cada uno. (Aquí simplificamos haciéndolo por cada uno)
+            let deudas = [];
+            for(const aId of alumnosIds) {
+               const res = await window.saeApi.pagos.calendario({ alumnoId: aId, estadoCobro: 'pendiente,parcial' });
+               if(res.ok && res.data) {
+                 deudas.push(...res.data.map(d => ({...d, alumno: this.tutorActualFicha.alumnos.find(x=>x.alumno.alumnoId===aId).alumno })));
+               }
+            }
+            
+            this.estadoCuentaConsolidado = deudas.sort((a,b) => new Date(a.fechaVencimiento) - new Date(b.fechaVencimiento));
+            this.totalDeudaConsolidada = this.estadoCuentaConsolidado.reduce((sum, item) => sum + Number(item.saldoPendiente || 0), 0);
+            
+            setTimeout(() => { if(window.lucide) window.lucide.createIcons(); }, 150);
+          } catch(e) {
+            console.error(e);
+          }
+        },
+        abrirModalPagoConsolidado() {
+          this.pagoConsolidadoTemp = { metodo: 'efectivo', comprobante: null, abonos: {} };
+          // Por defecto asignamos abonos automáticos para liquidar todo o podemos dejar que el usuario asigne
+          for(const item of this.estadoCuentaConsolidado) {
+             this.pagoConsolidadoTemp.abonos[item.calendarioPagoId] = item.saldoPendiente;
+          }
+          this.modalPagoConsolidado = true;
+        },
+        async procesarPagoConsolidado() {
+           const abonosArray = [];
+           let suma = 0;
+           for(const key in this.pagoConsolidadoTemp.abonos) {
+              const monto = Number(this.pagoConsolidadoTemp.abonos[key]);
+              if(monto > 0) {
+                 abonosArray.push({ calendarioPagoId: Number(key), montoAbonado: monto });
+                 suma += monto;
+              }
+           }
+           if(suma <= 0) return window.saeApi.toast('error', 'El monto a pagar debe ser mayor a 0');
+
+           try {
+             this.cargando = true;
+             // Primero registramos el pago
+             const res = await fetch(`/api/v1/pagos/consolidado`, {
+               method: 'POST',
+               headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token'), 'Content-Type': 'application/json' },
+               body: JSON.stringify({ tutorId: this.tutorActualFicha.tutorId, abonos: abonosArray, metodoPago: this.pagoConsolidadoTemp.metodo })
+             }).then(r => r.json());
+
+             if(!res.ok) throw new Error(res.message);
+
+             // Subir comprobante si hay
+             if(this.pagoConsolidadoTemp.comprobante && res.data?.pagoId) {
+                const formData = new FormData();
+                formData.append('comprobante', this.pagoConsolidadoTemp.comprobante);
+                await fetch(`/api/v1/pagos/${res.data.pagoId}/comprobante`, {
+                  method: 'POST',
+                  headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+                  body: formData
+                });
+             }
+
+             window.saeApi.toast('exito', 'Pago consolidado registrado');
+             this.modalPagoConsolidado = false;
+             this._cargarEstadoCuentaConsolidado();
+           } catch(e) {
+             window.saeApi.toast('error', e.message);
+           } finally {
+             this.cargando = false;
+           }
+        },
+
+        async desvincularTutor(tutorId) {
         if (!confirm('¿Seguro que deseas desvincular este tutor del alumno?')) return;
         try {
           const res = await window.saeApi.tutores.desvincular(tutorId, this.alumnoActualFicha.id);

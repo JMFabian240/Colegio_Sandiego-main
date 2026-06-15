@@ -34,13 +34,19 @@ async function crear(datos, auditCtx) {
   
   // Hook: Generar Calendario de Pagos Automáticamente si se inscribió (RF-15)
   // La creación inscribe al alumno en el ciclo activo automáticamente si se pasó grupoId.
-  if (alumnoCreado && alumnoCreado.inscripciones && alumnoCreado.inscripciones.length > 0) {
-    const inscripcion = alumnoCreado.inscripciones[0]; // La que se acaba de crear/actualizar
-    try {
-      await calendarioPagoService.generarCalendario(inscripcion.inscripcionId || inscripcion.id);
-    } catch (e) {
-      console.error(`Error al generar calendario automático para alumno ${alumnoCreado.alumnoId}:`, e.message);
-      // No bloqueamos la creación del alumno por esto, se puede regenerar manual después
+  if (datos.grupoId) {
+    const { PrismaClient } = require('@prisma/client');
+    const prisma = new PrismaClient();
+    const inscripcion = await prisma.inscripcionCiclo.findFirst({
+      where: { alumnoId: alumnoCreado.id },
+      orderBy: { creadoEn: 'desc' }
+    });
+    if (inscripcion) {
+      try {
+        await calendarioPagoService.generarCalendario(inscripcion.inscripcionId);
+      } catch (e) {
+        console.error(`Error al generar calendario automático para alumno ${alumnoCreado.id}:`, e.message);
+      }
     }
   }
 
@@ -70,6 +76,28 @@ async function actualizar(id, datos, auditCtx) {
     if (estadoNuevo === 'baja definitiva' && estadoPrevio === 'baja temporal') {
       // El calendario ya está suspendido, solo se formaliza el estado.
       // (Aquí se podría agregar lógica extra si fuera necesario, como generar un certificado de baja).
+    }
+  }
+
+  // Hook: Generar Calendario de Pagos si se le asignó un grupo y no tiene pagos
+  if (datos.grupoId !== undefined) {
+    const { PrismaClient } = require('@prisma/client');
+    const prisma = new PrismaClient();
+    const inscripcion = await prisma.inscripcionCiclo.findFirst({
+      where: { alumnoId: Number(id) },
+      orderBy: { creadoEn: 'desc' }
+    });
+    if (inscripcion) {
+      const pagosGenerados = await prisma.calendarioPago.count({
+        where: { alumnoId: inscripcion.alumnoId, cicloId: inscripcion.cicloId }
+      });
+      if (pagosGenerados === 0 || datos.planPagoId) {
+        try {
+          await calendarioPagoService.generarCalendario(inscripcion.inscripcionId);
+        } catch (e) {
+          console.error(`Error al generar calendario automático para alumno ${id}:`, e.message);
+        }
+      }
     }
   }
 

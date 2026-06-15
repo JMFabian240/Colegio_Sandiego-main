@@ -12,5 +12,6 @@ router.get('/corte-caja',         reportesController.corteCaja);
 router.get('/ingresos-mensuales', reportesController.ingresosMensuales);
 router.get('/deudores',           reportesController.deudores);
 router.get('/facturables',        reportesController.facturables);
+router.get('/examen-restringido', reportesController.examenRestringido);
 
 module.exports = router;

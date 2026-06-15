@@ -62,6 +62,12 @@ router.post('/', crearPagoValidators, validate,
   pagosController.registrar
 );
 
+// POST /api/v1/pagos/consolidado
+router.post('/consolidado',
+  authorizePermiso('pagos', 'escritura'),
+  pagosController.registrarConsolidado
+);
+
 // POST /api/v1/pagos/:pagoId/comprobante — subir comprobante digital
 router.post('/:pagoId/comprobante',
   authorizePermiso('pagos', 'escritura'),

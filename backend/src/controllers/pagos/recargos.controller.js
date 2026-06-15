@@ -15,24 +15,42 @@ async function modificarRecargo(req, res, next) {
     if (montoNuevo === undefined || montoNuevo === null) {
       return res.status(400).json({ ok: false, message: 'Se requiere montoNuevo.' });
     }
+    
+    // Validar monto negativo (Flujo B)
+    if (Number(montoNuevo) < 0) {
+      return res.status(400).json({ ok: false, message: 'El monto del recargo no puede ser negativo.' });
+    }
+
     if (!motivo || motivo.trim().length < 3) {
       return res.status(400).json({ ok: false, message: 'Se requiere un motivo de al menos 3 caracteres.' });
     }
 
-    const recargo = await prisma.recargo.findUnique({ where: { recargoId } });
+    const recargo = await prisma.recargo.findUnique({ 
+      where: { recargoId },
+      include: { calendarioPago: true }
+    });
     if (!recargo) {
       return res.status(404).json({ ok: false, message: 'Recargo no encontrado.' });
     }
 
-    const nuevoMonto = Math.max(0, Number(montoNuevo));
-    const diferencia = Number(recargo.montoActual) - nuevoMonto;
+    // Validar que no se modifique si el pago ya fue cubierto (Flujo D)
+    if (recargo.calendarioPago && recargo.calendarioPago.estadoCobro === 'pagado') {
+      return res.status(400).json({ ok: false, message: 'No se puede modificar un recargo que ya fue cubierto dentro de un pago registrado.' });
+    }
+
+    const nuevoMonto = Number(montoNuevo);
+    const montoAnterior = Number(recargo.montoActual);
+
+    if (nuevoMonto > Number(recargo.montoOriginal)) {
+      return res.status(400).json({ ok: false, message: `El nuevo monto no puede exceder el monto original ($${Number(recargo.montoOriginal).toFixed(2)}).` });
+    }
 
     // Actualizar el recargo
     const recargoActualizado = await prisma.recargo.update({
       where: { recargoId },
       data: {
         montoActual: nuevoMonto,
-        estado: nuevoMonto === 0 ? 'condonado' : 'modificado',
+        estado: nuevoMonto === 0 ? 'condonado' : 'reducido',
         motivoModificacion: motivo.trim(),
         modificadoPor: req.usuario?.id ?? null,
         modificadoEn: new Date(),
@@ -50,11 +68,24 @@ async function modificarRecargo(req, res, next) {
       data: { montoRecargo: totalRecargos },
     });
 
+    // Registrar en bitácora (Flujos Principal y G)
+    await prisma.logAuditoria.create({
+      data: {
+        usuarioId: req.usuario?.id || 1,
+        accion: 'UPDATE',
+        tablaAfectada: 'recargo',
+        registroId: recargoId.toString(),
+        valoresAntes: recargo,
+        valoresDespues: recargoActualizado,
+        direccionIp: req.ip
+      }
+    });
+
     res.json({
       ok: true,
       message: nuevoMonto === 0
         ? 'Recargo condonado completamente.'
-        : `Recargo modificado de $${Number(recargo.montoActual).toFixed(2)} a $${nuevoMonto.toFixed(2)}.`,
+        : `Recargo modificado de $${montoAnterior.toFixed(2)} a $${nuevoMonto.toFixed(2)}.`,
       data: recargoActualizado,
     });
   } catch (err) { next(err); }

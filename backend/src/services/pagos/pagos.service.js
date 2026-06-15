@@ -203,4 +203,36 @@ async function registrarAdelantado(datos, usuarioId, auditCtx = {}) {
   }, periodosProcesados, auditCtx);
 }
 
-module.exports = { listar, obtenerPorId, registrar, obtenerCalendario, totalPorAlumno, registrarAdelantado };
+async function registrarConsolidado(datos, usuarioId, auditCtx = {}) {
+  const { tutorId, metodoPago, fecha, abonos } = datos;
+
+  if (!tutorId) {
+    throw Object.assign(new Error('El ID del tutor es requerido para un pago consolidado.'), { statusCode: 400 });
+  }
+  if (!abonos || !Array.isArray(abonos) || abonos.length === 0) {
+    throw Object.assign(new Error('No se han proporcionado abonos para procesar el pago consolidado.'), { statusCode: 400 });
+  }
+
+  // Validar montos y sumas
+  let sumaAbonos = 0;
+  for (const abono of abonos) {
+    if (!abono.calendarioPagoId || !abono.montoAbonado) {
+      throw Object.assign(new Error('Cada abono debe tener calendarioPagoId y montoAbonado.'), { statusCode: 400 });
+    }
+    const monto = Number(abono.montoAbonado);
+    if (isNaN(monto) || monto <= 0) {
+      throw Object.assign(new Error('El monto abonado debe ser mayor a 0.'), { statusCode: 400 });
+    }
+    sumaAbonos += monto;
+  }
+
+  const datosConSuma = {
+    ...datos,
+    montoTotal: sumaAbonos,
+    registradoPorId: usuarioId
+  };
+
+  return pagosRepository.createConsolidado(datosConSuma, abonos, auditCtx);
+}
+
+module.exports = { listar, obtenerPorId, registrar, obtenerCalendario, totalPorAlumno, registrarAdelantado, registrarConsolidado };

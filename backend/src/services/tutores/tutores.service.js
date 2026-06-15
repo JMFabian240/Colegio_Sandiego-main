@@ -24,6 +24,16 @@ async function crear(datos, auditCtx) {
       );
     }
   }
+
+  if (datos.requiereFactura) {
+    if (!datos.rfc || datos.rfc.trim().length === 0) {
+      throw Object.assign(new Error('Si el tutor requiere factura, el RFC es obligatorio.'), { statusCode: 400 });
+    }
+    if (!datos.regimenFiscal || datos.regimenFiscal.trim().length === 0) {
+      throw Object.assign(new Error('Si el tutor requiere factura, el Régimen Fiscal es obligatorio.'), { statusCode: 400 });
+    }
+  }
+
   return tutoresRepository.create(datos, auditCtx);
 }
 
@@ -37,6 +47,15 @@ async function actualizar(id, datos, auditCtx) {
         new Error(`El RFC ${datos.rfc} ya está registrado en otro perfil.`),
         { statusCode: 409 }
       );
+    }
+  }
+
+  if (datos.requiereFactura) {
+    if (!datos.rfc || datos.rfc.trim().length === 0) {
+      throw Object.assign(new Error('Si el tutor requiere factura, el RFC es obligatorio.'), { statusCode: 400 });
+    }
+    if (!datos.regimenFiscal || datos.regimenFiscal.trim().length === 0) {
+      throw Object.assign(new Error('Si el tutor requiere factura, el Régimen Fiscal es obligatorio.'), { statusCode: 400 });
     }
   }
 

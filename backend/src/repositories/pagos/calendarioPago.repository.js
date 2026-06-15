@@ -82,6 +82,7 @@ async function findInscripcionById(inscripcionId) {
 async function createCalendarioBatch(dataArray) {
   return prisma.calendarioPago.createMany({
     data: dataArray,
+    skipDuplicates: true,
   });
 }
 

@@ -488,4 +488,119 @@ async function createAdelantado(datos, periodos, auditCtx = {}) {
   return findById(pago.pagoId);
 }
 
-module.exports = { findAll, findById, create, sumaByAlumno, findCalendario, createAdelantado };
+async function createConsolidado(datos, abonos, auditCtx = {}) {
+  const pago = await prisma.$transaction(async (tx) => {
+    // 1. Crear el pago principal
+    const nuevoPago = await tx.pago.create({
+      data: {
+        tutorId:       datos.tutorId,
+        fechaPago:     new Date(datos.fecha || new Date()),
+        montoTotal:    datos.montoTotal,
+        metodoPago:    datos.metodoPago ?? 'efectivo',
+        observaciones: datos.observaciones || 'Pago Consolidado',
+        registradoPor: datos.registradoPorId ? Number(datos.registradoPorId) : null,
+      },
+    });
+
+    const cicloIdsAfectados = new Set();
+    const alumnoIdsAfectados = new Set();
+
+    // 2. Procesar cada abono individual
+    for (const abono of abonos) {
+      const deuda = await tx.calendarioPago.findUnique({
+        where: { calendarioPagoId: Number(abono.calendarioPagoId) },
+        include: { 
+          alumno: { include: { asignacionesBeca: { where: { estado: 'activa' }, include: { beca: true } } } }
+        }
+      });
+
+      if (!deuda) continue;
+
+      cicloIdsAfectados.add(deuda.cicloId);
+      alumnoIdsAfectados.add(deuda.alumnoId);
+
+      const asignacionBeca = deuda.alumno?.asignacionesBeca?.[0];
+      const porcentajeBeca = asignacionBeca && asignacionBeca.beca ? Number(asignacionBeca.beca.porcentaje) : 0;
+
+      let montoCobrado = Number(deuda.montoOriginal);
+      if (porcentajeBeca > 0 && deuda.concepto.toLowerCase() === 'colegiatura') {
+        const descuento = (montoCobrado * porcentajeBeca) / 100;
+        montoCobrado = montoCobrado - descuento;
+      }
+
+      const pagadoAnterior = Number(deuda.montoPagado);
+      const recargoActual  = Number(deuda.montoRecargo);
+      const abonoMonto = Number(abono.montoAbonado);
+
+      const nuevoMontoPagado = pagadoAnterior + abonoMonto;
+      const totalDeuda = montoCobrado + recargoActual;
+      
+      let nuevoEstado = 'parcial';
+      if (nuevoMontoPagado >= totalDeuda - 0.01) {
+        nuevoEstado = 'pagado';
+      }
+
+      // Actualizar CalendarioPago
+      await tx.calendarioPago.update({
+        where: { calendarioPagoId: deuda.calendarioPagoId },
+        data: {
+          montoPagado: nuevoMontoPagado,
+          estadoCobro: nuevoEstado,
+          liquidadoAt: nuevoEstado === 'pagado' ? new Date() : null,
+          actualizadoEn: new Date(),
+        },
+      });
+
+      // Crear registro de la aplicación
+      await tx.aplicacionPago.create({
+        data: {
+          pagoId: nuevoPago.pagoId,
+          calendarioPagoId: deuda.calendarioPagoId,
+          montoAplicado: abonoMonto,
+          fechaAplicacion: new Date(),
+          aplicadoA: 'capital',
+        },
+      });
+    }
+
+    // Actualizar meses de adeudo de los alumnos
+    for (const cId of Array.from(cicloIdsAfectados)) {
+      for (const aId of Array.from(alumnoIdsAfectados)) {
+        const mesesDeudaCount = await tx.calendarioPago.count({
+          where: {
+            alumnoId: Number(aId),
+            cicloId: cId,
+            concepto: 'colegiatura',
+            estadoCobro: { not: 'pagado' },
+            fechaVencimiento: { lt: new Date() },
+            eliminadoEn: null
+          }
+        });
+        
+        await tx.inscripcionCiclo.updateMany({
+          where: { alumnoId: Number(aId), cicloId: cId },
+          data: { mesesAdeudo: mesesDeudaCount }
+        });
+      }
+    }
+
+    if (auditCtx?.usuarioId) {
+      await tx.logAuditoria.create({
+        data: {
+          usuarioId: auditCtx.usuarioId,
+          accion: 'INSERT',
+          tablaAfectada: 'pago_consolidado',
+          registroId: nuevoPago.pagoId.toString(),
+          valoresDespues: nuevoPago,
+          direccionIp: auditCtx.ip
+        }
+      });
+    }
+
+    return nuevoPago;
+  });
+
+  return findById(pago.pagoId);
+}
+
+module.exports = { findAll, findById, create, sumaByAlumno, findCalendario, createAdelantado, createConsolidado };

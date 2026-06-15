@@ -64,7 +64,8 @@ async function findById(id) {
               alumnoId: true,
               matricula: true,
               nombreCompleto: true,
-              nivel: { select: { nombre: true } },
+              curp: true,
+              nivel: { select: { nombre: true, rvoe: true } },
               estado: true
             }
           }

@@ -423,8 +423,42 @@
                     <div class="col-span-2">
                       <label class="text-xs font-medium text-gray-600">Personas autorizadas para recoger (separadas por coma)</label>
                       <textarea class="input-modern" rows="2" x-model="alumnoFichaEditable.autorizados"></textarea>
+                      </div>
                     </div>
-                  </div>
+                    <!-- Boleta Virtual -->
+                    <div class="mt-6 border-t pt-4" x-show="historialAcademico.length > 0">
+                      <div class="flex justify-between items-end mb-4">
+                        <h3 class="text-lg font-bold text-navy-800">Boleta Virtual (Historial Académico)</h3>
+                        <div class="text-right">
+                          <div class="text-xs text-gray-500">Promedio General</div>
+                          <div class="text-xl font-bold text-navy-800" x-text="promedioGeneralFicha"></div>
+                        </div>
+                      </div>
+                      <div class="overflow-x-auto border border-gray-100 rounded-lg">
+                        <table class="w-full text-sm text-left">
+                          <thead class="bg-gray-50 text-gray-600">
+                            <tr>
+                              <th class="p-3 font-semibold">Materia</th>
+                              <th class="p-3 font-semibold text-center w-32">Trimestre 1</th>
+                              <th class="p-3 font-semibold text-center w-32">Trimestre 2</th>
+                              <th class="p-3 font-semibold text-center w-32">Trimestre 3</th>
+                              <th class="p-3 font-semibold text-center w-24">Promedio</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <template x-for="mat in historialAcademico" :key="mat.id">
+                              <tr class="border-b">
+                                <td class="p-3 font-medium text-gray-800" x-text="mat.nombre"></td>
+                                <td class="p-3 text-center" x-text="mat.T1.v !== '' ? mat.T1.v : (mat.T1.t ? 'Obs. registradas' : '-')"></td>
+                                <td class="p-3 text-center" x-text="mat.T2.v !== '' ? mat.T2.v : (mat.T2.t ? 'Obs. registradas' : '-')"></td>
+                                <td class="p-3 text-center" x-text="mat.T3.v !== '' ? mat.T3.v : (mat.T3.t ? 'Obs. registradas' : '-')"></td>
+                                <td class="p-3 text-center font-bold" :class="mat.prom < 6 ? 'text-red-500' : 'text-emerald-600'" x-text="mat.prom"></td>
+                              </tr>
+                            </template>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   <div class="flex justify-between items-center mt-6">
                     <div class="flex gap-2">
                       <template x-if="alumnoActualFicha?.estado === 'Activo'">
@@ -872,7 +906,84 @@
 
 
       <!-- CALIFICACIONES -->
-      <template x-if="view==='calificaciones'"><div><h2 class="text-xl font-bold text-navy-800 mb-3">Calificaciones · Buscador inteligente</h2><div class="grid md:grid-cols-2 gap-4 mb-5"><div><label class="text-xs font-medium text-gray-600">Alumno (más de 100 registros)</label><input type="text" class="input-modern" placeholder="Escribe nombre o matrícula..." x-model="busquedaCalif" @input="buscarAlumnoCalif"></div><div><label class="text-xs font-medium text-gray-600">Periodo</label><select class="input-modern" x-model="periodoCalif"><option>Trimestre 1</option><option>Trimestre 2</option><option>Trimestre 3</option></select></div></div><div class="card-clean p-5" x-show="alumnoSeleccionadoCalif"><div class="font-bold text-lg text-navy-700" x-text="alumnoActualCalif?.nombre"></div><div class="text-sm text-gray-500 mb-3" x-text="alumnoActualCalif?.grupo"></div><div class="space-y-3"><div class="flex justify-between items-center border-b py-2"><span class="font-medium">Matemáticas</span><input class="w-28 input-modern text-center" x-model="calificacionesTemp.matematicas" type="number" step="0.1"></div><div class="flex justify-between items-center border-b py-2"><span class="font-medium">Español</span><input class="w-28 input-modern text-center" x-model="calificacionesTemp.espanol"></div><div class="flex justify-between items-center border-b py-2"><span class="font-medium">Ciencias</span><input class="w-28 input-modern text-center" x-model="calificacionesTemp.ciencias"></div></div><div class="flex justify-end gap-3 mt-5"><button class="btn-outline" @click="alumnoSeleccionadoCalif=false">Cancelar</button><button class="btn-primary" @click="guardarCalificacion()">Guardar</button></div></div><div class="text-gray-400 text-sm text-center py-6" x-show="!alumnoSeleccionadoCalif && busquedaCalif.length>2 && alumnosCoincidencias.length===0">No se encontraron alumnos</div><div class="grid gap-2 mt-3" x-show="!alumnoSeleccionadoCalif && busquedaCalif.length>1"><template x-for="al in alumnosCoincidencias.slice(0,6)"><div class="card-clean p-3 flex justify-between items-center cursor-pointer hover:bg-navy-50 transition" @click="seleccionarAlumnoCalif(al)"><div><span class="font-medium text-navy-700" x-text="al.nombre"></span><div class="text-xs text-gray-400" x-text="al.matricula"></div></div><button class="btn-primary text-xs">Seleccionar</button></div></template></div></div></template>
+      <template x-if="view==='calificaciones'"><div><h2 class="text-xl font-bold text-navy-800 mb-3">Calificaciones 
+— Buscador inteligente</h2>
+<div class="grid md:grid-cols-4 gap-4 mb-5">
+  <div>
+    <label class="text-xs font-medium text-gray-600">Alumno</label>
+    <input type="text" class="input-modern" placeholder="Nombre o matrícula..." x-model="busquedaCalif" @input="buscarAlumnoCalif">
+  </div>
+  <div>
+    <label class="text-xs font-medium text-gray-600">Nivel Escolar</label>
+    <select class="input-modern" x-model="filtroCalifNivel" @change="filtroCalifGrado=''; filtroCalifGrupo=''; buscarAlumnoCalif()">
+      <option value="">Todos los niveles</option>
+      <template x-for="n in nivelesDisponibles" :key="n"><option :value="n" x-text="n"></option></template>
+    </select>
+  </div>
+  <div>
+    <label class="text-xs font-medium text-gray-600">Grado</label>
+    <select class="input-modern" x-model="filtroCalifGrado" @change="filtroCalifGrupo=''; buscarAlumnoCalif()" :disabled="!filtroCalifNivel">
+      <option value="">Grado</option>
+      <template x-for="g in ['1','2','3','4','5','6']" :key="g"><option :value="g" x-text="g + '°'"></option></template>
+    </select>
+  </div>
+  <div>
+    <label class="text-xs font-medium text-gray-600">Grupo</label>
+    <select class="input-modern" x-model="filtroCalifGrupo" @change="buscarAlumnoCalif()" :disabled="!filtroCalifGrado">
+      <option value="">Grupo</option>
+      <template x-for="s in ['A','B','C','D']" :key="s"><option :value="s" x-text="s"></option></template>
+    </select>
+  </div>
+</div>
+<div class="card-clean p-5" x-show="alumnoSeleccionadoCalif">
+  <div class="flex justify-between items-end mb-4">
+    <div>
+      <div class="font-bold text-lg text-navy-700" x-text="alumnoActualCalif?.nombre"></div>
+      <div class="text-sm text-gray-500" x-text="alumnoActualCalif?.grupo"></div>
+    </div>
+    <div class="text-right">
+      <div class="text-xs text-gray-500">Promedio General</div>
+      <div class="text-xl font-bold text-navy-800" x-text="promedioGeneralCalif"></div>
+    </div>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm text-left">
+      <thead class="bg-gray-50 text-gray-600">
+        <tr>
+          <th class="p-3 font-semibold rounded-tl-lg">Materia</th>
+          <th class="p-3 font-semibold text-center w-32">Trimestre 1</th>
+          <th class="p-3 font-semibold text-center w-32">Trimestre 2</th>
+          <th class="p-3 font-semibold text-center w-32">Trimestre 3</th>
+          <th class="p-3 font-semibold text-center w-24 rounded-tr-lg">Promedio</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="mat in materiasAlumno" :key="mat.id">
+          <tr class="border-b">
+            <td class="p-3 font-medium text-gray-800" x-text="mat.nombre"></td>
+            <td class="p-2">
+              <template x-if="esPreescolar"><textarea class="w-full input-modern text-xs p-1 h-10 resize-none" x-model="mat.T1.t" placeholder="Obs..."></textarea></template>
+              <template x-if="!esPreescolar"><input type="number" class="w-full input-modern text-center" min="0" max="10" step="0.1" x-model="mat.T1.v" @input="recalcularPromediosCalif()"></template>
+            </td>
+            <td class="p-2">
+              <template x-if="esPreescolar"><textarea class="w-full input-modern text-xs p-1 h-10 resize-none" x-model="mat.T2.t" placeholder="Obs..."></textarea></template>
+              <template x-if="!esPreescolar"><input type="number" class="w-full input-modern text-center" min="0" max="10" step="0.1" x-model="mat.T2.v" @input="recalcularPromediosCalif()"></template>
+            </td>
+            <td class="p-2">
+              <template x-if="esPreescolar"><textarea class="w-full input-modern text-xs p-1 h-10 resize-none" x-model="mat.T3.t" placeholder="Obs..."></textarea></template>
+              <template x-if="!esPreescolar"><input type="number" class="w-full input-modern text-center" min="0" max="10" step="0.1" x-model="mat.T3.v" @input="recalcularPromediosCalif()"></template>
+            </td>
+            <td class="p-3 text-center font-bold" :class="mat.prom < 6 ? 'text-red-500' : 'text-emerald-600'" x-text="mat.prom"></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+  <div class="flex justify-end gap-3 mt-5">
+    <button class="btn-outline" @click="alumnoSeleccionadoCalif=false">Cancelar</button>
+    <button class="btn-primary" @click="guardarCalificacion()">Guardar Calificaciones</button>
+  </div>
+</div><div class="text-gray-400 text-sm text-center py-6" x-show="!alumnoSeleccionadoCalif && busquedaCalif.length>2 && alumnosCoincidencias.length===0">No se encontraron alumnos</div><div class="grid gap-2 mt-3" x-show="!alumnoSeleccionadoCalif && busquedaCalif.length>1"><template x-for="al in alumnosCoincidencias.slice(0,6)"><div class="card-clean p-3 flex justify-between items-center cursor-pointer hover:bg-navy-50 transition" @click="seleccionarAlumnoCalif(al)"><div><span class="font-medium text-navy-700" x-text="al.nombre"></span><div class="text-xs text-gray-400" x-text="al.matricula"></div></div><button class="btn-primary text-xs">Seleccionar</button></div></template></div></div></template>
 
       <!-- BECAS -->
       <template x-if="view==='becas'">
@@ -2025,8 +2136,8 @@ reporteCorte: null,
       // ── Calificaciones ──────────────────────────────────────────────────────
       alumnoSeleccionadoCalif: false,
       alumnoActualCalif: null,
-      calificacionesTemp: { matematicas: '', espanol: '', ciencias: '' },
-      _materiasIds: { matematicas: null, espanol: null, ciencias: null },
+      materiasAlumno: [], esPreescolar: false,
+      
 
       // ── Ficha alumno & Directorio ───────────────────────────────────────────
       alumnoSeleccionado: false,
@@ -3080,7 +3191,7 @@ reporteCorte: null,
         return this.becasAsignadas.find(b => b.alumnoId === this.alumnoActualFicha.id);
       },
       seleccionarAlumnoFicha(al) {
-        window.saeApi.alumnos.obtener(al.id).then(res => {
+        window.saeApi.alumnos.obtener(al.id).then(async res => {
           if (res && res.ok && res.data) {
             this.alumnoActualFicha = res.data;
             this.alumnoActualFicha.padresLista = res.data.padres || [];
@@ -3100,7 +3211,54 @@ reporteCorte: null,
             this.tabAlumnoFicha = 'academicos';
             // Asegurarse de tener las becas cargadas
             if (this.becasAsignadas.length === 0) this.cargarBecasAsignadas();
-          } else {
+              
+              // Cargar Boleta Virtual
+              this.historialAcademico = [];
+              this.promedioGeneralFicha = null;
+              if (al.grupoId) {
+                  const grupoRes = await window.saeApi.grupos.obtener(al.grupoId);
+                  if (grupoRes.ok && grupoRes.data && grupoRes.data.materias) {
+                      const esPre = (grupoRes.data.nivel === 'PREESCOLAR' || (al.nivel && al.nivel.toUpperCase() === 'PREESCOLAR'));
+                      let sumGral = 0, countGral = 0;
+                      
+                      const materiasArr = grupoRes.data.materias.map(m => ({
+                          id: m.id, nombre: m.materia, T1: {v:'', t:''}, T2: {v:'', t:''}, T3: {v:'', t:''}, prom: null
+                      }));
+                      
+                      const calRes = await window.saeApi.calificaciones.porAlumno(al.id, undefined);
+                      if (calRes.ok && calRes.data) {
+                          calRes.data.forEach(c => {
+                             const mat = materiasArr.find(x => x.id === c.grupoMateriaId);
+                             if(mat) {
+                                 const k = String(c.periodo).includes('1') ? 'T1' : String(c.periodo).includes('2') ? 'T2' : 'T3';
+                                 mat[k].v = c.valor || '';
+                                 mat[k].t = c.textoObservacion || '';
+                             }
+                          });
+                      }
+                      
+                      materiasArr.forEach(mat => {
+                         if(esPre) { mat.prom = 'N/A'; }
+                         else {
+                             let s = 0, c = 0;
+                             if(mat.T1.v !== '') { s += parseFloat(mat.T1.v); c++; }
+                             if(mat.T2.v !== '') { s += parseFloat(mat.T2.v); c++; }
+                             if(mat.T3.v !== '') { s += parseFloat(mat.T3.v); c++; }
+                             if(c>0) {
+                                mat.prom = (s/c).toFixed(1);
+                                sumGral += parseFloat(mat.prom);
+                                countGral++;
+                             } else {
+                                mat.prom = '-';
+                             }
+                         }
+                      });
+                      
+                      this.historialAcademico = materiasArr;
+                      this.promedioGeneralFicha = esPre ? 'N/A' : (countGral > 0 ? (sumGral/countGral).toFixed(1) : '-');
+                  }
+              }
+            } else {
             console.error('Error al obtener expediente', res);
             window.saeApi.toast('error', res?.message || 'Error al cargar el expediente del alumno.');
           }
@@ -3226,71 +3384,103 @@ reporteCorte: null,
 
       // ── Calificaciones ───────────────────────────────────────────────────────
       buscarAlumnoCalif() {
-        if (this.busquedaCalif.length > 1) {
           const q = this.busquedaCalif.toLowerCase();
-          this.alumnosCoincidencias = this.listaAlumnos.filter(a =>
-            a.nombre.toLowerCase().includes(q) || a.matricula.toLowerCase().includes(q)
-          );
-        } else {
-          this.alumnosCoincidencias = [];
-        }
-      },
+          const nivel = this.filtroCalifNivel;
+          const grado = this.filtroCalifGrado;
+          const grupo = this.filtroCalifGrupo;
+          
+          if (q.length > 1 || nivel) {
+            this.alumnosCoincidencias = this.listaAlumnos.filter(a => {
+              const matchBusqueda = !q || a.nombre.toLowerCase().includes(q) || a.matricula.toLowerCase().includes(q);
+              const matchNivel = !nivel || (a.nivel && a.nivel.toUpperCase() === nivel.toUpperCase());
+              const matchGrado = !grado || a.grado === grado;
+              const matchSeccion = !grupo || a.seccion === grupo;
+              return matchBusqueda && matchNivel && matchGrado && matchSeccion;
+            });
+          } else {
+            this.alumnosCoincidencias = [];
+          }
+        },
       async seleccionarAlumnoCalif(al) {
         this.alumnoActualCalif      = al;
         this.alumnoSeleccionadoCalif = true;
-        this.calificacionesTemp     = { matematicas: '', espanol: '', ciencias: '' };
-        this._materiasIds           = { matematicas: null, espanol: null, ciencias: null };
+        this.materiasAlumno = []; this.esPreescolar = false;
+        
         this.busquedaCalif          = '';
 
 
 
         // Cargar materias del grupo para obtener IDs
-        if (al.grupoId) {
-          const grupoRes = await window.saeApi.grupos.obtener(al.grupoId);
-          if (grupoRes.ok && grupoRes.data && grupoRes.data.materias) {
-            grupoRes.data.materias.forEach(m => {
-              const n = m.materia.toLowerCase();
-              if      (n.includes('matem'))                         this._materiasIds.matematicas = m.id;
-              else if (n.includes('espa') || n.includes('español')) this._materiasIds.espanol     = m.id;
-              else if (n.includes('cien'))                          this._materiasIds.ciencias    = m.id;
-            });
-          }
-        }
+          if (al.grupoId) {
+            const grupoRes = await window.saeApi.grupos.obtener(al.grupoId);
+            if (grupoRes.ok && grupoRes.data && grupoRes.data.materias) {
+                this.esPreescolar = (grupoRes.data.nivel === 'PREESCOLAR' || (al.nivel && al.nivel.toUpperCase() === 'PREESCOLAR'));
+                grupoRes.data.materias.forEach(m => {
+                  this.materiasAlumno.push({ id: m.id, nombre: m.materia, T1: {v:'', t:''}, T2: {v:'', t:''}, T3: {v:'', t:''}, prom: null });
+                });
+              }
 
-        // Pre-cargar calificaciones existentes para el período
-        if (al.id) {
-          const periodo = window.saeApi.PERIODO_MAP[this.periodoCalif];
-          const calRes  = await window.saeApi.calificaciones.porAlumno(al.id, periodo);
-          if (calRes.ok && calRes.data) {
-            calRes.data.forEach(c => {
-              if (c.grupoMateriaId === this._materiasIds.matematicas) this.calificacionesTemp.matematicas = c.valor;
-              if (c.grupoMateriaId === this._materiasIds.espanol)     this.calificacionesTemp.espanol     = c.valor;
-              if (c.grupoMateriaId === this._materiasIds.ciencias)    this.calificacionesTemp.ciencias    = c.valor;
-            });
+            const calRes  = await window.saeApi.calificaciones.porAlumno(al.id, undefined);
+            if (calRes.ok && calRes.data) {
+              calRes.data.forEach(c => {
+                  const mat = this.materiasAlumno.find(m => m.id === c.grupoMateriaId);
+                  if (mat) {
+                    const k = String(c.periodo).includes('1') ? 'T1' : String(c.periodo).includes('2') ? 'T2' : 'T3';
+                    mat[k].v = c.valor || '';
+                    mat[k].t = c.textoObservacion || '';
+                  }
+                });
+            }
+            this.recalcularPromediosCalif();
           }
-        }
-      },
+        },
+        recalcularPromediosCalif() {
+           let sumGral = 0; let countGral = 0;
+           this.materiasAlumno.forEach(mat => {
+               if(this.esPreescolar) { mat.prom = 'N/A'; }
+               else {
+                   let s = 0, c = 0;
+                   if(mat.T1.v !== '') { s += parseFloat(mat.T1.v); c++; }
+                   if(mat.T2.v !== '') { s += parseFloat(mat.T2.v); c++; }
+                   if(mat.T3.v !== '') { s += parseFloat(mat.T3.v); c++; }
+                   if(c>0) {
+                      mat.prom = (s/c).toFixed(1);
+                      sumGral += parseFloat(mat.prom);
+                      countGral++;
+                   } else {
+                      mat.prom = '-';
+                   }
+               }
+           });
+           this.promedioGeneralCalif = this.esPreescolar ? 'N/A' : (countGral > 0 ? (sumGral/countGral).toFixed(1) : '-');
+        },
       async guardarCalificacion() {
         if (!this.alumnoActualCalif || !this.alumnoActualCalif.id) {
           window.saeApi.toast('error', 'No hay alumno seleccionado.');
           return;
         }
-        const periodo  = window.saeApi.PERIODO_MAP[this.periodoCalif] || 'TRIMESTRE_1';
-        const alumnoId = this.alumnoActualCalif.id;
-        const lote     = [];
-
-        const agregar = (campo, idMateria) => {
-          const val = parseFloat(this.calificacionesTemp[campo]);
-          if (idMateria && !isNaN(val) && val >= 0 && val <= 10) {
-            lote.push({ alumnoId, grupoMateriaId: idMateria, periodo, valor: val });
+        const periodosArr = ['TRIMESTRE_1', 'TRIMESTRE_2', 'TRIMESTRE_3'];
+          const lote = [];
+          
+          for (const mat of this.materiasAlumno) {
+            if (this.esPreescolar) {
+               ['T1','T2','T3'].forEach((t, i) => {
+                  const obs = (mat[t].t || '').trim();
+                  if (obs) {
+                      lote.push({ alumnoId: this.alumnoActualCalif.id, grupoMateriaId: mat.id, periodo: periodosArr[i], valor: null, textoObservacion: obs, tipoEvaluacion: 'cualitativa' });
+                  }
+               });
+            } else {
+               ['T1','T2','T3'].forEach((t, i) => {
+                  const val = parseFloat(mat[t].v);
+                  if (!isNaN(val) && val >= 0 && val <= 10) {
+                      lote.push({ alumnoId: this.alumnoActualCalif.id, grupoMateriaId: mat.id, periodo: periodosArr[i], valor: val, tipoEvaluacion: 'numerica' });
+                  }
+               });
+            }
           }
-        };
 
-        agregar('matematicas', this._materiasIds.matematicas);
-        agregar('espanol',     this._materiasIds.espanol);
-        agregar('ciencias',    this._materiasIds.ciencias);
-
-        if (lote.length === 0) {
+          if (lote.length === 0) {
           window.saeApi.toast('advertencia', 'No hay calificaciones válidas para guardar. Verifica que el alumno tenga grupo y materias asignadas.');
           return;
         }

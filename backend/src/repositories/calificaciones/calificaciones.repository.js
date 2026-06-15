@@ -126,8 +126,17 @@ async function resolverPeriodoId(periodo, grupoMateriaId) {
           tipo:       mapped.tipo,
           numero:     mapped.numero,
           nombre:     `${mapped.tipo.charAt(0).toUpperCase() + mapped.tipo.slice(1)} ${mapped.numero}`,
-          fechaInicio: ciclo?.fechaInicio ?? new Date(),
-          fechaFin:    ciclo?.fechaFin   ?? new Date(),
+          fechaInicio: (() => {
+            const d = ciclo?.fechaInicio ? new Date(ciclo.fechaInicio) : new Date();
+            d.setMonth(d.getMonth() + ((mapped.numero - 1) * 3));
+            return d;
+          })(),
+          fechaFin: (() => {
+            const d = ciclo?.fechaInicio ? new Date(ciclo.fechaInicio) : new Date();
+            d.setMonth(d.getMonth() + (mapped.numero * 3));
+            d.setDate(d.getDate() - 1);
+            return d;
+          })(),
         },
       });
       return nuevoPeriodo.periodoId;
@@ -219,7 +228,7 @@ async function findByAlumnoYPeriodo(alumnoId, periodo) {
  *   { alumnoId, grupoMateriaId, periodo (string), valor, registradoPorId }
  */
 async function upsert(datos, auditCtx = {}) { return withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
-  const { alumnoId, grupoMateriaId, periodo, valor, registradoPorId, tipoEvaluacion } = datos;
+  const { alumnoId, grupoMateriaId, periodo, valor, registradoPorId, tipoEvaluacion, textoObservacion } = datos;
 
   const periodoId = await resolverPeriodoId(periodo, grupoMateriaId);
   if (!periodoId) throw new Error(`Período '${periodo}' no pudo resolverse.`);
@@ -238,11 +247,13 @@ async function upsert(datos, auditCtx = {}) { return withAudit(auditCtx.usuarioI
       periodoId,
       tipoEvaluacion: tipoEvaluacion ?? 'numerica',
       valorNumerico:  valor !== undefined ? valor : null,
+      textoObservacion: textoObservacion ?? null,
       registradaPor:  registradoPorId ? Number(registradoPorId) : null,
     },
     update: {
       valorNumerico: valor !== undefined ? valor : undefined,
       tipoEvaluacion: tipoEvaluacion,
+      textoObservacion: textoObservacion !== undefined ? textoObservacion : undefined,
       registradaPor: registradoPorId ? Number(registradoPorId) : undefined,
     },
     include: INCLUDE_COMPLETO,

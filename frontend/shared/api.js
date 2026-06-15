@@ -334,7 +334,7 @@
   // ── Módulo: Reportes ────────────────────────────────────────────────────────
   var reportes = {
     corteCaja: function() { return request('GET', '/reportes/corte-caja'); },
-    ingresosMensuales: function(anio) { return request('GET', '/reportes/ingresos-mensuales' + (anio ? '?anio=' + anio : '')); },
+    ingresosMensuales: function(cicloId) { return request('GET', '/reportes/ingresos-mensuales' + (cicloId ? '?cicloId=' + cicloId : '')); },
     deudores: function() { return request('GET', '/reportes/deudores'); },
     facturables: function() { return request('GET', '/reportes/facturables'); },
   };

@@ -61,36 +61,66 @@ async function corteCaja(req, res, next) {
 
 /**
  * GET /api/v1/reportes/ingresos-mensuales
- * Ingresos agrupados por mes del año actual.
+ * Ingresos agrupados por mes del año actual o por ciclo escolar.
  */
 async function ingresosMensuales(req, res, next) {
   try {
-    const anio = req.query.anio || new Date().getFullYear();
-    const inicioAnio = new Date(`${anio}-01-01`);
-    const finAnio = new Date(`${Number(anio) + 1}-01-01`);
+    const cicloId = req.query.cicloId;
+    let tituloReporte = '';
+    let inicioFiltro = null;
+    let finFiltro = null;
+    const nombresMeses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    let mesesBuckets = [];
+
+    if (cicloId) {
+      const ciclo = await prisma.cicloEscolar.findUnique({ where: { cicloId: Number(cicloId) } });
+      if (!ciclo) throw new Error('Ciclo escolar no encontrado');
+      
+      tituloReporte = ciclo.nombre;
+      inicioFiltro = new Date(ciclo.fechaInicio);
+      finFiltro = new Date(ciclo.fechaFin);
+      finFiltro.setDate(finFiltro.getDate() + 1); // Incluir el último día
+
+      let fechaActual = new Date(inicioFiltro.getFullYear(), inicioFiltro.getMonth(), 1);
+      const fechaFinal = new Date(finFiltro.getFullYear(), finFiltro.getMonth(), 1);
+      
+      while (fechaActual <= fechaFinal) {
+        const mesStr = `${nombresMeses[fechaActual.getMonth()]} ${fechaActual.getFullYear()}`;
+        mesesBuckets.push(mesStr);
+        fechaActual.setMonth(fechaActual.getMonth() + 1);
+      }
+    } else {
+      const anio = req.query.anio || new Date().getFullYear();
+      tituloReporte = String(anio);
+      inicioFiltro = new Date(`${anio}-01-01`);
+      finFiltro = new Date(`${Number(anio) + 1}-01-01`);
+      mesesBuckets = nombresMeses.map(m => m);
+    }
 
     const pagos = await prisma.pago.findMany({
-      where: {
-        registradoEn: { gte: inicioAnio, lt: finAnio },
-      },
+      where: { registradoEn: { gte: inicioFiltro, lt: finFiltro } },
       select: { montoTotal: true, registradoEn: true },
     });
 
-    // Agrupar por mes
     const meses = {};
-    const nombresMeses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    nombresMeses.forEach((m, i) => { meses[m] = 0; });
+    mesesBuckets.forEach(m => { meses[m] = 0; });
 
     for (const p of pagos) {
-      const mesIdx = new Date(p.registradoEn).getMonth();
-      meses[nombresMeses[mesIdx]] += Number(p.montoTotal);
+      const fechaPago = new Date(p.registradoEn);
+      let mesIdxStr = cicloId 
+        ? `${nombresMeses[fechaPago.getMonth()]} ${fechaPago.getFullYear()}` 
+        : nombresMeses[fechaPago.getMonth()];
+        
+      if (meses[mesIdxStr] !== undefined) {
+        meses[mesIdxStr] += Number(p.montoTotal);
+      }
     }
 
     const totalAnual = Object.values(meses).reduce((s, v) => s + v, 0);
 
     res.json({
       ok: true,
-      data: { anio: Number(anio), meses, totalAnual },
+      data: { anio: tituloReporte, meses, totalAnual },
     });
   } catch (err) { next(err); }
 }

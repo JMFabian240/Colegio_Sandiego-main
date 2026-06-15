@@ -20,7 +20,7 @@ const prisma = new PrismaClient({ log: [] });
 
 // ── Tablas que deben existir (33 modelos del schema v6) ────────
 const TABLAS_REQUERIDAS = [
-  'usuario', 'rol', 'usuario_rol',
+  'usuario', 'rol', 'usuario_rol', 'usuario_permiso_modulo', 'token_revocado',
   'nivel_educativo', 'ciclo_escolar', 'grupo', 'materia', 'grupo_materia',
   'periodo_evaluacion', 'tutor', 'alumno', 'tutor_alumno',
   'plan_pago', 'inscripcion_ciclo',

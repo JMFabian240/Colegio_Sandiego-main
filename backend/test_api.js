@@ -1,26 +1,46 @@
-const { request } = require('http');
+const http = require('http');
 
-async function test() {
-  const token = process.argv[2];
-  if (!token) {
-    console.log("No token provided");
-    return;
-  }
-  
-  const req = request({
-    hostname: 'localhost',
-    port: 3000,
-    path: '/api/v1/pagos?alumnoId=1',
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  }, res => {
-    let data = '';
-    res.on('data', chunk => data += chunk);
-    res.on('end', () => console.log(data));
+async function testAPI() {
+  // We can just use the database directly, but we want to see the JSON output
+  const { PrismaClient } = require('@prisma/client');
+  const prisma = new PrismaClient();
+  const items = await prisma.calendarioPago.findMany({
+    where: { alumnoId: 4, eliminadoEn: null },
+    include: {
+      recargos: { where: { estado: { in: ['aplicado', 'modificado'] } } },
+      alumno: {
+        select: {
+          asignacionesBeca: {
+            where: { estado: 'activa' },
+            include: { beca: true }
+          }
+        }
+      }
+    },
+    orderBy: [{ fechaVencimiento: 'asc' }],
   });
-  req.on('error', console.error);
-  req.end();
+  console.log('Prisma items returned:', items.length);
+  console.log('Is Array?', Array.isArray(items));
+  // Simulate JSON serialization:
+  const jsonStr = JSON.stringify({ ok: true, data: items });
+  const res = JSON.parse(jsonStr);
+  console.log('Is res.data Array?', Array.isArray(res.data));
+  console.log('Sample date from JSON:', res.data[0].fechaVencimiento);
+  
+  // Test AlpineJS logic
+  let datos = res.data;
+  const hoy = new Date().toISOString().split('T')[0];
+  datos = datos.map(d => {
+    if (d.estadoCobro === 'pagado' || Number(d.saldoPendiente) === 0) {
+      d.estadoCalc = 'PAGADO';
+    } else if (d.fechaVencimiento < hoy) {
+      d.estadoCalc = 'VENCIDO';
+    } else {
+      d.estadoCalc = 'PENDIENTE';
+    }
+    return d;
+  });
+  datos.sort((a,b) => new Date(a.fechaVencimiento) - new Date(b.fechaVencimiento));
+  console.log('Sorted datos first element:', datos[0].estadoCalc, datos[0].fechaVencimiento);
 }
-test();
+testAPI().catch(console.error);

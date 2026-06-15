@@ -374,7 +374,7 @@ async function update(id, datos, auditCtx = {}) { return withAudit(auditCtx.usua
           cicloId: cicloActivo.cicloId,
           grupoId: Number(grupoId),
           planPagoId: planDefault?.planPagoId ?? null,
-          estadoFinanciero: 'Al Corriente',
+          estadoFinanciero: 'al_corriente',
           mesesAdeudo: 0,
         }
       });

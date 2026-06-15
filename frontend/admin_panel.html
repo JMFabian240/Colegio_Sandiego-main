@@ -437,8 +437,13 @@
 
           <!-- TAB: TUTORES -->
           <div x-show="tabDirectorio==='tutores'">
-            <div class="mb-4">
-              <input type="text" class="input-modern max-w-md" placeholder="Buscar tutor por nombre, RFC, correo..." x-model="busquedaTutor" @input="filtrarTutores()">
+            <div class="mb-4 flex flex-col md:flex-row gap-4">
+              <input type="text" class="input-modern w-full md:max-w-md" placeholder="Buscar tutor por nombre, RFC, correo..." x-model="busquedaTutor" @input="filtrarTutores()">
+              <select class="input-modern w-full md:w-64" x-model="filtroFacturacionTutor" @change="filtrarTutores()">
+                <option value="">Todos los tutores</option>
+                <option value="si">Requieren datos fiscales</option>
+                <option value="no">No requieren datos fiscales</option>
+              </select>
             </div>
             
             <div class="card-clean overflow-hidden" x-show="!tutorSeleccionado">
@@ -870,25 +875,36 @@
           <!-- Ingresos Mensuales -->
           <div x-show="reporteActivo==='ingresos'" class="card-clean p-5 print-area">
             <div class="flex justify-between items-center mb-4">
-              <h3 class="font-semibold text-navy-800">Ingresos Mensuales — <span x-text="reporteIngresos?.anio || ''"></span></h3>
+              <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                <h3 class="font-semibold text-navy-800">Ingresos Mensuales — <span x-text="reporteIngresos?.anio || ''"></span></h3>
+                <select class="input-modern py-1 px-2 text-sm max-w-xs bg-gray-50 border-gray-200" x-model="cicloSeleccionadoIngresos" @change="cargarReporteIngresos()" x-init="if(typeof cargarCiclosYTarifas === 'function' && ciclosDisponibles && ciclosDisponibles.length === 0) cargarCiclosYTarifas()">
+                  <option value="">Año Actual (Global)</option>
+                  <template x-for="c in (typeof ciclosDisponibles !== 'undefined' ? ciclosDisponibles : [])" :key="c.cicloId">
+                    <option :value="c.cicloId" x-text="c.nombre"></option>
+                  </template>
+                </select>
+              </div>
               <div class="flex items-center gap-4">
                 <div class="text-lg font-bold text-emerald-700" x-text="'Total anual: $' + (reporteIngresos?.totalAnual || 0).toLocaleString('es-MX')"></div>
                 <button class="btn-outline text-sm no-print" @click="window.print()">🖨️ Imprimir</button>
               </div>
             </div>
-            <div class="space-y-2">
-              <template x-for="(monto, mes) in (reporteIngresos?.meses || {})" :key="mes">
-                <div class="flex items-center gap-3">
-                  <span class="w-10 text-sm font-medium text-gray-600" x-text="mes"></span>
-                  <div class="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
-                    <div class="h-6 bg-gradient-to-r from-navy-500 to-navy-700 rounded-full transition-all duration-500 flex items-center justify-end pr-2"
-                         :style="'width:' + (reporteIngresos?.totalAnual > 0 ? Math.max(2, (monto / reporteIngresos.totalAnual) * 100) : 0) + '%'">
-                      <span class="text-[10px] text-white font-bold" x-show="monto > 0" x-text="'$'+monto.toLocaleString('es-MX')"></span>
-                    </div>
-                  </div>
-                </div>
-              </template>
-            </div>
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="p-2 text-left">Mes</th>
+                  <th class="p-2 text-right">Ingresos Totales</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="(monto, mes) in (reporteIngresos?.meses || {})" :key="mes">
+                  <tr class="border-b hover:bg-gray-50">
+                    <td class="p-2 font-medium capitalize" x-text="mes"></td>
+                    <td class="p-2 text-right font-mono font-bold text-emerald-600" x-text="monto > 0 ? '$' + monto.toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2}) : '$0.00'"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
           </div>
 
           <!-- Lista de Deudores -->
@@ -1488,6 +1504,7 @@
       reporteActivo: 'corte',
       reporteCorte: null,
       reporteIngresos: null,
+      cicloSeleccionadoIngresos: '',
       reporteDeudores: null,
       reporteFacturables: null,
 
@@ -1516,6 +1533,7 @@
       
       tabDirectorio: 'alumnos',
       busquedaTutor: '',
+      filtroFacturacionTutor: '',
       tutoresRegistrados: [],
       tutoresFiltrados: [],
       tutorSeleccionado: false,
@@ -1891,11 +1909,15 @@
       },
       filtrarTutores() {
         const q = this.busquedaTutor.toLowerCase();
-        this.tutoresFiltrados = this.tutoresRegistrados.filter(t =>
-          (t.nombreCompleto || '').toLowerCase().includes(q) ||
-          (t.rfc || '').toLowerCase().includes(q) ||
-          (t.correoElectronico || '').toLowerCase().includes(q)
-        );
+        this.tutoresFiltrados = this.tutoresRegistrados.filter(t => {
+          const matchQ = (t.nombreCompleto || '').toLowerCase().includes(q) ||
+                         (t.rfc || '').toLowerCase().includes(q) ||
+                         (t.correoElectronico || '').toLowerCase().includes(q);
+          const matchF = this.filtroFacturacionTutor === '' || 
+                         (this.filtroFacturacionTutor === 'si' && t.requiereFactura) || 
+                         (this.filtroFacturacionTutor === 'no' && !t.requiereFactura);
+          return matchQ && matchF;
+        });
       },
       async seleccionarTutorFicha(tut) {
         try {
@@ -2186,7 +2208,7 @@
       },
       async cargarReporteIngresos() {
         try {
-          const res = await window.saeApi.reportes.ingresosMensuales();
+          const res = await window.saeApi.reportes.ingresosMensuales(this.cicloSeleccionadoIngresos);
           if (res && res.ok) this.reporteIngresos = res.data;
         } catch (e) { console.error('Error cargando ingresos', e); }
       },

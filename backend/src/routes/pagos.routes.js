@@ -50,6 +50,9 @@ router.get('/total/:alumnoId', authorizePermiso('pagos', 'lectura'), pagosContro
 // PATCH /api/v1/pagos/recargos/:recargoId — modificar/condonar recargo (solo ADMIN)
 router.patch('/recargos/:recargoId', authorize('ADMIN'), recargosController.modificarRecargo);
 
+// POST /api/v1/pagos/adelantado
+router.post('/adelantado', authorizePermiso('pagos', 'escritura'), pagosController.registrarAdelantado);
+
 // GET /api/v1/pagos/:id
 router.get('/:id', authorizePermiso('pagos', 'lectura'), pagosController.obtener);
 

@@ -108,4 +108,99 @@ async function totalPorAlumno(alumnoId) {
   return pagosRepository.sumaByAlumno(alumnoId);
 }
 
-module.exports = { listar, obtenerPorId, registrar, obtenerCalendario, totalPorAlumno };
+/**
+ * Registra un pago adelantado de colegiaturas.
+ */
+async function registrarAdelantado(datos, usuarioId, auditCtx = {}) {
+  const { alumnoId, meses, metodoPago, fecha } = datos;
+  const numMeses = parseInt(meses, 10);
+
+  if (!numMeses || numMeses <= 0) {
+    throw Object.assign(new Error('Debe especificar una cantidad válida de meses a adelantar.'), { statusCode: 400 });
+  }
+
+  const alumno = await alumnosRepository.findById(alumnoId);
+  if (!alumno) {
+    throw Object.assign(new Error('Alumno no encontrado.'), { statusCode: 404 });
+  }
+
+  // Buscar colegiaturas futuras pendientes
+  const deudasPendientes = await prisma.calendarioPago.findMany({
+    where: {
+      alumnoId: Number(alumnoId),
+      concepto: 'colegiatura',
+      estadoCobro: { not: 'pagado' },
+      eliminadoEn: null
+    },
+    include: {
+      alumno: {
+        select: {
+          asignacionesBeca: {
+            where: { estado: 'activa' },
+            include: { beca: true }
+          }
+        }
+      }
+    },
+    orderBy: { fechaVencimiento: 'asc' },
+  });
+
+  // Filtrar periodos que no tienen saldo vencido, o asumir que las colegiaturas no vencidas 
+  // son las que se van a pagar por adelantado. En estricto sentido, los periodos vencidos se
+  // deberían pagar primero. Para asegurar orden cronológico, tomamos todas las pendientes en orden.
+  // El usuario paga las siguientes 'numMeses' colegiaturas en la lista.
+  if (deudasPendientes.length === 0) {
+    throw Object.assign(new Error('No existen colegiaturas pendientes para este alumno.'), { statusCode: 400 });
+  }
+
+  if (deudasPendientes.length < numMeses) {
+    throw Object.assign(new Error(`Sólo hay ${deudasPendientes.length} meses disponibles para pago adelantado.`), { statusCode: 400 });
+  }
+
+  // Tomamos exactamente la cantidad de meses solicitados
+  const periodosAPagar = deudasPendientes.slice(0, numMeses);
+
+  // Calcular el monto total considerando posibles becas
+  let montoTotalEsperado = 0;
+  const periodosProcesados = [];
+
+  for (const periodo of periodosAPagar) {
+    const asignacionBeca = periodo.alumno?.asignacionesBeca?.[0];
+    const porcentajeBeca = asignacionBeca && asignacionBeca.beca ? Number(asignacionBeca.beca.porcentaje) : 0;
+    
+    let montoCobrado = Number(periodo.montoOriginal);
+    if (porcentajeBeca > 0) {
+      const descuento = (montoCobrado * porcentajeBeca) / 100;
+      montoCobrado = montoCobrado - descuento;
+    }
+    
+    // Sumar recargos si los hubiera en los periodos seleccionados
+    const recargoActual = Number(periodo.montoRecargo);
+    const pagadoAnterior = Number(periodo.montoPagado);
+    
+    const saldoPendiente = Math.max(0, (montoCobrado + recargoActual) - pagadoAnterior);
+    
+    montoTotalEsperado += saldoPendiente;
+    periodosProcesados.push({
+      calendarioPagoId: periodo.calendarioPagoId,
+      montoOriginal: montoCobrado, // el nuevo monto base tras beca
+      montoCobrado: saldoPendiente,
+      cicloId: periodo.cicloId
+    });
+  }
+
+  if (Number(datos.monto) && Math.abs(Number(datos.monto) - montoTotalEsperado) > 0.01) {
+    throw Object.assign(new Error(`El monto proporcionado (${Number(datos.monto)}) no coincide con el total de los meses seleccionados (${montoTotalEsperado}).`), { statusCode: 400 });
+  }
+
+  return pagosRepository.createAdelantado({
+    alumnoId: Number(alumnoId),
+    tutorId: datos.tutorId,
+    montoTotal: montoTotalEsperado,
+    metodoPago: metodoPago,
+    fecha: fecha || new Date().toISOString(),
+    registradoPorId: usuarioId
+  }, periodosProcesados, auditCtx);
+}
+
+module.exports = { listar, obtenerPorId, registrar, obtenerCalendario, totalPorAlumno, registrarAdelantado };

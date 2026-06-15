@@ -991,13 +991,18 @@
         <!-- Autocompletado de alumno -->
         <div>
           <label class="text-xs font-medium text-gray-600">Alumno</label>
-          <div class="autocomplete-wrapper" @click.outside="mostrarSugerenciasPago=false">
-            <input type="text" class="input-modern"
+          <div class="autocomplete-wrapper relative" @click.outside="mostrarSugerenciasPago=false">
+            <input type="text" class="input-modern pr-8"
                    placeholder="Escribe el nombre o matrícula del alumno..."
                    x-model="busquedaPagoAlumno"
                    @input="filtrarPagoAlumnos()"
                    @focus="filtrarPagoAlumnos(); mostrarSugerenciasPago=true"
                    autocomplete="off">
+            <button x-show="busquedaPagoAlumno.length > 0"
+                    @click="limpiarSeleccionPago()"
+                    class="absolute right-2 top-[38px] transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
             <div class="autocomplete-list"
                  x-show="mostrarSugerenciasPago && busquedaPagoAlumno.length > 0">
               <template x-for="al in pagoCoincidencias" :key="al.matricula">
@@ -1033,13 +1038,32 @@
                 <div class="text-right">
                   <div class="font-bold text-crimson-600" x-text="'$' + (Number(adeudo.montoOriginal) + Number(adeudo.montoRecargo) - Number(adeudo.montoPagado)).toFixed(2)"></div>
                   <div x-show="Number(adeudo.montoRecargo) > 0" class="text-[10px] text-amber-600" x-text="'Incluye recargo: $' + adeudo.montoRecargo"></div>
+                  <!-- Mostrar recargos editables -->
+                  <template x-if="adeudo.recargos && adeudo.recargos.length > 0">
+                    <div class="mt-1 space-y-1">
+                      <template x-for="recargo in adeudo.recargos" :key="recargo.recargoId">
+                        <div class="flex items-center justify-end gap-1 text-[10px] text-amber-700 bg-amber-50 p-1 rounded hover:bg-amber-100 transition-colors" @click.stop="iniciarEdicionRecargo(recargo)">
+                          <span x-text="(recargo.estado === 'condonado' ? 'Condonado' : 'Recargo') + ': $' + Number(recargo.montoActual).toFixed(2)"></span>
+                          <button type="button" class="text-amber-800 hover:text-amber-900" title="Modificar recargo">
+                            <i data-lucide="edit-2" class="w-3 h-3"></i>
+                          </button>
+                        </div>
+                      </template>
+                    </div>
+                  </template>
                 </div>
               </div>
             </template>
           </div>
         </div>
 
-        <div>
+        <!-- Tipo de Pago -->
+        <div class="flex gap-2 mb-4" x-show="nuevoPago.alumno">
+          <button class="btn-outline flex-1" :class="nuevoPago.tipoPago === 'normal' ? 'bg-navy-700 text-white border-navy-700' : ''" @click="nuevoPago.tipoPago = 'normal'; autofillMonto()">Pago Normal</button>
+          <button class="btn-outline flex-1" :class="nuevoPago.tipoPago === 'adelantado' ? 'bg-navy-700 text-white border-navy-700' : ''" @click="nuevoPago.tipoPago = 'adelantado'">Pago Adelantado</button>
+        </div>
+
+        <div x-show="nuevoPago.tipoPago === 'normal'">
           <label class="text-xs font-medium text-gray-600">Concepto</label>
           <select class="input-modern" x-model="nuevoPago.concepto" @change="autofillMonto()">
             <option>Colegiatura</option>
@@ -1047,6 +1071,11 @@
             <option>Material didáctico</option>
             <option>Uniforme</option>
           </select>
+        </div>
+
+        <div x-show="nuevoPago.tipoPago === 'adelantado'">
+          <label class="text-xs font-medium text-gray-600">Meses a adelantar</label>
+          <input type="number" class="input-modern" min="1" max="12" x-model="nuevoPago.mesesAdelantar">
         </div>
 
         <div>
@@ -1090,6 +1119,30 @@
             <button class="btn-primary" @click="imprimirRecibo()"><i data-lucide="printer" class="w-4 h-4 mr-1"></i> Imprimir Recibo</button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL MODIFICAR RECARGO -->
+  <div x-show="recargoEditando" x-cloak class="modal-mask" @click.self="recargoEditando=null" style="z-index: 100;">
+    <div class="modal-container p-6 w-96 relative">
+      <div class="font-bold text-lg text-navy-800">Modificar Recargo</div>
+      <p class="text-xs text-gray-500 mb-4">Modifica el monto o condona el recargo ingresando un valor de $0.</p>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="text-xs font-medium text-gray-600">Monto del recargo ($)</label>
+          <input type="number" min="0" class="input-modern" x-model="formRecargo.montoNuevo">
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-600">Motivo de la modificación</label>
+          <textarea class="input-modern h-20" placeholder="Ej. Condonación aprobada por dirección..." x-model="formRecargo.motivo"></textarea>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 mt-5">
+        <button class="btn-outline" @click="recargoEditando=null">Cancelar</button>
+        <button class="btn-primary" @click="guardarRecargo()">Guardar cambios</button>
       </div>
     </div>
   </div>
@@ -1358,6 +1411,8 @@
       nuevoUsuario:   { nombre: '', rol: 'Estándar (Maestra)' },
       nuevoPago:      { alumno: '', alumnoId: null, concepto: 'Colegiatura', monto: '', fecha: new Date().toISOString().slice(0,10) },
       pagoAdeudos:    [],
+      recargoEditando: null,
+      formRecargo: { montoNuevo: '', motivo: '' },
       pagoCalculando: false,
       reciboGenerado: null,
       nuevoAlumnoData:{ nombre: '', matricula: '', curp: '', grupoId: null, padre: '', telefono: '', tutorId: null },
@@ -1658,9 +1713,11 @@
         }
       },
       abrirModalPagoDesdeAlumno(al) {
-        // Simulates selecting a student and opening the payment modal
         this.alumnoActualFicha = al;
         this.abrirModalPago();
+        setTimeout(() => {
+          this.seleccionarPagoAlumno(al);
+        }, 50);
       },
       abrirModalVincularTutor() {
         this.busquedaVincularTutor = '';
@@ -2072,7 +2129,7 @@
         this.busquedaPagoAlumno  = '';
         this.pagoCoincidencias   = [];
         this.mostrarSugerenciasPago = false;
-        this.nuevoPago           = { alumno: '', alumnoId: null, concepto: 'Colegiatura', monto: '', fecha: new Date().toISOString().slice(0,10) };
+        this.nuevoPago           = { alumno: '', alumnoId: null, concepto: 'Colegiatura', monto: '', fecha: new Date().toISOString().slice(0,10), tipoPago: 'normal', mesesAdelantar: 1 };
       },
       filtrarPagoAlumnos() {
         const q = this.busquedaPagoAlumno.trim().toLowerCase();
@@ -2091,6 +2148,16 @@
           this.nuevoPago.alumno   = '';
           this.nuevoPago.alumnoId = null;
         }
+      },
+      limpiarSeleccionPago() {
+        this.busquedaPagoAlumno = '';
+        this.nuevoPago.alumno = '';
+        this.nuevoPago.alumnoId = null;
+        this.nuevoPago.monto = '';
+        this.nuevoPago.concepto = 'Colegiatura';
+        this.pagoAdeudos = [];
+        this.mostrarSugerenciasPago = false;
+        this.$nextTick(() => { lucide.createIcons(); });
       },
       async seleccionarPagoAlumno(al) {
         this.nuevoPago.alumno       = al.nombre;
@@ -2132,7 +2199,30 @@
         this.nuevoPago.concepto = cMap[adeudo.concepto.toUpperCase()] || 'Colegiatura';
         this.nuevoPago.monto = (Number(adeudo.montoOriginal) + Number(adeudo.montoRecargo) - Number(adeudo.montoPagado)).toFixed(2);
       },
+      calcularAdelanto() {
+        if (!this.nuevoPago.alumnoId) return;
+        const colegiaturas = this.pagoAdeudos.filter(a => a.concepto.toLowerCase() === 'colegiatura');
+        const numMeses = parseInt(this.nuevoPago.mesesAdelantar) || 1;
+        
+        if (colegiaturas.length === 0) {
+           this.nuevoPago.monto = '0.00';
+           return;
+        }
+        
+        const aAdelantar = colegiaturas.slice(0, numMeses);
+        let total = 0;
+        for (const deud of aAdelantar) {
+          let cobro = Number(deud.montoOriginal);
+          const recargo = Number(deud.montoRecargo);
+          const pagado = Number(deud.montoPagado);
+          total += Math.max(0, (cobro + recargo) - pagado);
+        }
+        this.nuevoPago.monto = total.toFixed(2);
+      },
       autofillMonto() {
+        if (this.nuevoPago.tipoPago === 'adelantado') {
+          return;
+        }
         if (!this.pagoAdeudos || this.pagoAdeudos.length === 0) return;
         const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(' ', '_');
         const targetMap = { 'COLEGIATURA': 'COLEGIATURA', 'INSCRIPCION': 'INSCRIPCION', 'MATERIAL_DIDACTICO': 'MATERIAL_DIDACTICO', 'UNIFORME': 'UNIFORME' };
@@ -2151,6 +2241,43 @@
           this.nuevoPago.monto = '';
         }
       },
+      iniciarEdicionRecargo(recargo) {
+        this.recargoEditando = recargo;
+        this.formRecargo.montoNuevo = recargo.montoActual;
+        this.formRecargo.motivo = recargo.motivoModificacion || '';
+      },
+      async guardarRecargo() {
+        if (!this.formRecargo.motivo || this.formRecargo.motivo.trim().length < 3) {
+          window.saeApi.toast('advertencia', 'El motivo de la modificación es obligatorio.');
+          return;
+        }
+        if (this.formRecargo.montoNuevo === '' || Number(this.formRecargo.montoNuevo) < 0) {
+          window.saeApi.toast('advertencia', 'Ingresa un monto válido.');
+          return;
+        }
+        const esCero = Number(this.formRecargo.montoNuevo) === 0;
+        if (esCero && !confirm('¿Estás seguro de condonar totalmente este recargo?')) {
+          return;
+        }
+
+        const res = await window.saeApi.pagos.modificarRecargo(this.recargoEditando.recargoId, {
+          montoNuevo: Number(this.formRecargo.montoNuevo),
+          motivo: this.formRecargo.motivo
+        });
+
+        if (res.ok) {
+          window.saeApi.toast('exito', res.message);
+          this.recargoEditando = null;
+          // Refrescar adeudos del alumno actual
+          if (this.nuevoPago.alumnoId) {
+             const al = this.pagoCoincidencias.find(x => x.id === this.nuevoPago.alumnoId) || this.listaAlumnos.find(x => x.id === this.nuevoPago.alumnoId) || { id: this.nuevoPago.alumnoId, nombre: this.nuevoPago.alumno };
+             this.seleccionarPagoAlumno(al);
+          }
+          lucide.createIcons();
+        } else {
+          window.saeApi.toast('error', res.message || 'Error al modificar el recargo.');
+        }
+      },
       async agregarPago() {
         if (!this.nuevoPago.alumnoId) {
           window.saeApi.toast('advertencia', 'Selecciona un alumno de la lista de sugerencias.');
@@ -2161,12 +2288,25 @@
           return;
         }
         const concepto = window.saeApi.CONCEPTO_MAP[this.nuevoPago.concepto] || 'OTRO';
-        const res      = await window.saeApi.pagos.registrar({
-          alumnoId:  this.nuevoPago.alumnoId,
-          concepto,
-          monto:     parseFloat(this.nuevoPago.monto),
-          fecha:     this.nuevoPago.fecha,
-        });
+        let res;
+        
+        if (this.nuevoPago.tipoPago === 'adelantado') {
+          res = await window.saeApi.pagos.adelantado({
+            alumnoId:  this.nuevoPago.alumnoId,
+            meses:     parseInt(this.nuevoPago.mesesAdelantar),
+            metodoPago: 'efectivo',
+            fecha:     this.nuevoPago.fecha,
+            monto:     parseFloat(this.nuevoPago.monto)
+          });
+          this.nuevoPago.concepto = `Adelanto de ${this.nuevoPago.mesesAdelantar} meses`;
+        } else {
+          res = await window.saeApi.pagos.registrar({
+            alumnoId:  this.nuevoPago.alumnoId,
+            concepto,
+            monto:     parseFloat(this.nuevoPago.monto),
+            fecha:     this.nuevoPago.fecha,
+          });
+        }
         if (res.ok) {
           const pagoId = res.data.pagoId || res.data.id;
           const fileInput = document.getElementById('comprobanteInputPago');
@@ -2202,6 +2342,8 @@
           this.nuevoPago.alumno = '';
           this.nuevoPago.alumnoId = null;
           this.nuevoPago.monto = '';
+          this.nuevoPago.tipoPago = 'normal';
+          this.nuevoPago.mesesAdelantar = 1;
           this.busquedaPagoAlumno = '';
           this.pagoAdeudos = [];
           if (fileInput) fileInput.value = '';

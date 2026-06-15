@@ -58,4 +58,12 @@ async function totalPorAlumno(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { listar, obtener, registrar, calendario, totalPorAlumno };
+async function registrarAdelantado(req, res, next) {
+  try {
+    const auditCtx = { usuarioId: req.usuario?.id, ip: req.ip };
+    const pago = await pagosService.registrarAdelantado(req.body, req.usuario.id, auditCtx);
+    return created(res, pago, 'Pago adelantado registrado correctamente.');
+  } catch (err) { next(err); }
+}
+
+module.exports = { listar, obtener, registrar, calendario, totalPorAlumno, registrarAdelantado };

@@ -205,6 +205,8 @@
     },
     obtener:   function (id)    { return request('GET',  '/pagos/' + id); },
     registrar: function (datos) { return request('POST', '/pagos', datos); },
+    adelantado: function (datos) { return request('POST', '/pagos/adelantado', datos); },
+    modificarRecargo: function (id, datos) { return request('PATCH', '/pagos/recargos/' + id, datos); },
     calendario: function(filtros) {
       var params = new URLSearchParams();
       if (filtros) {

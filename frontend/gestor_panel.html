@@ -225,6 +225,7 @@
               <div class="flex border-b">
                 <button class="px-4 py-2 text-sm font-medium" :class="tabAlumno==='academicos'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabAlumno='academicos'">Datos Académicos</button>
                 <button class="px-4 py-2 text-sm font-medium" :class="tabAlumno==='fiscales'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabAlumno='fiscales'">Datos Fiscales</button>
+                <button class="px-4 py-2 text-sm font-medium" :class="tabAlumno==='historial_pagos'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabAlumno='historial_pagos'; _cargarPagosAlumnoFicha()">Historial de Pagos</button>
               </div>
               <div class="p-5" x-show="tabAlumno==='academicos'">
                 <div class="grid grid-cols-2 gap-4">
@@ -243,6 +244,107 @@
                   <div><label class="text-xs font-medium">Correo Facturación</label><input class="input-modern" :value="alumnoActualFicha?.correoFacturacion || 'pendiente@ejemplo.com'"></div>
                 </div>
                 <div class="flex justify-end mt-4"><button class="btn-primary">Guardar Datos Fiscales</button></div>
+              </div>
+              <div class="p-5" x-show="tabAlumno==='historial_pagos'">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  
+                  <!-- Columna 1: Estado de Cuenta y Línea de Tiempo -->
+                  <div>
+                    <div class="flex justify-between items-center mb-4">
+                      <h3 class="font-semibold text-gray-700">Estado de Cuenta</h3>
+                      <button class="btn-outline text-xs" @click="_cargarPagosAlumnoFicha()"><i data-lucide="refresh-cw" class="w-4 h-4 mr-1"></i> Actualizar</button>
+                    </div>
+
+                    <!-- Timeline -->
+                    <div class="relative border-l border-gray-200 ml-3 space-y-6">
+                  <template x-for="item in historialCalendarioAlumno" :key="item.calendarioPagoId">
+                    <div class="mb-6 ml-6">
+                      <span class="absolute flex items-center justify-center w-6 h-6 rounded-full -left-3 ring-4 ring-white"
+                            :class="{'bg-emerald-100': item.estadoCobro === 'pagado' || item.estadoCobro === 'liquidado',
+                                     'bg-amber-100': item.estadoCobro === 'pendiente',
+                                     'bg-red-100': item.estadoCobro === 'vencido'}">
+                        <i data-lucide="check-circle" class="w-3 h-3 text-emerald-600" x-show="item.estadoCobro === 'pagado' || item.estadoCobro === 'liquidado'"></i>
+                        <i data-lucide="clock" class="w-3 h-3 text-amber-600" x-show="item.estadoCobro === 'pendiente'"></i>
+                        <i data-lucide="alert-circle" class="w-3 h-3 text-red-600" x-show="item.estadoCobro === 'vencido'"></i>
+                      </span>
+                      <div class="bg-white p-4 rounded-lg border border-gray-100 shadow-sm">
+                        <div class="flex justify-between items-start mb-1">
+                          <h4 class="font-medium text-gray-800" x-text="item.concepto + (item.mes ? ' ' + item.mes : '')"></h4>
+                          <span class="text-xs font-semibold px-2 py-1 rounded-full"
+                                :class="{'bg-emerald-100 text-emerald-700': item.estadoCobro === 'pagado' || item.estadoCobro === 'liquidado',
+                                         'bg-amber-100 text-amber-700': item.estadoCobro === 'pendiente',
+                                         'bg-red-100 text-red-700': item.estadoCobro === 'vencido'}"
+                                x-text="item.estadoCobro.toUpperCase()">
+                          </span>
+                        </div>
+                        <p class="text-xs text-gray-500 mb-2">Vencimiento: <span x-text="item.fechaVencimiento.split('T')[0]"></span></p>
+                        <div class="grid grid-cols-2 gap-2 text-sm mt-3">
+                          <div>
+                            <p class="text-gray-500 text-xs">Monto Original</p>
+                            <p class="font-medium text-gray-700" x-text="'$' + Number(item.montoOriginal).toFixed(2)"></p>
+                          </div>
+                          <div x-show="Number(item.montoRecargo) > 0">
+                            <p class="text-gray-500 text-xs">Recargo</p>
+                            <p class="font-medium text-red-600" x-text="'+$' + Number(item.montoRecargo).toFixed(2)"></p>
+                          </div>
+                          <div>
+                            <p class="text-gray-500 text-xs">Monto Pagado</p>
+                            <p class="font-medium text-emerald-600" x-text="'$' + Number(item.montoPagado).toFixed(2)"></p>
+                          </div>
+                          <div>
+                            <p class="text-gray-500 text-xs">Saldo Pendiente</p>
+                            <p class="font-bold" :class="Number(item.saldoPendiente) > 0 ? 'text-navy-700' : 'text-gray-600'" x-text="'$' + Number(item.saldoPendiente).toFixed(2)"></p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                  </div>
+                  
+                  <!-- Columna 2: Recibos y Comprobantes -->
+                  <div>
+                    <h3 class="font-semibold text-gray-700 mb-4">Recibos y Comprobantes</h3>
+                    <div class="overflow-x-auto">
+                      <table class="w-full text-left text-sm text-gray-600">
+                        <thead class="bg-gray-50 text-gray-700 uppercase text-xs">
+                          <tr>
+                            <th class="px-4 py-3 rounded-tl-lg">Fecha</th>
+                            <th class="px-4 py-3">Concepto</th>
+                            <th class="px-4 py-3">Monto</th>
+                            <th class="px-4 py-3 text-center rounded-tr-lg">Ver</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                          <template x-for="pago in historialPagosAlumno" :key="pago.id">
+                            <tr class="hover:bg-gray-50/50 transition-colors">
+                              <td class="px-4 py-3 font-medium text-gray-900" x-text="pago.fecha.split('T')[0]"></td>
+                              <td class="px-4 py-3" x-text="pago.concepto"></td>
+                              <td class="px-4 py-3 text-emerald-600 font-semibold" x-text="'$' + Number(pago.monto).toFixed(2)"></td>
+                              <td class="px-4 py-3 text-center">
+                                <template x-if="pago.documentos && pago.documentos.length > 0">
+                                  <a :href="window.saeApi.pagos.descargarComprobante(pago.id)" target="_blank" class="text-xs text-blue-600 hover:text-blue-800 font-medium inline-flex items-center" title="Ver Comprobante">
+                                    <i data-lucide="file-text" class="w-4 h-4 mr-1"></i> PDF
+                                  </a>
+                                </template>
+                                <template x-if="!pago.documentos || pago.documentos.length === 0">
+                                  <label class="cursor-pointer text-xs text-navy-600 hover:text-navy-800 font-medium inline-flex items-center">
+                                    <i data-lucide="upload" class="w-4 h-4 mr-1"></i>
+                                    <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png" @change="subirComprobanteHistorial(pago.id, $event)">
+                                  </label>
+                                </template>
+                              </td>
+                            </tr>
+                          </template>
+                          <tr x-show="historialPagosAlumno.length === 0">
+                            <td colspan="4" class="px-4 py-8 text-center text-gray-500">
+                              No hay recibos de pagos para este alumno.
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -659,6 +761,8 @@
       alumnoSeleccionado: false,
       alumnoActualFicha: null,
       tabAlumno: 'academicos',
+      historialPagosAlumno: [],
+      historialCalendarioAlumno: [],
 
       // ── Formularios ─────────────────────────────────────────────────────────
       nuevaBeca:       { alumnoId: null, tipo: 'Beca por hermanos (15%)', motivo: '' },
@@ -776,6 +880,41 @@
         this.alumnoActualFicha = al;
         this.alumnoSeleccionado = true;
         this.tabAlumno = 'academicos';
+        this.historialPagosAlumno = [];
+        this.historialCalendarioAlumno = [];
+      },
+      async _cargarPagosAlumnoFicha() {
+        if (!this.alumnoActualFicha) return;
+        try {
+          const res = await window.saeApi.pagos.listar({ alumnoId: this.alumnoActualFicha.id });
+          const resCal = await window.saeApi.pagos.calendario({ alumnoId: this.alumnoActualFicha.id });
+          if (res && res.ok) {
+            this.historialPagosAlumno = res.pagination ? res.data : (Array.isArray(res.data) ? res.data : []);
+          }
+          if (resCal && resCal.ok) {
+            this.historialCalendarioAlumno = Array.isArray(resCal.data) ? resCal.data : [];
+            this.historialCalendarioAlumno.sort((a, b) => new Date(a.fechaVencimiento) - new Date(b.fechaVencimiento));
+          }
+          setTimeout(() => { if(window.lucide) window.lucide.createIcons(); }, 150);
+        } catch (e) {
+          console.error('Error loading payment history:', e);
+        }
+      },
+      async subirComprobanteHistorial(pagoId, event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        try {
+          const res = await window.saeApi.pagos.subirComprobante(pagoId, file);
+          if (res && res.ok) {
+            window.saeApi.toast('exito', 'Comprobante subido correctamente');
+            this._cargarPagosAlumnoFicha();
+          } else {
+            window.saeApi.toast('error', res?.message || 'Error al subir comprobante');
+          }
+        } catch (e) {
+          console.error('Upload error:', e);
+          window.saeApi.toast('error', 'Error inesperado al subir');
+        }
       },
       openNuevoAlumno() {
         this.modalNuevoAlumno  = true;

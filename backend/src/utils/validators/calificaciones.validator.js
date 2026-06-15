@@ -16,7 +16,14 @@ const guardarCalificacionValidators = [
     .withMessage(`El periodo debe ser: ${PERIODOS_VALIDOS.join(', ')}.`),
 
   body('valor')
-    .isFloat({ min: 0, max: 10 }).withMessage('La calificación debe ser un número entre 0 y 10.'),
+    .custom((value) => {
+      if (value === null || value === undefined) return true;
+      const num = parseFloat(value);
+      if (isNaN(num) || num < 0 || num > 10) {
+        throw new Error('La calificación debe ser un número entre 0 y 10.');
+      }
+      return true;
+    }),
 ];
 
 const guardarCalificacionesLoteValidators = [
@@ -34,7 +41,15 @@ const guardarCalificacionesLoteValidators = [
     .withMessage('Periodo inválido en algún registro.'),
 
   body('calificaciones.*.valor')
-    .isFloat({ min: 0, max: 10 }).withMessage('Valor de calificación inválido.'),
+    .custom((value) => {
+      console.log('VALIDATOR GOT VALUE:', value, typeof value);
+      if (value === null || value === undefined || value === '') return true;
+      const num = parseFloat(value);
+      if (isNaN(num) || num < 0 || num > 10) {
+        throw new Error('CUSTOM_ERROR');
+      }
+      return true;
+    }),
 ];
 
 module.exports = { guardarCalificacionValidators, guardarCalificacionesLoteValidators };

@@ -253,7 +253,7 @@
             <!-- Listado de Alumnos -->
             <div x-show="!alumnoSeleccionado">
               <div class="mb-4 flex flex-wrap gap-3">
-                <input type="text" class="input-modern max-w-sm" placeholder="Buscar por nombre, matrícula o CURP..." x-model="busquedaAlumno" @input="filtrarAlumnos()">
+                <input type="text" class="input-modern max-w-sm" placeholder="Buscar por nombre, matrícula o CURP..." x-model.debounce.500ms="busquedaAlumno" @input="_cargarAlumnosAPI(1)">
                 <select class="input-modern w-40" x-model="filtroEstadoAlumno" @change="_cargarAlumnosAPI(1)">
                   <option value="">Vista principal (Activos)</option>
                   <option value="Todos">Mostrar Todos</option>
@@ -263,21 +263,21 @@
                   <option value="Egresado">Solo Egresados</option>
                 </select>
                 
-                <select class="input-modern w-40" x-model="filtroNivel" @change="filtroGrado=''; filtroSeccion=''; filtrarAlumnos()">
+                <select class="input-modern w-40" x-model="filtroNivel" @change="filtroGrado=''; filtroSeccion=''; _cargarAlumnosAPI(1)">
                   <option value="">Todos los niveles</option>
                   <template x-for="n in nivelesDisponibles" :key="n">
                     <option :value="n" x-text="n"></option>
                   </template>
                 </select>
                 
-                <select class="input-modern w-32" x-model="filtroGrado" @change="filtroSeccion=''; filtrarAlumnos()" :disabled="!filtroNivel">
+                <select class="input-modern w-32" x-model="filtroGrado" @change="filtroSeccion=''; _cargarAlumnosAPI(1)" :disabled="!filtroNivel">
                   <option value="">Grado</option>
                   <template x-for="g in gradosDisponiblesFiltro" :key="g">
                     <option :value="g" x-text="g + '°'"></option>
                   </template>
                 </select>
                 
-                <select class="input-modern w-32" x-model="filtroSeccion" @change="filtrarAlumnos()" :disabled="!filtroGrado">
+                <select class="input-modern w-32" x-model="filtroSeccion" @change="_cargarAlumnosAPI(1)" :disabled="!filtroGrado">
                   <option value="">Grupo</option>
                   <template x-for="s in seccionesDisponiblesFiltro" :key="s">
                     <option :value="s" x-text="s"></option>
@@ -426,15 +426,22 @@
                       </div>
                     </div>
                     <!-- Boleta Virtual -->
-                    <div class="mt-6 border-t pt-4" x-show="historialAcademico.length > 0">
+                    <div class="mt-6 border-t pt-4">
                       <div class="flex justify-between items-end mb-4">
                         <h3 class="text-lg font-bold text-navy-800">Boleta Virtual (Historial Académico)</h3>
-                        <div class="text-right">
+                        <div class="text-right" x-show="historialAcademico.length > 0">
                           <div class="text-xs text-gray-500">Promedio General</div>
                           <div class="text-xl font-bold text-navy-800" x-text="promedioGeneralFicha"></div>
                         </div>
                       </div>
-                      <div class="overflow-x-auto border border-gray-100 rounded-lg">
+                      
+                      <div x-show="historialAcademico.length === 0" class="p-6 bg-gray-50 rounded-lg border border-gray-100 text-center">
+                        <i data-lucide="book-x" class="w-8 h-8 text-gray-400 mx-auto mb-2"></i>
+                        <p class="text-gray-500 text-sm">El grupo de este alumno aún no tiene materias asignadas.<br>Asigne materias al grupo desde el módulo "Grupos & Materias" para poder calificar.</p>
+                      </div>
+
+                      <h4 class="font-bold text-navy-800 mt-6 mb-3 text-md" x-show="historialAcademico.length > 0">Materias Curriculares</h4>
+                      <div class="overflow-x-auto border border-gray-100 rounded-lg" x-show="historialAcademico.length > 0">
                         <table class="w-full text-sm text-left">
                           <thead class="bg-gray-50 text-gray-600">
                             <tr>
@@ -458,6 +465,40 @@
                           </tbody>
                         </table>
                       </div>
+                      
+                      <div class="mt-8 pt-6 border-t-2 border-dashed border-gray-200">
+                        <h4 class="font-bold text-navy-800 mb-3 text-md">Clubes Extracurriculares</h4>
+                        
+                        <div x-show="historialExtraBoleta.length === 0" class="p-4 bg-gray-50 rounded-lg text-center">
+                          <p class="text-gray-500 text-sm">El alumno no tiene calificaciones registradas en clubes extracurriculares.</p>
+                        </div>
+                        
+                        <div class="overflow-x-auto border border-gray-100 rounded-lg" x-show="historialExtraBoleta.length > 0">
+                          <table class="w-full text-sm text-left">
+                            <thead class="bg-gray-50 text-gray-600">
+                              <tr>
+                                <th class="p-3 font-semibold">Club Extracurricular</th>
+                                <th class="p-3 font-semibold text-center w-32">Trimestre 1</th>
+                                <th class="p-3 font-semibold text-center w-32">Trimestre 2</th>
+                                <th class="p-3 font-semibold text-center w-32">Trimestre 3</th>
+                                <th class="p-3 font-semibold text-center w-24">Promedio</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <template x-for="club in historialExtraBoleta" :key="club.id">
+                                <tr class="border-b">
+                                  <td class="p-3 font-medium text-gray-800 uppercase" x-text="club.nombre"></td>
+                                  <td class="p-3 text-center" x-text="club.T1.v !== '' ? club.T1.v : '-'"></td>
+                                  <td class="p-3 text-center" x-text="club.T2.v !== '' ? club.T2.v : '-'"></td>
+                                  <td class="p-3 text-center" x-text="club.T3.v !== '' ? club.T3.v : '-'"></td>
+                                  <td class="p-3 text-center font-bold" :class="club.prom < 6 ? 'text-red-500' : 'text-emerald-600'" x-text="club.prom"></td>
+                                </tr>
+                              </template>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                      
                     </div>
                   <div class="flex justify-between items-center mt-6">
                     <div class="flex gap-2">
@@ -908,28 +949,29 @@
       <!-- CALIFICACIONES -->
       <template x-if="view==='calificaciones'"><div><h2 class="text-xl font-bold text-navy-800 mb-3">Calificaciones 
 — Buscador inteligente</h2>
-<div class="grid md:grid-cols-4 gap-4 mb-5">
+
+<div class="grid md:grid-cols-4 gap-4 mb-5" x-show="!alumnoSeleccionadoCalif">
   <div>
     <label class="text-xs font-medium text-gray-600">Alumno</label>
-    <input type="text" class="input-modern" placeholder="Nombre o matrícula..." x-model="busquedaCalif" @input="buscarAlumnoCalif">
+    <input type="text" class="input-modern" placeholder="Nombre o matrícula..." x-model.debounce.500ms="busquedaCalif" @input="buscarAlumnoCalif">
   </div>
   <div>
     <label class="text-xs font-medium text-gray-600">Nivel Escolar</label>
-    <select class="input-modern" x-model="filtroCalifNivel" @change="filtroCalifGrado=''; filtroCalifGrupo=''; buscarAlumnoCalif()">
+    <select class="input-modern" x-model="filtroCalifNivel" @change="$nextTick(() => { filtroCalifGrado=''; filtroCalifGrupo=''; buscarAlumnoCalif(); })">
       <option value="">Todos los niveles</option>
       <template x-for="n in nivelesDisponibles" :key="n"><option :value="n" x-text="n"></option></template>
     </select>
   </div>
   <div>
     <label class="text-xs font-medium text-gray-600">Grado</label>
-    <select class="input-modern" x-model="filtroCalifGrado" @change="filtroCalifGrupo=''; buscarAlumnoCalif()" :disabled="!filtroCalifNivel">
+    <select class="input-modern" x-model="filtroCalifGrado" @change="$nextTick(() => { filtroCalifGrupo=''; buscarAlumnoCalif(); })" :disabled="!filtroCalifNivel">
       <option value="">Grado</option>
       <template x-for="g in ['1','2','3','4','5','6']" :key="g"><option :value="g" x-text="g + '°'"></option></template>
     </select>
   </div>
   <div>
     <label class="text-xs font-medium text-gray-600">Grupo</label>
-    <select class="input-modern" x-model="filtroCalifGrupo" @change="buscarAlumnoCalif()" :disabled="!filtroCalifGrado">
+    <select class="input-modern" x-model="filtroCalifGrupo" @change="$nextTick(() => buscarAlumnoCalif())" :disabled="!filtroCalifGrado">
       <option value="">Grupo</option>
       <template x-for="s in ['A','B','C','D']" :key="s"><option :value="s" x-text="s"></option></template>
     </select>
@@ -942,10 +984,21 @@
       <div class="text-sm text-gray-500" x-text="alumnoActualCalif?.grupo"></div>
     </div>
     <div class="text-right">
+      <span class="px-3 py-1 bg-navy-50 text-navy-700 rounded-full text-sm font-semibold" x-text="alumnoActualCalif?.matricula"></span>
+    </div>
+  </div>
+  
+  <div class="flex gap-4 mb-5 border-b border-gray-200">
+    <button class="pb-2 font-medium text-sm" :class="tipoEvaluacionCalif==='curricular' ? 'text-navy-700 border-b-2 border-navy-700' : 'text-gray-400 hover:text-gray-600'" @click="tipoEvaluacionCalif='curricular'">Curriculares</button>
+    <button class="pb-2 font-medium text-sm" :class="tipoEvaluacionCalif==='extracurricular' ? 'text-navy-700 border-b-2 border-navy-700' : 'text-gray-400 hover:text-gray-600'" @click="tipoEvaluacionCalif='extracurricular'">Extracurriculares (Clubes)</button>
+  </div>
+  
+  <template x-if="tipoEvaluacionCalif==='curricular'">
+  <div>
+    <div class="text-right mb-4">
       <div class="text-xs text-gray-500">Promedio General</div>
       <div class="text-xl font-bold text-navy-800" x-text="promedioGeneralCalif"></div>
     </div>
-  </div>
   <div class="overflow-x-auto">
     <table class="w-full text-sm text-left">
       <thead class="bg-gray-50 text-gray-600">
@@ -983,7 +1036,43 @@
     <button class="btn-outline" @click="alumnoSeleccionadoCalif=false">Cancelar</button>
     <button class="btn-primary" @click="guardarCalificacion()">Guardar Calificaciones</button>
   </div>
-</div><div class="text-gray-400 text-sm text-center py-6" x-show="!alumnoSeleccionadoCalif && busquedaCalif.length>2 && alumnosCoincidencias.length===0">No se encontraron alumnos</div><div class="grid gap-2 mt-3" x-show="!alumnoSeleccionadoCalif && busquedaCalif.length>1"><template x-for="al in alumnosCoincidencias.slice(0,6)"><div class="card-clean p-3 flex justify-between items-center cursor-pointer hover:bg-navy-50 transition" @click="seleccionarAlumnoCalif(al)"><div><span class="font-medium text-navy-700" x-text="al.nombre"></span><div class="text-xs text-gray-400" x-text="al.matricula"></div></div><button class="btn-primary text-xs">Seleccionar</button></div></template></div></div></template>
+  </div>
+  </template>
+
+  <template x-if="tipoEvaluacionCalif==='extracurricular'">
+  <div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-left">
+        <thead class="bg-gray-50 text-gray-600">
+          <tr>
+            <th class="p-3 font-semibold rounded-tl-lg">Club Extracurricular</th>
+            <th class="p-3 font-semibold text-center w-32">Trimestre 1</th>
+            <th class="p-3 font-semibold text-center w-32">Trimestre 2</th>
+            <th class="p-3 font-semibold text-center w-32">Trimestre 3</th>
+            <th class="p-3 font-semibold text-center w-24 rounded-tr-lg">Promedio</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="club in clubesAlumno" :key="club.id">
+            <tr class="border-b">
+              <td class="p-3 font-medium text-gray-800 uppercase" x-text="club.nombre"></td>
+              <td class="p-2"><input type="number" class="w-full input-modern text-center" min="0" max="10" step="0.1" x-model="club.T1.v" @input="recalcularPromediosExtra()"></td>
+              <td class="p-2"><input type="number" class="w-full input-modern text-center" min="0" max="10" step="0.1" x-model="club.T2.v" @input="recalcularPromediosExtra()"></td>
+              <td class="p-2"><input type="number" class="w-full input-modern text-center" min="0" max="10" step="0.1" x-model="club.T3.v" @input="recalcularPromediosExtra()"></td>
+              <td class="p-3 text-center font-bold" :class="club.prom < 6 ? 'text-red-500' : 'text-emerald-600'" x-text="club.prom"></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+    <div class="flex justify-end gap-3 mt-5">
+      <button class="btn-outline" @click="alumnoSeleccionadoCalif=false">Cancelar</button>
+      <button class="btn-primary" @click="guardarCalificacionExtraLote()">Guardar Clubes</button>
+    </div>
+  </div>
+  </template>
+
+</div><div class="text-gray-400 text-sm text-center py-6" x-show="!alumnoSeleccionadoCalif && alumnosCoincidencias.length===0">No se encontraron alumnos</div><div class="grid gap-2 mt-3" x-show="!alumnoSeleccionadoCalif && alumnosCoincidencias.length > 0"><template x-for="al in alumnosCoincidencias"><div class="card-clean p-3 flex justify-between items-center cursor-pointer hover:bg-navy-50 transition" @click="seleccionarAlumnoCalif(al)"><div><span class="font-medium text-navy-700" x-text="al.nombre"></span><div class="text-xs text-gray-400"><span x-text="al.matricula"></span><span x-show="al.nivel" class="ml-2 px-2 py-0.5 bg-gray-100 rounded text-gray-600 font-medium"><span x-text="al.nivel"></span><span x-show="al.grado" x-text="' - ' + al.grado + '° ' + (al.seccion || '')"></span></span></div></div><button class="btn-primary text-xs">Seleccionar</button></div></template></div></div></template>
 
       <!-- BECAS -->
       <template x-if="view==='becas'">
@@ -2137,11 +2226,15 @@ reporteCorte: null,
       alumnoSeleccionadoCalif: false,
       alumnoActualCalif: null,
       materiasAlumno: [], esPreescolar: false,
+      clubesAlumno: [],
+      tipoEvaluacionCalif: 'curricular',
+      historialExtraAlumno: [],
       
 
       // ── Ficha alumno & Directorio ───────────────────────────────────────────
       alumnoSeleccionado: false,
       alumnoActualFicha: null,
+      historialExtraBoleta: [],
       historialPagosAlumno: [],
       historialPagosTutor: [],
       estadoCuentaAlumno: [],
@@ -2317,6 +2410,11 @@ reporteCorte: null,
       paginaAlumnos: 1, limitAlumnos: 20, totalAlumnos: 0, paginasAlumnos: 1,
       // ── Paginación pagos ──────────────────────────────────────────────────
       paginaPagos: 1, limitPagos: 25, totalPagos: 0, paginasPagos: 1,
+      
+      // Filtros de Calificaciones
+      filtroCalifNivel: '',
+      filtroCalifGrado: '',
+      filtroCalifGrupo: '',
 
       // ── Computed ────────────────────────────────────────────────────────────
       get fechaActual() {
@@ -2346,7 +2444,7 @@ reporteCorte: null,
       get seccionesDisponiblesFiltro() {
         if (!this.filtroNivel || !this.filtroGrado) return [];
         const nivel = this.filtroNivel.toUpperCase();
-        return [...new Set(this.gruposData.filter(g => g.nivel && g.nivel.toUpperCase() === nivel && g.grado === this.filtroGrado).map(g => g.seccion))].filter(Boolean);
+        return [...new Set(this.gruposData.filter(g => g.nivel && g.nivel.toUpperCase() === nivel && String(g.grado) === String(this.filtroGrado)).map(g => g.seccion))].filter(Boolean);
       },
       get gradosDisponiblesNuevo() {
         if (!this.nuevoAlumnoData.nivel) return [];
@@ -2358,7 +2456,7 @@ reporteCorte: null,
       get gruposDisponiblesNuevo() {
         if (!this.nuevoAlumnoData.nivel || !this.nuevoAlumnoData.grado) return [];
         const nivel = this.nuevoAlumnoData.nivel.toUpperCase();
-        return this.gruposData.filter(g => g.nivel && g.nivel.toUpperCase() === nivel && g.grado === this.nuevoAlumnoData.grado);
+        return this.gruposData.filter(g => g.nivel && g.nivel.toUpperCase() === nivel && String(g.grado) === String(this.nuevoAlumnoData.grado));
       },
       get gradosDisponiblesFicha() {
         if (!this.alumnoFichaEditable || !this.alumnoFichaEditable.nivel) return [];
@@ -2370,19 +2468,34 @@ reporteCorte: null,
       get gruposDisponiblesFicha() {
         if (!this.alumnoFichaEditable || !this.alumnoFichaEditable.nivel || !this.alumnoFichaEditable.grado) return [];
         const nivel = this.alumnoFichaEditable.nivel.toUpperCase();
-        return this.gruposData.filter(g => g.nivel && g.nivel.toUpperCase() === nivel && g.grado === this.alumnoFichaEditable.grado);
+        return this.gruposData.filter(g => g.nivel && g.nivel.toUpperCase() === nivel && String(g.grado) === String(this.alumnoFichaEditable.grado));
       },
 
       // ── Carga inicial de datos ───────────────────────────────────────────────
       async _cargarAlumnosAPI(pagina, q) {
         const p   = pagina || this.paginaAlumnos;
-        const params = { page: p, limit: this.limitAlumnos, q };
-        if (this.filtroEstadoAlumno) params.estado = this.filtroEstadoAlumno;
+        const query = q !== undefined ? q : this.busquedaAlumno;
+        const params = { page: p, limit: this.limitAlumnos, q: query };
+        if (this.filtroEstadoAlumno && this.filtroEstadoAlumno !== 'Todos') {
+           if (this.filtroEstadoAlumno === 'deudores') {
+               // The API currently doesn't accept 'deudores' as an estado directly, but we will send it anyway,
+               // or handle it in the backend if we want. Actually, for now let's just let it be.
+               params.estado = this.filtroEstadoAlumno;
+           } else {
+               params.estado = this.filtroEstadoAlumno;
+           }
+        }
+        
+        if (this.filtroNivel) params.nivel = this.filtroNivel.toUpperCase();
+        if (this.filtroGrado) params.grado = this.filtroGrado;
+        if (this.filtroSeccion) params.seccion = this.filtroSeccion;
+        
         const res = await window.saeApi.alumnos.listar(params);
         if (res.ok) {
           const lista = res.pagination ? res.data : (Array.isArray(res.data) ? res.data : []);
           this.listaAlumnos     = lista.map(window.saeApi.mapAlumno);
           this.filtrarAlumnos();
+          if (typeof this.buscarAlumnoCalif === 'function') this.buscarAlumnoCalif();
           if (res.pagination) {
             this.paginaAlumnos  = res.pagination.page;
             this.totalAlumnos   = res.pagination.total;
@@ -3258,6 +3371,37 @@ reporteCorte: null,
                       this.promedioGeneralFicha = esPre ? 'N/A' : (countGral > 0 ? (sumGral/countGral).toFixed(1) : '-');
                   }
               }
+              
+              // Cargar extracurriculares
+              this.historialExtraBoleta = [];
+              try {
+                const resExtra = await window.saeApi.calificacionesExtra.porAlumno(al.id);
+                if (resExtra && resExtra.data) {
+                  const clubesMap = {};
+                  resExtra.data.forEach(c => {
+                      if (!clubesMap[c.club]) {
+                          clubesMap[c.club] = { id: c.club, nombre: c.club, T1: {v:''}, T2: {v:''}, T3: {v:''}, prom: '-' };
+                      }
+                      const p = c.periodoId;
+                      let key = null;
+                      if(p === 1 || String(c.periodo?.nombre).includes('1')) key = 'T1';
+                      if(p === 2 || String(c.periodo?.nombre).includes('2')) key = 'T2';
+                      if(p === 3 || String(c.periodo?.nombre).includes('3')) key = 'T3';
+                      if(key) {
+                          clubesMap[c.club][key].v = c.valorNumerico;
+                      }
+                  });
+                  this.historialExtraBoleta = Object.values(clubesMap).map(club => {
+                      let s = 0, c = 0;
+                      if(club.T1.v !== '') { s += parseFloat(club.T1.v); c++; }
+                      if(club.T2.v !== '') { s += parseFloat(club.T2.v); c++; }
+                      if(club.T3.v !== '') { s += parseFloat(club.T3.v); c++; }
+                      if(c>0) club.prom = (s/c).toFixed(1);
+                      return club;
+                  });
+                }
+              } catch (e) { console.error('Error al cargar extracurriculares:', e); }
+              
             } else {
             console.error('Error al obtener expediente', res);
             window.saeApi.toast('error', res?.message || 'Error al cargar el expediente del alumno.');
@@ -3383,32 +3527,39 @@ reporteCorte: null,
       },
 
       // ── Calificaciones ───────────────────────────────────────────────────────
-      buscarAlumnoCalif() {
+      async buscarAlumnoCalif() {
           const q = this.busquedaCalif.toLowerCase();
           const nivel = this.filtroCalifNivel;
           const grado = this.filtroCalifGrado;
           const grupo = this.filtroCalifGrupo;
-          
-          if (q.length > 1 || nivel) {
-            this.alumnosCoincidencias = this.listaAlumnos.filter(a => {
-              const matchBusqueda = !q || a.nombre.toLowerCase().includes(q) || a.matricula.toLowerCase().includes(q);
-              const matchNivel = !nivel || (a.nivel && a.nivel.toUpperCase() === nivel.toUpperCase());
-              const matchGrado = !grado || a.grado === grado;
-              const matchSeccion = !grupo || a.seccion === grupo;
-              return matchBusqueda && matchNivel && matchGrado && matchSeccion;
-            });
+
+          const params = {};
+          if (q) params.q = q;
+          if (nivel) params.nivel = nivel.toUpperCase();
+          if (grado) params.grado = grado;
+          if (grupo) params.seccion = grupo;
+
+          const res = await window.saeApi.alumnos.listar(params);
+          if (res.ok) {
+             const data = res.pagination ? res.data : (Array.isArray(res.data) ? res.data : []);
+             this.alumnosCoincidencias = data.map(window.saeApi.mapAlumno);
           } else {
-            this.alumnosCoincidencias = [];
+             this.alumnosCoincidencias = [];
           }
         },
       async seleccionarAlumnoCalif(al) {
         this.alumnoActualCalif      = al;
         this.alumnoSeleccionadoCalif = true;
         this.materiasAlumno = []; this.esPreescolar = false;
+        this.clubesAlumno = [
+          { id: 'inglés', nombre: 'Inglés', T1: {v:'', orig:null, califId:null}, T2: {v:'', orig:null, califId:null}, T3: {v:'', orig:null, califId:null}, prom: '-' },
+          { id: 'computación', nombre: 'Computación', T1: {v:'', orig:null, califId:null}, T2: {v:'', orig:null, califId:null}, T3: {v:'', orig:null, califId:null}, prom: '-' },
+          { id: 'danza', nombre: 'Danza', T1: {v:'', orig:null, califId:null}, T2: {v:'', orig:null, califId:null}, T3: {v:'', orig:null, califId:null}, prom: '-' }
+        ];
         
         this.busquedaCalif          = '';
 
-
+        this.cargarHistorialExtra();
 
         // Cargar materias del grupo para obtener IDs
           if (al.grupoId) {
@@ -3467,7 +3618,7 @@ reporteCorte: null,
                ['T1','T2','T3'].forEach((t, i) => {
                   const obs = (mat[t].t || '').trim();
                   if (obs) {
-                      lote.push({ alumnoId: this.alumnoActualCalif.id, grupoMateriaId: mat.id, periodo: periodosArr[i], valor: null, textoObservacion: obs, tipoEvaluacion: 'cualitativa' });
+                      lote.push({ alumnoId: this.alumnoActualCalif.id, grupoMateriaId: mat.id, periodo: periodosArr[i], valor: null, textoObservacion: obs, tipoEvaluacion: 'observacion' });
                   }
                });
             } else {
@@ -3491,6 +3642,122 @@ reporteCorte: null,
           window.saeApi.toast('exito', `${lote.length} calificación(es) guardada(s) para ${this.alumnoActualCalif.nombre}.`);
         } else {
             window.saeApi.toast('error', res.message || 'Error al guardar calificaciones.');
+        }
+      },
+      async cargarHistorialExtra() {
+        if (!this.alumnoActualCalif) return;
+        try {
+          const res = await window.saeApi.calificacionesExtra.porAlumno(this.alumnoActualCalif.id);
+          if (res && res.data) {
+            this.historialExtraAlumno = res.data;
+            this.clubesAlumno.forEach(club => {
+              club.T1 = {v:'', orig:null, califId:null};
+              club.T2 = {v:'', orig:null, califId:null};
+              club.T3 = {v:'', orig:null, califId:null};
+              club.prom = '-';
+            });
+            res.data.forEach(c => {
+               const club = this.clubesAlumno.find(x => x.id === c.club);
+               if (club) {
+                  const num = c.periodo?.numero;
+                  let key = null;
+                  if(num === 1) key = 'T1';
+                  if(num === 2) key = 'T2';
+                  if(num === 3) key = 'T3';
+                  if(key) {
+                     club[key].v = c.valorNumerico;
+                     club[key].orig = c.valorNumerico;
+                     club[key].califId = c.calificacionExtracurricularId;
+                  }
+               }
+            });
+            this.recalcularPromediosExtra();
+          }
+        } catch (e) { console.error(e); }
+      },
+      recalcularPromediosExtra() {
+         this.clubesAlumno.forEach(club => {
+             let s = 0, c = 0;
+             if(club.T1.v !== '') { s += parseFloat(club.T1.v); c++; }
+             if(club.T2.v !== '') { s += parseFloat(club.T2.v); c++; }
+             if(club.T3.v !== '') { s += parseFloat(club.T3.v); c++; }
+             if(c>0) { club.prom = (s/c).toFixed(1); }
+             else { club.prom = '-'; }
+         });
+      },
+      async guardarCalificacionExtraLote() {
+        if (!this.alumnoActualCalif) return;
+        const promesas = [];
+        for (const club of this.clubesAlumno) {
+           ['T1','T2','T3'].forEach((t, i) => {
+              const valStr = club[t].v;
+              if (valStr !== '') {
+                 const val = parseFloat(valStr);
+                 if (!isNaN(val) && val >= 0 && val <= 10) {
+                    if (club[t].califId) {
+                       if (val !== club[t].orig) {
+                          promesas.push(window.saeApi.calificacionesExtra.modificar(club[t].califId, { valorNumerico: val, motivo: 'Actualización en lote desde panel' }));
+                       }
+                    } else {
+                       promesas.push(window.saeApi.calificacionesExtra.registrar({
+                          alumnoId: this.alumnoActualCalif.id,
+                          club: club.id,
+                          numeroTrimestre: i + 1,
+                          cicloId: window.saeApi.CICLO_ACTIVO_ID || 1,
+                          valorNumerico: val
+                       }));
+                    }
+                 }
+              }
+           });
+        }
+        
+        if (promesas.length === 0) {
+           window.saeApi.toast('advertencia', 'No hay calificaciones para guardar o no se detectaron cambios.');
+           return;
+        }
+
+        try {
+           const resultados = await Promise.all(promesas);
+           const errores = resultados.filter(r => r && (!r.success && !r.ok));
+           
+           if (errores.length > 0) {
+              window.saeApi.toast('error', errores[0].message || 'Error al guardar algunas calificaciones.');
+           } else {
+              window.saeApi.toast('exito', 'Calificaciones de clubes guardadas correctamente.');
+           }
+           await this.cargarHistorialExtra();
+        } catch(e) {
+           window.saeApi.toast('error', 'Hubo un error de conexión al guardar calificaciones.');
+           await this.cargarHistorialExtra();
+        }
+      },
+      async abrirModalModificarExtra(c) {
+        const nuevaCalif = prompt(`Modificar calificación para ${c.club}\nValor actual: ${c.valorNumerico}\nIngrese nueva calificación (0-10):`, c.valorNumerico);
+        if (nuevaCalif === null) return;
+        const valor = parseFloat(nuevaCalif);
+        if (isNaN(valor) || valor < 0 || valor > 10) {
+          window.saeApi.toast('advertencia', 'Calificación inválida.');
+          return;
+        }
+        const motivo = prompt('Motivo de la modificación:');
+        if (!motivo || motivo.trim() === '') {
+          window.saeApi.toast('advertencia', 'Debe proporcionar un motivo.');
+          return;
+        }
+        try {
+          const res = await window.saeApi.calificacionesExtra.modificar(c.calificacionExtracurricularId, {
+            valorNumerico: valor,
+            motivo: motivo.trim()
+          });
+          if (res.ok || res.success) {
+            window.saeApi.toast('exito', 'Calificación modificada correctamente.');
+            await this.cargarHistorialExtra();
+          } else {
+            window.saeApi.toast('error', res.message || 'Error al modificar.');
+          }
+        } catch(e) {
+          window.saeApi.toast('error', e.message || 'Error al modificar.');
         }
       },
 
@@ -4199,4 +4466,4 @@ reporteCorte: null,
   });
 </script>
 </body>
-</html>
+</html>

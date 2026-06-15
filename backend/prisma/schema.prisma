@@ -60,6 +60,7 @@ model Usuario {
   intentosLogin              IntentoLogin[]
   logsAuditoria              LogAuditoria[]
   movimientosSaldoCreados    MovimientoSaldo[] @relation("MovimientoSaldoCreadoPor")
+  calificacionesExtraRegistradas CalificacionExtracurricular[] @relation("CalificacionExtraRegistradaPor")
   // RF-06: tokens revocados por logout
   tokensRevocados            TokenRevocado[]
   // RF-03: permisos granulares por módulo
@@ -144,6 +145,7 @@ model CicloEscolar {
   solicitudesBeca           SolicitudBeca[]
   ventanasInscripcion       VentanaInscripcionTemprana[]
   configuraciones           ConfiguracionSistema[]
+  calificacionesExtra       CalificacionExtracurricular[]
 
   @@map("ciclo_escolar")
 }
@@ -234,6 +236,7 @@ model PeriodoEvaluacion {
   ciclo          CicloEscolar   @relation(fields: [cicloId], references: [cicloId], onDelete: Restrict)
   nivel          NivelEducativo @relation(fields: [nivelId], references: [nivelId], onDelete: Restrict)
   calificaciones Calificacion[]
+  calificacionesExtra CalificacionExtracurricular[]
 
   @@unique([cicloId, nivelId, tipo, numero])
   @@map("periodo_evaluacion")
@@ -296,6 +299,7 @@ model Alumno {
   tutores          TutorAlumno[]
   inscripciones    InscripcionCiclo[]
   calificaciones   Calificacion[]
+  calificacionesExtra CalificacionExtracurricular[]
   asistencias      Asistencia[]
   calendariosPago  CalendarioPago[]
   pagos            Pago[]           @relation("PagoAlumno")
@@ -405,6 +409,27 @@ model Calificacion {
 
   @@unique([alumnoId, grupoMateriaId, periodoId])
   @@map("calificacion")
+}
+
+model CalificacionExtracurricular {
+  calificacionExtracurricularId Int       @id @default(autoincrement()) @map("calificacion_extracurricular_id")
+  alumnoId           Int       @map("alumno_id")
+  club               String    @db.VarChar(50) // "ingles", "computacion", "danza"
+  periodoId          Int       @map("periodo_id")
+  cicloId            Int       @map("ciclo_id")
+  valorNumerico      Decimal?  @map("valor_numerico") @db.Decimal(4, 2)
+  modificadaMotivo   String?   @map("modificada_motivo")
+  registradaPor      Int?      @map("registrada_por")
+  registradaEn       DateTime  @default(now()) @map("registrada_en") @db.Timestamptz()
+  actualizadoEn      DateTime  @updatedAt @map("actualizado_en") @db.Timestamptz()
+
+  alumno             Alumno            @relation(fields: [alumnoId], references: [alumnoId], onDelete: Restrict)
+  periodo            PeriodoEvaluacion @relation(fields: [periodoId], references: [periodoId], onDelete: Restrict)
+  ciclo              CicloEscolar      @relation(fields: [cicloId], references: [cicloId], onDelete: Restrict)
+  registradoPorUsuario Usuario?        @relation("CalificacionExtraRegistradaPor", fields: [registradaPor], references: [usuarioId], onDelete: SetNull)
+
+  @@unique([alumnoId, club, periodoId, cicloId])
+  @@map("calificacion_extracurricular")
 }
 
 model Asistencia {

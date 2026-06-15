@@ -114,12 +114,16 @@ function mapAlumno(a) {
  *
  * @returns {Array|{data, pagination}} Sin page → array plano. Con page → { data, pagination }
  */
-async function findAll({ q, grupoId, nivel, estado, page, limit } = {}) {
+async function findAll({ q, grupoId, nivel, grado, seccion, estado, page, limit } = {}) {
   const where = {};
 
   if (estado && estado !== 'Todos') {
-    // Filtramos exactamente por el estado solicitado (Activo, Baja Temporal, Baja Definitiva, Egresado)
-    where.estado = estado;
+    if (estado !== 'deudores') {
+      // Filtramos exactamente por el estado solicitado (Activo, Baja Temporal, Baja Definitiva, Egresado)
+      where.estado = estado;
+    } else {
+      where.eliminadoEn = null;
+    }
   } else if (!estado) {
     // Comportamiento por defecto al cargar sin filtros: ocultamos bajas definitivas
     where.eliminadoEn = null;
@@ -129,13 +133,28 @@ async function findAll({ q, grupoId, nivel, estado, page, limit } = {}) {
     where.nivel = { codigo: nivel };
   }
 
+  const inscripcionesSome = { eliminadoEn: null };
+  let filterInscripcion = false;
+
+  if (estado === 'deudores') {
+    inscripcionesSome.estadoFinanciero = { not: 'al_corriente' };
+    filterInscripcion = true;
+  }
+
   if (grupoId) {
-    where.inscripciones = {
-      some: {
-        grupoId: Number(grupoId),
-        eliminadoEn: null,
-      },
-    };
+    inscripcionesSome.grupoId = Number(grupoId);
+    filterInscripcion = true;
+  } else if (grado || seccion) {
+    // If no specific grupoId is provided but grado/seccion is, filter by those properties on the group
+    const grupoWhere = {};
+    if (grado) grupoWhere.grado = grado;
+    if (seccion) grupoWhere.seccion = seccion;
+    inscripcionesSome.grupo = { is: grupoWhere };
+    filterInscripcion = true;
+  }
+
+  if (filterInscripcion) {
+    where.inscripciones = { some: inscripcionesSome };
   }
 
   if (q) {

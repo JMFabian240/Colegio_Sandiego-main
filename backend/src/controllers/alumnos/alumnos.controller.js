@@ -9,8 +9,8 @@ const { success, created }    = require('../../utils/response.utils');
 
 async function listar(req, res, next) {
   try {
-    const { q, grupoId, nivel, estado, page, limit } = req.query;
-    const resultado = await alumnosService.listar({ q, grupoId, nivel, estado, page, limit });
+    const { q, grupoId, nivel, grado, seccion, estado, page, limit } = req.query;
+    const resultado = await alumnosService.listar({ q, grupoId, nivel, grado, seccion, estado, page, limit });
 
     // Con paginación: resultado = { data, pagination }
     if (resultado && resultado.pagination) {

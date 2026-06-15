@@ -276,6 +276,12 @@
     guardarLote: function (lista)  { return request('POST', '/calificaciones/lote', { calificaciones: lista }); },
   };
 
+  var calificacionesExtra = {
+    porAlumno: function (alumnoId) { return request('GET', '/calificaciones-extra/alumno/' + alumnoId); },
+    registrar: function (datos) { return request('POST', '/calificaciones-extra', datos); },
+    modificar: function (id, datos) { return request('PUT', '/calificaciones-extra/' + id, datos); }
+  };
+
   // ── Módulo: Grupos ──────────────────────────────────────────────────────────
   var grupos = {
     listar:     function (nivel)       { return request('GET',  '/grupos' + (nivel ? '?nivel=' + nivel : '')); },
@@ -498,7 +504,7 @@
     getUsuario: getUsuario, setUsuario: setUsuario,
     // Módulos
     auth: auth, alumnos: alumnos, tutores: tutores, pagos: pagos, becas: becas,
-    calificaciones: calificaciones, grupos: grupos, usuarios: usuarios,
+    calificaciones: calificaciones, calificacionesExtra: calificacionesExtra, grupos: grupos, usuarios: usuarios,
     bitacora: bitacora, permisos: permisos, configuracion: configuracion,
     reportes: reportes,
     // Fetch directo

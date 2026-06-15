@@ -227,40 +227,41 @@ async function findByAlumnoYPeriodo(alumnoId, periodo) {
  * Acepta el mismo formato anterior:
  *   { alumnoId, grupoMateriaId, periodo (string), valor, registradoPorId }
  */
-async function upsert(datos, auditCtx = {}) { return withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
+async function upsert(datos, auditCtx = {}) { 
   const { alumnoId, grupoMateriaId, periodo, valor, registradoPorId, tipoEvaluacion, textoObservacion } = datos;
 
   const periodoId = await resolverPeriodoId(periodo, grupoMateriaId);
   if (!periodoId) throw new Error(`Período '${periodo}' no pudo resolverse.`);
 
-  const cal = await tx.calificacion.upsert({
-    where: {
-      alumnoId_grupoMateriaId_periodoId: {
+  return withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
+    const cal = await tx.calificacion.upsert({
+      where: {
+        alumnoId_grupoMateriaId_periodoId: {
+          alumnoId:       Number(alumnoId),
+          grupoMateriaId: Number(grupoMateriaId),
+          periodoId,
+        },
+      },
+      create: {
         alumnoId:       Number(alumnoId),
         grupoMateriaId: Number(grupoMateriaId),
         periodoId,
+        tipoEvaluacion: tipoEvaluacion ?? 'numerica',
+        valorNumerico:  valor !== undefined ? valor : null,
+        textoObservacion: textoObservacion ?? null,
+        registradaPor:  registradoPorId ? Number(registradoPorId) : null,
       },
-    },
-    create: {
-      alumnoId:       Number(alumnoId),
-      grupoMateriaId: Number(grupoMateriaId),
-      periodoId,
-      tipoEvaluacion: tipoEvaluacion ?? 'numerica',
-      valorNumerico:  valor !== undefined ? valor : null,
-      textoObservacion: textoObservacion ?? null,
-      registradaPor:  registradoPorId ? Number(registradoPorId) : null,
-    },
-    update: {
-      valorNumerico: valor !== undefined ? valor : undefined,
-      tipoEvaluacion: tipoEvaluacion,
-      textoObservacion: textoObservacion !== undefined ? textoObservacion : undefined,
-      registradaPor: registradoPorId ? Number(registradoPorId) : undefined,
-    },
-    include: INCLUDE_COMPLETO,
-  });
+      update: {
+        valorNumerico: valor !== undefined ? valor : undefined,
+        tipoEvaluacion: tipoEvaluacion,
+        textoObservacion: textoObservacion !== undefined ? textoObservacion : undefined,
+        registradaPor: registradoPorId ? Number(registradoPorId) : undefined,
+      },
+      include: INCLUDE_COMPLETO,
+    });
 
-  return mapCalificacion(cal);
-});
+    return mapCalificacion(cal);
+  });
 }
 
 /**

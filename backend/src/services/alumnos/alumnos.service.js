@@ -8,9 +8,9 @@
 const alumnosRepository = require('../../repositories/alumnos/alumnos.repository');
 const calendarioPagoService = require('../pagos/calendarioPago.service');
 
-async function listar(filtros) {
+async function listar(filtros, usuario) {
   // page y limit son opcionales — sin ellos la respuesta es el array plano (backward compat)
-  return alumnosRepository.findAll(filtros);
+  return alumnosRepository.findAll(filtros, usuario);
 }
 
 async function obtenerPorId(id) {

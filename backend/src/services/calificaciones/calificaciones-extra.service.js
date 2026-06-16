@@ -14,7 +14,8 @@ async function registrarCalificacion({ alumnoId, club, numeroTrimestre, cicloId,
   const cicloActivo = await prisma.cicloEscolar.findFirst({ where: { activo: true } });
   if (!cicloActivo) throw new Error('No hay un ciclo escolar activo configurado en el sistema.');
 
-  const periodo = await prisma.periodoEvaluacion.findFirst({
+  // Buscar periodo por nivel del alumno y ciclo activo
+  let periodo = await prisma.periodoEvaluacion.findFirst({
     where: {
       nivelId: alumno.nivelId,
       numero: parseInt(numeroTrimestre, 10),
@@ -22,8 +23,18 @@ async function registrarCalificacion({ alumnoId, club, numeroTrimestre, cicloId,
     }
   });
 
+  // Fallback: si no hay periodo para ese nivel, buscar cualquier periodo del ciclo activo con ese numero
   if (!periodo) {
-    const err = new Error(`No se encontró el periodo (Trimestre ${numeroTrimestre}) para el nivel de este alumno.`);
+    periodo = await prisma.periodoEvaluacion.findFirst({
+      where: {
+        numero: parseInt(numeroTrimestre, 10),
+        cicloId: cicloActivo.cicloId
+      }
+    });
+  }
+
+  if (!periodo) {
+    const err = new Error(`No se encontró el periodo (Trimestre ${numeroTrimestre}) para el ciclo activo. Configure los periodos en Ciclo Escolar.`);
     err.statusCode = 404;
     throw err;
   }

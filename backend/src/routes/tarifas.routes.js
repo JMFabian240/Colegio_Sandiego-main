@@ -3,16 +3,16 @@
 const { Router } = require('express');
 const tarifasController = require('../controllers/tarifas/tarifas.controller');
 const { authenticate } = require('../middleware/auth.middleware');
-const { adminOGestor } = require('../middleware/rbac.middleware');
+const { authorizePermiso } = require('../middleware/rbac.middleware');
 
 const router = Router();
-router.use(authenticate, adminOGestor);
+router.use(authenticate);
 
-router.get('/ciclos', tarifasController.listarCiclos);
-router.post('/ciclos', tarifasController.crearCiclo);
-router.get('/niveles', tarifasController.listarNiveles);
-router.get('/', tarifasController.obtenerTarifas);
-router.put('/', tarifasController.guardarTarifas);
+router.get('/ciclos', authorizePermiso('configuracion', 'lectura'), tarifasController.listarCiclos);
+router.post('/ciclos', authorizePermiso('configuracion', 'escritura'), tarifasController.crearCiclo);
+router.get('/niveles', authorizePermiso('configuracion', 'lectura'), tarifasController.listarNiveles);
+router.get('/', authorizePermiso('configuracion', 'lectura'), tarifasController.obtenerTarifas);
+router.put('/', authorizePermiso('configuracion', 'escritura'), tarifasController.guardarTarifas);
 
 module.exports = router;
 

@@ -3,7 +3,7 @@
 const { Router }             = require('express');
 const becasController        = require('../controllers/becas/becas.controller');
 const { authenticate }       = require('../middleware/auth.middleware');
-const { authorize }          = require('../middleware/rbac.middleware');
+const { authorize, authorizePermiso } = require('../middleware/rbac.middleware');
 const { validate }           = require('../middleware/validate.middleware');
 const {
   crearSolicitudBecaValidators,
@@ -19,18 +19,18 @@ const router = Router();
 router.use(authenticate);
 
 // GET /api/v1/becas — becas activas (todos los roles)
-router.get('/', authorize('ADMIN', 'GESTOR', 'MAESTRA'), becasController.listarBecas);
+router.get('/', authorizePermiso('becas', 'lectura'), becasController.listarBecas);
 
 // ── CATÁLOGO DE BECAS ─────────────────────────────────────────
-router.get('/catalogo', authorize('ADMIN', 'GESTOR'), becasController.listarCatalogoBecas);
+router.get('/catalogo', authorizePermiso('becas', 'lectura'), becasController.listarCatalogoBecas);
 router.post('/catalogo', 
   crearCatalogoBecaValidators, validate,
-  authorize('ADMIN', 'GESTOR'), 
+  authorizePermiso('becas', 'escritura'), 
   becasController.crearCatalogoBeca
 );
 router.patch('/catalogo/:id',
   actualizarCatalogoBecaValidators, validate,
-  authorize('ADMIN', 'GESTOR'),
+  authorizePermiso('becas', 'escritura'),
   becasController.actualizarCatalogoBeca
 );
 router.delete('/catalogo/:id', authorize('ADMIN'), becasController.eliminarCatalogoBeca);
@@ -39,24 +39,24 @@ router.delete('/catalogo/:id', authorize('ADMIN'), becasController.eliminarCatal
 // ── ASIGNACIONES DIRECTAS (ADMIN y GESTOR) ────────────────────────────
 router.post('/asignar',
   asignarBecaValidators, validate,
-  authorize('ADMIN', 'GESTOR'),
+  authorizePermiso('becas', 'escritura'),
   becasController.asignarBecaDirecta
 );
 
 router.post('/asignaciones/:id/retirar',
   retirarBecaValidators, validate,
-  authorize('ADMIN', 'GESTOR'),
+  authorizePermiso('becas', 'escritura'),
   becasController.retirarBecaDirecta
 );
 // ─────────────────────────────────────────────────────────────
 
 // GET /api/v1/becas/solicitudes — ADMIN ve todas; GESTOR ve las suyas
-router.get('/solicitudes', authorize('ADMIN', 'GESTOR'), becasController.listarSolicitudes);
+router.get('/solicitudes', authorizePermiso('becas', 'lectura'), becasController.listarSolicitudes);
 
 // POST /api/v1/becas/solicitudes — GESTOR y ADMIN pueden solicitar (RF-21, 26, 28)
 router.post('/solicitudes',
   crearSolicitudBecaValidators, validate,
-  authorize('ADMIN', 'GESTOR'),
+  authorizePermiso('becas', 'escritura'),
   becasController.solicitarBeca
 );
 

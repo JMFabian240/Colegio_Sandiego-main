@@ -407,7 +407,7 @@
           x-text="(saeApi.getUsuario()?.nombre||'').charAt(0).toUpperCase()||'?'">?</div>
         <div class="flex-1 min-w-0">
           <div class="text-white text-sm truncate" x-text="saeApi.getUsuario()?.nombre||'Usuario'">Usuario</div>
-          <div class="text-white/40 text-[11px]" x-text="rol"></div>
+          <div class="text-white/40 text-[11px]" x-text="rol === 'MAESTRA' ? 'DOCENTE' : rol"></div>
         </div>
         <button title="Cerrar sesión" @click="saeLogout()"
           class="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition flex-shrink-0">
@@ -425,6 +425,38 @@
           <span class="gestor-role-pill" x-show="esGestor()">Gestor — Becas requieren autorización del
             Administrador</span>
           <span class="text-sm text-gray-400" x-text="fechaActual"></span>
+          
+          <!-- Notificaciones Bell -->
+          <div class="relative" x-data="{ openNotif: false }" @click.away="openNotif = false">
+            <button @click="openNotif = !openNotif" class="relative p-2 text-gray-400 hover:text-gray-600 transition">
+              <i data-lucide="bell" class="w-5 h-5"></i>
+              <span x-show="notificacionesNoLeidas > 0" class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+            </button>
+            <div x-show="openNotif" x-cloak class="absolute right-0 mt-2 w-80 bg-white border border-gray-100 rounded-xl shadow-lg z-50 overflow-hidden">
+              <div class="px-4 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="font-semibold text-gray-700 text-sm">Notificaciones</h3>
+                <span x-show="notificacionesNoLeidas > 0" class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium" x-text="notificacionesNoLeidas + ' nuevas'"></span>
+              </div>
+              <div class="max-h-80 overflow-y-auto p-2 space-y-1">
+                <template x-if="notificaciones.length === 0">
+                  <p class="text-xs text-gray-400 text-center py-4">No hay notificaciones</p>
+                </template>
+                <template x-for="n in notificaciones" :key="n.notificacionId">
+                  <div class="p-3 rounded-lg text-sm transition" :class="n.leida ? 'bg-white hover:bg-gray-50' : 'bg-blue-50/50 hover:bg-blue-50 border border-blue-100/50'">
+                    <div class="flex justify-between items-start mb-1">
+                      <span class="font-medium text-gray-800 text-xs" x-text="n.asunto"></span>
+                      <span class="text-[10px] text-gray-400" x-text="window.saeApi?.formatDateTime ? window.saeApi.formatDateTime(n.creadoEn) : n.creadoEn.substring(0, 10)"></span>
+                    </div>
+                    <p class="text-xs text-gray-600 leading-snug" x-text="n.cuerpo"></p>
+                    <div class="mt-2 text-right" x-show="!n.leida">
+                      <button @click="marcarNotificacionLeida(n.notificacionId)" class="text-[10px] text-blue-600 hover:text-blue-800 font-medium">Marcar como leída</button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+
           <button x-show="tienePermiso('pagos', 'escritura') && (view === 'dashboard' || view === 'pagos')"
             class="btn-primary text-sm" @click="abrirModalPago()">+ Pago rápido</button>
         </div>
@@ -1047,6 +1079,9 @@
                           <button class="btn-primary px-3 py-1 text-xs flex items-center" @click="view = 'calificaciones'; $nextTick(() => seleccionarAlumnoCalif(alumnoActualFicha))">
                             <i data-lucide="edit" class="w-3 h-3 mr-1"></i> Editar
                           </button>
+                          <button x-show="historialAcademico.length > 0" class="btn-outline px-3 py-1 text-xs flex items-center border-red-200 text-red-600 hover:bg-red-50" @click="exportarBoletaPDF(alumnoActualFicha)">
+                            <i data-lucide="file-text" class="w-3 h-3 mr-1"></i> Exportar PDF
+                          </button>
                         </div>
                         <div class="text-right" x-show="historialAcademico.length > 0">
                           <div class="text-xs text-gray-500">Promedio General</div>
@@ -1252,11 +1287,11 @@
                       Alumnos</button>
                     <button class="px-4 py-3 text-sm font-medium flex items-center"
                       :class="tabTutorFicha==='estado_cuenta_consolidado'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'"
-                      @click="tabTutorFicha='estado_cuenta_consolidado'; _cargarEstadoCuentaConsolidado()"><i
+                      @click="tabTutorFicha='estado_cuenta_consolidado'"><i
                         data-lucide="wallet" class="w-4 h-4 mr-2"></i> Estado de Cuenta Consolidado</button>
                     <button class="px-4 py-3 text-sm font-medium flex items-center"
                       :class="tabTutorFicha==='historial_pagos'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'"
-                      @click="tabTutorFicha='historial_pagos'; _cargarPagosTutorFicha()"><i data-lucide="receipt"
+                      @click="tabTutorFicha='historial_pagos'"><i data-lucide="receipt"
                         class="w-4 h-4 mr-2"></i> Historial de Pagos</button>
                     <button class="px-4 py-3 text-sm font-medium"
                       :class="tabTutorFicha==='informacion'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'"
@@ -1267,6 +1302,7 @@
                   <div class="p-5 space-y-4" x-show="tabTutorFicha==='alumnos'">
                     <div class="flex justify-between items-center border-b pb-2 mb-4">
                       <h3 class="font-bold text-navy-800">Alumnos / Hijos Vinculados</h3>
+                      <button class="btn-outline text-xs" @click="abrirModalVincularAlumno()">+ Vincular Alumno</button>
                     </div>
                     <div class="space-y-3">
                       <template x-for="al in tutorActualFicha?.alumnos || []">
@@ -1280,6 +1316,8 @@
                             <div class="text-[11px] mt-1 font-medium text-emerald-600 uppercase"
                               x-text="al.tipoRelacion"></div>
                           </div>
+                          <button class="btn-outline text-crimson-600 border-crimson-200 text-xs py-1 px-3 ml-2"
+                            @click="desvincularAlumno(al.alumnoId || al.alumno?.id)">Desvincular</button>
                         </div>
                       </template>
                       <div x-show="!tutorActualFicha?.alumnos || tutorActualFicha.alumnos.length === 0"
@@ -1367,22 +1405,22 @@
                       <h3 class="font-bold text-navy-800">Datos de Facturación (Opcional)</h3>
                       <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-700 font-medium">
                         <input type="checkbox" class="rounded border-gray-300 text-navy-600 focus:ring-navy-600"
-                          x-model="tutorFichaEditable.requiereFactura" :disabled="!editandoFacturacionTutor">
+                          x-model="tutorFichaEditable.requiereFactura">
                         Requiere facturación
                       </label>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4 mt-4">
+                    <div class="grid grid-cols-2 gap-4 mt-4" x-show="tutorFichaEditable.requiereFactura" x-collapse>
                       <div>
                         <label class="text-xs font-medium text-gray-600">RFC</label>
                         <input type="text" class="input-modern uppercase" maxlength="13"
-                          x-model="tutorFichaEditable.rfc" :readonly="!editandoFacturacionTutor"
+                          x-model="tutorFichaEditable.rfc"
                           :class="errorFacturacion && (!tutorFichaEditable.rfc || tutorFichaEditable.rfc.length < 12) ? 'border-crimson-500 ring-crimson-500' : ''">
                       </div>
                       <div>
                         <label class="text-xs font-medium text-gray-600">Régimen Fiscal (Código)</label>
                         <select class="input-modern" x-model="tutorFichaEditable.regimenFiscal"
-                          :disabled="!editandoFacturacionTutor"
+                         
                           :class="errorFacturacion && !tutorFichaEditable.regimenFiscal ? 'border-crimson-500 ring-crimson-500' : ''">
                           <option value="">Seleccionar...</option>
                           <option value="601">601 - General de Ley PM</option>
@@ -1400,7 +1438,7 @@
                       <div>
                         <label class="text-xs font-medium text-gray-600">Uso de CFDI</label>
                         <select class="input-modern" x-model="tutorFichaEditable.usoCfdi"
-                          :disabled="!editandoFacturacionTutor"
+                         
                           :class="errorFacturacion && !tutorFichaEditable.usoCfdi ? 'border-crimson-500 ring-crimson-500' : ''">
                           <option value="">Seleccionar...</option>
                           <option value="G01">G01 - Adquisición de mercancías</option>
@@ -1416,25 +1454,25 @@
                       <div>
                         <label class="text-xs font-medium text-gray-600">Código Postal Fiscal</label>
                         <input type="text" class="input-modern" maxlength="5" placeholder="Ej: 37000"
-                          x-model="tutorFichaEditable.codigoPostal" :readonly="!editandoFacturacionTutor"
+                          x-model="tutorFichaEditable.codigoPostal"
                           :class="errorFacturacion && (!tutorFichaEditable.codigoPostal || tutorFichaEditable.codigoPostal.length !== 5) ? 'border-crimson-500 ring-crimson-500' : ''">
                       </div>
                       <div class="col-span-2">
                         <label class="text-xs font-medium text-gray-600">Dirección Fiscal</label>
                         <textarea class="input-modern" rows="2" placeholder="Calle, número, colonia, ciudad, estado"
-                          x-model="tutorFichaEditable.direccionFiscal" :readonly="!editandoFacturacionTutor"
+                          x-model="tutorFichaEditable.direccionFiscal"
                           :class="errorFacturacion && (!tutorFichaEditable.direccionFiscal || tutorFichaEditable.direccionFiscal.trim() === '') ? 'border-crimson-500 ring-crimson-500' : ''"></textarea>
                       </div>
                       <div class="col-span-2">
                         <label class="text-xs font-medium text-gray-600">Correo para envío de CFDI</label>
                         <input type="email" class="input-modern" x-model="tutorFichaEditable.correoFacturacion"
-                          :readonly="!editandoFacturacionTutor"
+                         
                           :class="errorFacturacion && (!tutorFichaEditable.correoFacturacion || !tutorFichaEditable.correoFacturacion.includes('@')) ? 'border-crimson-500 ring-crimson-500' : ''">
                       </div>
                     </div>
 
                     <!-- Campos informativos para CFDI Educativo -->
-                    <div class="mt-6 border-t pt-4">
+                    <div class="mt-6 border-t pt-4" x-show="tutorFichaEditable.requiereFactura" x-collapse>
                       <h4 class="text-sm font-bold text-navy-800 mb-2">Información para Complemento Educativo (CFDI)
                       </h4>
                       <p class="text-xs text-gray-500 mb-3">Estos datos son extraídos automáticamente de los expedientes
@@ -1458,6 +1496,13 @@
                         <div x-show="!tutorActualFicha?.alumnos || tutorActualFicha.alumnos.length === 0"
                           class="text-xs text-gray-400 italic">No hay alumnos vinculados.</div>
                       </div>
+                    </div>
+
+                    <div class="flex justify-end mt-4 pt-4 border-t border-gray-200">
+                      
+                      <button class="btn-primary flex items-center" x-show="tutorFichaEditable.requiereFactura"
+                        @click="guardarFacturacionTutor()"><i data-lucide="save" class="w-4 h-4 mr-2"></i> Guardar Datos
+                        Fiscales</button>
                     </div>
                   </div>
                 </div>
@@ -1509,7 +1554,7 @@
 
         <!-- CALIFICACIONES -->
         <template x-if="view==='calificaciones'">
-          <div>
+          <div x-init="buscarAlumnoCalif()">
             <h2 class="text-xl font-bold text-navy-800 mb-3">Calificaciones
               — Buscador inteligente</h2>
 
@@ -1776,16 +1821,36 @@
             </div>
 
             <!-- Despliegue del Historial -->
-            <div x-show="alumnoHistorialSeleccionado" class="space-y-6">
+            <div x-show="alumnoHistorialSeleccionado" class="space-y-6" id="historialAcademicoImprimible">
               <!-- Info del alumno -->
-              <div class="bg-navy-800 text-white rounded-lg p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg">
-                <div>
-                  <h3 class="text-2xl font-bold" x-text="alumnoHistorialSeleccionado.nombre"></h3>
-                  <p class="text-white/70 text-sm mt-1" x-text="(alumnoHistorialSeleccionado.matricula || 'Sin Matrícula') + ' • ' + (alumnoHistorialSeleccionado.nivel || '')"></p>
+              <div class="bg-navy-800 text-white rounded-lg p-6 md:p-8 shadow-lg relative">
+                <div class="absolute top-6 right-6 print:hidden">
+                  <button class="btn-outline text-white border-white hover:bg-white/10" @click="window.print()">
+                    <i data-lucide="printer" class="w-4 h-4 mr-2"></i> Imprimir
+                  </button>
                 </div>
-                <button class="btn-outline text-white border-white hover:bg-white/10" @click="window.print()">
-                  <i data-lucide="printer" class="w-4 h-4 mr-2"></i> Imprimir Historial
-                </button>
+                
+                <div class="grid grid-cols-[80px_1fr] md:grid-cols-[100px_1fr] gap-x-4 gap-y-3 text-sm text-white/80 pr-32">
+                  <div class="font-bold text-white/60">Alumno:</div>
+                  <div class="uppercase text-white">
+                    <span class="font-bold mr-6" x-text="alumnoHistorialSeleccionado.matricula || 'S/M'"></span> 
+                    <span x-text="alumnoHistorialSeleccionado.nombre"></span>
+                  </div>
+                  
+                  <div class="font-bold text-white/60">Programa:</div>
+                  <div class="uppercase text-white" x-text="'EDUCACIÓN BÁSICA - ' + (alumnoHistorialSeleccionado.nivel || '')"></div>
+
+                  <div class="font-bold text-white/60">Campus:</div>
+                  <div class="uppercase flex flex-wrap gap-x-8 gap-y-2 text-white">
+                    <span>COLEGIO SAN DIEGO</span>
+                    <span><span class="font-bold text-white/60">Modalidad:</span> ESCOLARIZADO</span>
+                    <span><span class="font-bold text-white/60">Nivel:</span> <span x-text="alumnoHistorialSeleccionado.nivel || ''"></span></span>
+                  </div>
+                </div>
+                
+                <div class="text-center italic text-white/50 text-xs mt-8">
+                  "Los datos que se presentan son únicamente de carácter informativo y carecen de validez oficial."
+                </div>
               </div>
 
               <!-- Sin historial -->
@@ -1810,20 +1875,16 @@
                           <thead class="bg-gray-100 text-gray-600 uppercase text-xs">
                             <tr>
                               <th class="px-4 py-2 rounded-tl">Experiencia Educativa</th>
-                              <th class="px-4 py-2 text-center">Créditos</th>
                               <th class="px-4 py-2">Periodo</th>
-                              <th class="px-4 py-2 text-center">Calificación</th>
-                              <th class="px-4 py-2 rounded-tr">Fecha Aprobación</th>
+                              <th class="px-4 py-2 text-center rounded-tr">Calificación</th>
                             </tr>
                           </thead>
                           <tbody class="divide-y divide-gray-100">
-                            <template x-for="c in registro.curriculares" :key="c.calificacionId">
+                            <template x-for="c in registro.curriculares" :key="c.materia">
                               <tr class="hover:bg-gray-50/50">
                                 <td class="px-4 py-2 font-medium text-gray-900" x-text="c.materia"></td>
-                                <td class="px-4 py-2 text-center" x-text="c.creditos"></td>
                                 <td class="px-4 py-2" x-text="c.periodo"></td>
-                                <td class="px-4 py-2 text-center font-bold" :class="c.valorNumerico < 6 ? 'text-red-600' : 'text-emerald-700'" x-text="c.tipoEvaluacion === 'numerica' ? c.valorNumerico : c.valorCualitativo"></td>
-                                <td class="px-4 py-2 text-xs text-gray-500" x-text="new Date(c.fechaAprobacion).toLocaleDateString('es-MX')"></td>
+                                <td class="px-4 py-2 text-center font-bold" :class="(!isNaN(c.promedio) && c.promedio < 6) ? 'text-red-600' : 'text-emerald-700'" x-text="c.promedio"></td>
                               </tr>
                             </template>
                           </tbody>
@@ -1840,8 +1901,7 @@
                             <tr>
                               <th class="px-4 py-2 rounded-tl">Taller</th>
                               <th class="px-4 py-2">Periodo</th>
-                              <th class="px-4 py-2 text-center">Evaluación</th>
-                              <th class="px-4 py-2 rounded-tr">Fecha Aprobación</th>
+                              <th class="px-4 py-2 text-center rounded-tr">Evaluación</th>
                             </tr>
                           </thead>
                           <tbody class="divide-y divide-gray-100">
@@ -1850,7 +1910,6 @@
                                 <td class="px-4 py-2 font-medium text-gray-900" x-text="t.taller"></td>
                                 <td class="px-4 py-2" x-text="t.periodo"></td>
                                 <td class="px-4 py-2 text-center font-bold" x-text="t.valorCualitativo || '-'"></td>
-                                <td class="px-4 py-2 text-xs text-gray-500" x-text="new Date(t.fechaAprobacion).toLocaleDateString('es-MX')"></td>
                               </tr>
                             </template>
                           </tbody>
@@ -1867,8 +1926,7 @@
                             <tr>
                               <th class="px-4 py-2 rounded-tl">Club / Actividad</th>
                               <th class="px-4 py-2">Periodo</th>
-                              <th class="px-4 py-2 text-center">Evaluación</th>
-                              <th class="px-4 py-2 rounded-tr">Fecha Aprobación</th>
+                              <th class="px-4 py-2 text-center rounded-tr">Evaluación</th>
                             </tr>
                           </thead>
                           <tbody class="divide-y divide-gray-100">
@@ -1877,7 +1935,6 @@
                                 <td class="px-4 py-2 font-medium text-gray-900 capitalize" x-text="ex.club"></td>
                                 <td class="px-4 py-2" x-text="ex.periodo"></td>
                                 <td class="px-4 py-2 text-center font-bold" x-text="ex.valorNumerico || '-'"></td>
-                                <td class="px-4 py-2 text-xs text-gray-500" x-text="new Date(ex.fechaAprobacion).toLocaleDateString('es-MX')"></td>
                               </tr>
                             </template>
                           </tbody>
@@ -1991,9 +2048,9 @@
 
             <select class="input-modern w-48" x-model="filtroRolUsuario">
               <option value="">Todos los roles</option>
-              <option value="Administrador">Administrador</option>
-              <option value="Gestor">Gestor</option>
-              <option value="Docente">Docente</option>
+              <option value="ADMIN">Administrador</option>
+              <option value="GESTOR">Gestor</option>
+              <option value="MAESTRA">Docente</option>
             </select>
           </div>
 
@@ -2014,7 +2071,7 @@
                       <div class="font-medium text-gray-800" x-text="user.nombre"></div>
                       <div class="text-xs text-gray-500" x-text="'@' + user.username"></div>
                     </td>
-                    <td class="p-3 text-gray-600" x-text="user.rol"></td>
+                    <td class="p-3 text-gray-600" x-text="user.rol === 'MAESTRA' ? 'DOCENTE' : user.rol"></td>
                     <td class="p-3">
                       <span x-show="user.activo" class="badge-emerald">Activo</span>
                       <span x-show="!user.activo" class="badge-gray">Inactivo</span>
@@ -2071,9 +2128,14 @@
           <div class="col-span-2 card-clean flex flex-col" x-show="usuarioPermisosActivo?.rol !== 'Administrador'">
             <div class="p-4 border-b flex justify-between items-center bg-gray-50">
               <h3 class="font-bold text-navy-800">Permisos de Acceso a Módulos</h3>
-              <button class="btn-primary text-xs py-1 px-3" @click="guardarPermisosUsuario(usuarioPermisosActivo.id)"
-                :disabled="!usuarioPermisosActivo?.activo"
-                :class="!usuarioPermisosActivo?.activo ? 'opacity-50 cursor-not-allowed' : ''">Guardar cambios</button>
+              <div class="flex gap-2">
+                <button class="btn-outline text-xs py-1 px-3" @click="restaurarPermisosPorDefecto()"
+                  :disabled="!usuarioPermisosActivo?.activo"
+                  :class="!usuarioPermisosActivo?.activo ? 'opacity-50 cursor-not-allowed' : ''">Default</button>
+                <button class="btn-primary text-xs py-1 px-3" @click="guardarPermisosUsuario(usuarioPermisosActivo.id)"
+                  :disabled="!usuarioPermisosActivo?.activo"
+                  :class="!usuarioPermisosActivo?.activo ? 'opacity-50 cursor-not-allowed' : ''">Guardar cambios</button>
+              </div>
             </div>
             <div class="p-5 flex-1">
               <div x-show="!usuarioPermisosActivo?.activo"
@@ -3335,27 +3397,80 @@
           <label class="text-xs font-medium text-gray-600">Correo Electrónico</label>
           <input type="email" class="input-modern" x-model="nuevoTutorData.correoElectronico" placeholder="Opcional">
         </div>
-        <div class="col-span-2 mt-2">
-          <label class="font-bold text-navy-800 text-sm">Datos de Facturación (Opcional)</label>
-        </div>
-        <div>
-          <label class="text-xs font-medium text-gray-600">RFC</label>
-          <input class="input-modern uppercase" maxlength="13" x-model="nuevoTutorData.rfc">
-        </div>
-        <div>
-          <label class="text-xs font-medium text-gray-600">Régimen Fiscal</label>
-          <input class="input-modern" x-model="nuevoTutorData.regimenFiscal">
-        </div>
-        <div class="col-span-2">
-          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-            <input type="checkbox" x-model="nuevoTutorData.requiereFactura" class="rounded border-gray-300"> Requiere
-            factura
+        <div class="col-span-2 mt-2 border-t pt-4">
+          <label class="flex items-center gap-2 text-sm text-navy-800 font-bold cursor-pointer">
+            <input type="checkbox" x-model="nuevoTutorData.requiereFactura" class="rounded border-gray-300"> 
+            Requiere factura
           </label>
         </div>
+
+        <template x-if="nuevoTutorData.requiereFactura">
+          <div class="col-span-2 grid grid-cols-2 gap-4 mt-2 p-4 bg-gray-50 rounded-lg border">
+            <div>
+              <label class="text-xs font-medium text-gray-600">RFC *</label>
+              <input class="input-modern uppercase" maxlength="13" x-model="nuevoTutorData.rfc" required>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-gray-600">Régimen Fiscal *</label>
+              <input class="input-modern" x-model="nuevoTutorData.regimenFiscal" required>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-gray-600">Uso de CFDI *</label>
+              <input class="input-modern" x-model="nuevoTutorData.usoCfdi" required>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-gray-600">Código Postal Fiscal *</label>
+              <input class="input-modern" x-model="nuevoTutorData.codigoPostal" required>
+            </div>
+            <div class="col-span-2">
+              <label class="text-xs font-medium text-gray-600">Dirección Fiscal *</label>
+              <input class="input-modern" x-model="nuevoTutorData.direccionFiscal" required>
+            </div>
+            <div class="col-span-2">
+              <label class="text-xs font-medium text-gray-600">Correo Electrónico de CFDI *</label>
+              <input type="email" class="input-modern" x-model="nuevoTutorData.correoFacturacion" required>
+            </div>
+          </div>
+        </template>
       </div>
       <div class="flex justify-end gap-2 mt-6 border-t pt-4">
         <button class="btn-outline" @click="modalNuevoTutor=false">Cancelar</button>
         <button class="btn-primary" @click="guardarNuevoTutor()">Guardar Tutor</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Vincular Alumno a Tutor -->
+  <div x-show="modalVincularAlumno" x-cloak class="modal-mask" @click.self="modalVincularAlumno=false">
+    <div class="modal-container p-6">
+      <div class="font-bold text-lg text-navy-800 border-b pb-2 mb-4">Vincular Alumno a <span
+          x-text="tutorActualFicha?.nombreCompleto"></span></div>
+
+      <div>
+        <label class="text-sm font-medium text-gray-600">Buscar Alumno Existente</label>
+        <input type="text" class="input-modern mt-1" placeholder="Buscar por nombre o matrícula (Mínimo 3 letras)..."
+          x-model="busquedaVincularAlumno" @input="buscarAlumnoParaVincular()">
+      </div>
+
+      <div class="mt-4 space-y-2">
+        <template x-for="a in alumnosParaVincular" :key="a.id">
+          <div class="card-clean p-3 flex justify-between items-center hover:bg-gray-50 cursor-pointer"
+            @click="confirmarVinculacionAlumno(a)">
+            <div>
+              <div class="font-bold text-navy-700" x-text="a.nombre"></div>
+              <div class="text-xs text-gray-500" x-text="a.matricula"></div>
+            </div>
+            <button class="btn-primary text-xs py-1">Vincular</button>
+          </div>
+        </template>
+        <div x-show="busquedaVincularAlumno.length >= 3 && alumnosParaVincular.length === 0"
+          class="text-sm text-center text-gray-500 py-4">
+          No se encontró ningún alumno.
+        </div>
+      </div>
+
+      <div class="flex justify-end mt-6 border-t pt-4">
+        <button class="btn-outline" @click="modalVincularAlumno=false">Cerrar</button>
       </div>
     </div>
   </div>
@@ -3457,6 +3572,9 @@
         verInactivos: false,
         cargando: false,
 
+        notificaciones: [],
+        notificacionesNoLeidas: 0,
+
         // ── Rol del usuario ────────────────────────────────────────────────────
         rol: window.saeApi.getUsuario()?.rol || 'MAESTRA',
         permisos: window.saeApi.getUsuario()?.permisos || {},
@@ -3538,6 +3656,9 @@
         nuevoTutorData: { nombreCompleto: '', telefono: '', correoElectronico: '', rfc: '', regimenFiscal: '', correoFacturacion: '', requiereFactura: false },
 
         modalVincularTutor: false,
+        modalVincularAlumno: false,
+        busquedaVincularAlumno: '',
+        alumnosParaVincular: [],
         busquedaVincularTutor: '',
         tutoresParaVincular: [],
 
@@ -4124,7 +4245,66 @@
             const res = await window.saeApi.fetchApi(`/alumnos/${al.id}/historial-academico`);
             
             if (res && res.ok && res.data) {
-              this.historialAcademicoCompleto = res.data.historial;
+              const historialFormateado = res.data.historial.map(ciclo => {
+                const matMap = {};
+                if (ciclo.curriculares) {
+                  ciclo.curriculares.forEach(c => {
+                    if (!matMap[c.materia]) {
+                      matMap[c.materia] = {
+                        materia: c.materia,
+                        periodo: ciclo.ciclo.nombre,
+                        suma: 0,
+                        conteo: 0,
+                        valorCualitativo: c.valorCualitativo,
+                        tipoEvaluacion: c.tipoEvaluacion
+                      };
+                    }
+                    if (c.tipoEvaluacion === 'numerica' && c.valorNumerico !== null) {
+                      matMap[c.materia].suma += parseFloat(c.valorNumerico);
+                      matMap[c.materia].conteo += 1;
+                    }
+                  });
+                }
+                const curricularesPromedio = Object.values(matMap).map(m => {
+                  if (m.tipoEvaluacion === 'numerica') {
+                    m.promedio = m.conteo > 0 ? (m.suma / m.conteo).toFixed(1) : '-';
+                  } else {
+                    m.promedio = m.valorCualitativo || '-';
+                  }
+                  return m;
+                });
+
+                const talleresSet = {};
+                if (ciclo.talleres) {
+                  ciclo.talleres.forEach(t => {
+                    talleresSet[t.taller] = {
+                      taller: t.taller,
+                      periodo: ciclo.ciclo.nombre,
+                      valorCualitativo: t.valorCualitativo
+                    };
+                  });
+                }
+
+                const extraSet = {};
+                if (ciclo.extracurriculares) {
+                  ciclo.extracurriculares.forEach(ex => {
+                    extraSet[ex.club] = {
+                      club: ex.club,
+                      periodo: ciclo.ciclo.nombre,
+                      valorNumerico: ex.valorNumerico
+                    };
+                  });
+                }
+
+                return {
+                  ciclo: ciclo.ciclo,
+                  curriculares: curricularesPromedio,
+                  talleres: Object.values(talleresSet),
+                  extracurriculares: Object.values(extraSet)
+                };
+              });
+              
+              this.historialAcademicoCompleto = historialFormateado;
             } else if (res && !res.ok) {
               throw new Error(res.message || 'Error desconocido');
             }
@@ -4247,6 +4427,372 @@
           const url = window.saeApi.bitacora.exportarURL('pdf');
           window.open(url, '_blank');
         },
+        exportarBoletaPDF(alumno) {
+          if (!alumno) return;
+          const { jsPDF } = window.jspdf;
+          const nivel = (alumno.nivel || this.alumnoFichaEditable?.nivel || '').toUpperCase();
+          const nombre = alumno.nombre || alumno.nombreCompleto || 'N/A';
+          const curp   = alumno.curp || 'N/A';
+          const matricula = alumno.matricula || 'N/A';
+          const grado  = this.alumnoFichaEditable?.grado || alumno.grupo?.grado || '';
+          const grupo  = alumno.grupo?.nombre || alumno.grupo?.codigo || '';
+          const turno  = alumno.turno || 'MATUTINO';
+          const ctt    = alumno.grupo?.cct || '30PPR3773B';
+          const hoy = new Date();
+          const dia  = String(hoy.getDate()).padStart(2,'0');
+          const mes  = String(hoy.getMonth()+1).padStart(2,'0');
+          const anio = hoy.getFullYear();
+          const materias = this.historialAcademico || [];
+          const promGeneral = this.promedioGeneralFicha || '-';
+
+          // Helpers
+          const fillCell = (doc, x, y, w, h, r, g, b) => { doc.setFillColor(r,g,b); doc.rect(x,y,w,h,'F'); doc.setFillColor(255,255,255); };
+          const drawCell = (doc, x, y, w, h, text, opts={}) => {
+            doc.rect(x,y,w,h);
+            doc.setFontSize(opts.fontSize||8); doc.setFont(undefined,opts.bold?'bold':'normal');
+            doc.setTextColor(...(opts.color||[0,0,0]));
+            doc.text(String(text||''), opts.align==='center'?x+w/2:x+1.5, y+h/2+0.5, {align:opts.align||'left',baseline:'middle'});
+            doc.setTextColor(0,0,0); doc.setFont(undefined,'normal');
+          };
+          const hdrBlue = (doc, x, y, w, h, text, fs=7) => {
+            fillCell(doc,x,y,w,h,30,85,160);
+            doc.setFontSize(fs); doc.setFont(undefined,'bold'); doc.setTextColor(255,255,255);
+            doc.text(text, x+w/2, y+h/2+0.5, {align:'center',baseline:'middle'});
+            doc.setTextColor(0,0,0); doc.setFont(undefined,'normal');
+          };
+
+          // ================================================================
+          //  BACHILLERATO
+          // ================================================================
+          if (nivel === 'BACHILLERATO') {
+            const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'letter'});
+            const PW=215.9,M=10; let y=M;
+            fillCell(doc,M,y,PW-2*M,7,200,30,30);
+            doc.setFontSize(10); doc.setFont(undefined,'bold'); doc.setTextColor(255,255,255);
+            doc.text('DATOS DEL EDUCANDO',PW/2,y+3.5,{align:'center',baseline:'middle'});
+            doc.setTextColor(0,0,0); y+=7;
+            const H1=6, cols1=[{l:'NOMBRE',w:55},{l:'CURP',w:38},{l:'SEMESTRE',w:25},{l:'GRUPO',w:20},{l:'PERIODO ESCOLAR',w:52}];
+            let cx=M;
+            cols1.forEach(c=>{fillCell(doc,cx,y,c.w,H1,200,210,230);doc.rect(cx,y,c.w,H1);doc.setFontSize(6.5);doc.setFont(undefined,'bold');doc.text(c.l,cx+c.w/2,y+H1/2+0.5,{align:'center',baseline:'middle'});cx+=c.w;});
+            y+=H1; cx=M;
+            [nombre,curp,grado||'V',grupo||'B',`${anio-1}-${anio}`].forEach((v,i)=>{
+              const ws=[55,38,25,20,52][i];
+              doc.rect(cx,y,ws,8); doc.setFontSize(8); doc.setFont(undefined,'bold'); doc.setTextColor(20,80,180);
+              doc.text(v,cx+ws/2,y+4,{align:'center',baseline:'middle'}); doc.setTextColor(0,0,0); cx+=ws;
+            }); y+=8;
+            const rH=5.5;
+            fillCell(doc,M,y,55,rH*2,200,210,230); doc.rect(M,y,55,rH*2);
+            doc.setFontSize(6); doc.setFont(undefined,'bold');
+            doc.text('UNIDADES DE APRENDIZAJE CURRICULAR (UAC)',M+27.5,y+rH/2+1,{align:'center',baseline:'middle'});
+            fillCell(doc,65,y,14,rH,200,210,230);doc.rect(65,y,14,rH);doc.text('CLASES\nIMPARTIDAS',72,y+2.5,{align:'center'});
+            fillCell(doc,79,y,14,rH,200,210,230);doc.rect(79,y,14,rH);doc.text('FALTAS DE\nASISTENCIA',86,y+2.5,{align:'center'});
+            fillCell(doc,93,y,54,rH,200,210,230);doc.rect(93,y,54,rH);doc.text('CALIFICACIONES PARCIALES',120,y+rH/2+0.5,{align:'center',baseline:'middle'});
+            fillCell(doc,147,y,35,rH,200,210,230);doc.rect(147,y,35,rH);doc.text('CALIFICACI\u00d3N FINAL',164.5,y+rH/2+0.5,{align:'center',baseline:'middle'});
+            fillCell(doc,182,y,24,rH*2,200,210,230);doc.rect(182,y,24,rH*2);doc.text('TIPO DE\nEXAMEN',194,y+rH/2+1,{align:'center'});
+            y+=rH;
+            ['I','II','III','PROMEDIO\nPOR UAC'].forEach((t,i)=>{
+              fillCell(doc,93+i*13.5,y,13.5,rH,200,210,230);doc.rect(93+i*13.5,y,13.5,rH);
+              doc.setFontSize(6);doc.text(t,93+i*13.5+6.75,y+rH/2+0.5,{align:'center',baseline:'middle'});
+            });
+            ['No.','LETRA'].forEach((t,i)=>{
+              fillCell(doc,147+i*17.5,y,17.5,rH,200,210,230);doc.rect(147+i*17.5,y,17.5,rH);
+              doc.text(t,147+i*17.5+8.75,y+rH/2+0.5,{align:'center',baseline:'middle'});
+            }); y+=rH;
+            const letras=['CERO','UNO','DOS','TRES','CUATRO','CINCO','SEIS','SIETE','OCHO','NUEVE','DIEZ'];
+            materias.forEach(mat=>{
+              const vs=[mat.T1.v,mat.T2.v,mat.T3.v].map(v=>v!==''?parseFloat(v):null);
+              const valid=vs.filter(v=>v!==null);
+              const prom=valid.length>0?(valid.reduce((a,b)=>a+b,0)/valid.length).toFixed(1):'-';
+              const pN=prom!=='-'?Math.round(parseFloat(prom)):null;
+              const letra=pN!==null&&pN>=0&&pN<=10?letras[pN]:'-';
+              drawCell(doc,M,y,55,rH,mat.nombre.toUpperCase(),{fontSize:6.5});
+              drawCell(doc,65,y,14,rH,'-',{align:'center',fontSize:7});
+              drawCell(doc,79,y,14,rH,'0',{align:'center',fontSize:7});
+              vs.forEach((v,i)=>drawCell(doc,93+i*13.5,y,13.5,rH,v!==null?v:'-',{align:'center',fontSize:7}));
+              drawCell(doc,93+3*13.5,y,13.5,rH,prom,{align:'center',fontSize:7,bold:true});
+              drawCell(doc,147,y,17.5,rH,prom,{align:'center',fontSize:7});
+              drawCell(doc,164.5,y,17.5,rH,letra,{align:'center',fontSize:7,bold:true});
+              drawCell(doc,182,y,24,rH,'P',{align:'center',fontSize:7}); y+=rH;
+            });
+            fillCell(doc,M,y,55,rH*2,200,210,230);doc.rect(M,y,55,rH*2);
+            doc.setFontSize(6);doc.setFont(undefined,'bold');
+            doc.text('COMP. DE FOR. FUN. EXTENDIDO',M+27.5,y+rH/2+0.5,{align:'center',baseline:'middle'});
+            doc.text('PROMEDIO POR',93+2*13.5,y+rH/2,{align:'center',baseline:'middle'});
+            doc.text('PARCIAL',93+2*13.5,y+rH,{align:'center',baseline:'middle'});
+            fillCell(doc,147,y,59,rH,200,210,230);doc.rect(147,y,59,rH);
+            doc.text('PROMEDIO GENERAL DEL SEMESTRE',176,y+rH/2+0.5,{align:'center',baseline:'middle'}); y+=rH;
+            fillCell(doc,147,y,17.5,rH,200,210,230);doc.rect(147,y,17.5,rH);doc.text('No.',155.75,y+rH/2+0.5,{align:'center',baseline:'middle'});
+            fillCell(doc,164.5,y,41.5,rH,200,210,230);doc.rect(164.5,y,41.5,rH);doc.text('LETRA',185.25,y+rH/2+0.5,{align:'center',baseline:'middle'}); y+=rH;
+            drawCell(doc,147,y,17.5,rH*1.5,promGeneral,{align:'center',fontSize:11,bold:true});
+            const pGL=promGeneral!=='-'&&!isNaN(parseFloat(promGeneral))?letras[Math.round(parseFloat(promGeneral))]||'-':'-';
+            drawCell(doc,164.5,y,41.5,rH*1.5,pGL,{align:'center',fontSize:11,bold:true}); y+=rH*2+10;
+            doc.line(M,y+12,90,y+12); doc.line(95,y+12,175,y+12);
+            doc.setFontSize(8); doc.setFont(undefined,'bold');
+            doc.text('MARIA ELENA PEREZ RODRIGUEZ',M+5,y+10); doc.text('NORMA MARIA IBARRA FONSECA',100,y+10);
+            doc.setFont(undefined,'normal');
+            doc.text('NOMBRE Y FIRMA DEL TITULAR DE LA SUBDIRECCI\u00d3N DEL PLANTEL',M,y+16);
+            doc.text('NOMBRE Y FIRMA DEL TITULAR DE LA DIRECCI\u00d3N DEL PLANTEL',95,y+16);
+            doc.rect(176,y-5,30,22);
+            fillCell(doc,176,y-5,30,6,200,210,230);doc.setFontSize(6.5);doc.setFont(undefined,'bold');
+            doc.text('FECHA DE EXPEDICI\u00d3N',191,y-2,{align:'center',baseline:'middle'});
+            ['D\u00cdA','MES','A\u00d1O'].forEach((t,i)=>{
+              doc.rect(176+i*10,y+1,10,6);fillCell(doc,176+i*10,y+1,10,6,220,220,220);
+              doc.setFontSize(6);doc.text(t,181+i*10,y+4,{align:'center'});
+              doc.rect(176+i*10,y+7,10,8);doc.setFontSize(8);doc.setFont(undefined,'normal');
+              doc.text(i===0?dia:i===1?mes:String(anio),181+i*10,y+11,{align:'center'});
+            });
+            doc.save(`Boleta_Bachillerato_${matricula}.pdf`);
+
+          // ================================================================
+          //  PREESCOLAR
+          // ================================================================
+          } else if (nivel === 'PREESCOLAR') {
+            const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'letter'});
+            const PW=215.9,M=10; let y=M;
+            doc.setFontSize(9);doc.setFont(undefined,'bold');
+            doc.text('"CENTRO DE INVESTIGACION EDUCATIVA"',PW/2,y,{align:'center'});y+=5;
+            doc.text('COLEGIO SAN DIEGO',PW/2,y,{align:'center'});y+=4;
+            doc.setFont(undefined,'normal');doc.setFontSize(7.5);
+            doc.text('Calle punta el campanario #183 Col. Bahia de San Mart\u00edn',PW/2,y,{align:'center'});y+=4;
+            doc.text('PREESCOLAR',PW/2,y,{align:'center'});y+=4;
+            doc.text(ctt,PW/2,y,{align:'center'});y+=8;
+            doc.setFontSize(10);doc.setFont(undefined,'bold');
+            doc.text('BOLETA DE EVALUACION',PW/2,y,{align:'center'});y+=7;
+            doc.setFontSize(9);doc.setFont(undefined,'normal');
+            doc.text(`${grado||'1'}    GRADO DE EDUCACION PREESCOLAR       CICLO ESCOLAR ${anio-1}-${String(anio).slice(-2)}`,M,y);y+=7;
+            doc.setFontSize(8);doc.setFont(undefined,'bold');doc.text('DATOS DEL ALUMNO (A):',M,y);y+=5;
+            doc.setFont(undefined,'normal');
+            const pts=nombre.split(' ');
+            doc.text(pts.slice(-2).join(' '),M+5,y);doc.text(pts[0]||'',M+70,y);doc.text(pts[1]||'',M+110,y);y+=4;
+            doc.setFontSize(7);doc.text('Nombre (s)',M+5,y);doc.text('Primer apellido',M+70,y);doc.text('Segundo apellido',M+110,y);y+=5;
+            doc.setFontSize(8);doc.text(curp,M+5,y);y+=4;
+            doc.setFontSize(7);doc.text('CURP',M+5,y);y+=6;
+            doc.setFontSize(8);doc.setFont(undefined,'bold');
+            doc.text('PERIODO DE EVALUACI\u00d3N: TRIMESTRE 1 / 2 / 3',M+5,y);y+=10;
+            const colW=(PW-2*M-5)/2;
+            doc.setFontSize(7.5);doc.setFont(undefined,'bold');
+            doc.text('OBSERVACIONES Y SUGERENCIAS SOBRE LOS AVANCES DE APRENDIZAJE',PW/2,y,{align:'center'});y+=4;
+            const drawObs=(doc,subs,x,sy,w)=>{
+              let cy=sy;
+              fillCell(doc,x,cy,w,6,200,210,230);doc.rect(x,cy,w,6);
+              doc.setFontSize(6.5);doc.setFont(undefined,'bold');
+              doc.text('OBSERVACIONES Y SUGERENCIAS',x+w/2,cy+3,{align:'center',baseline:'middle'});cy+=6;
+              subs.forEach(s=>{
+                doc.rect(x,cy,w*0.25,22);fillCell(doc,x,cy,w*0.25,22,220,225,240);
+                doc.setFontSize(6.5);doc.setFont(undefined,'bold');
+                doc.text(s,x+w*0.125,cy+11,{align:'center',baseline:'middle',maxWidth:w*0.22});
+                doc.rect(x+w*0.25,cy,w*0.75,22);
+                doc.setFont(undefined,'normal');doc.setFontSize(6);
+                doc.text('OBSERVACI\u00d3N: Sin datos registrados.',x+w*0.26,cy+5,{maxWidth:w*0.73});
+                doc.text('RECOMENDACI\u00d3N: Consultar con el docente titular del grupo.',x+w*0.26,cy+13,{maxWidth:w*0.73});cy+=22;
+              });return cy;
+            };
+            const eL=drawObs(doc,['LENGUAJES','SABERES Y PENSAMIENTO CIENT\u00cdFICO','\u00c9TICA, NATURALEZA Y SOCIEDADES','DE LO HUMANO Y LO COMUNITARIO'],M,y,colW);
+            const eR=drawObs(doc,['INGL\u00c9S','COMPUTACI\u00d3N','EDUCACI\u00d3N F\u00cdSICA'],M+colW+5,y,colW);
+            y=Math.max(eL,eR)+6;
+            doc.line(M,y+12,M+80,y+12);doc.line(M+90,y+12,M+170,y+12);
+            doc.setFontSize(7.5);doc.setFont(undefined,'normal');
+            doc.text(`TITULAR DE ${grado||'1'} GRADO`,M+15,y+15);doc.text('DIRECTORA',M+110,y+15);y+=20;
+            doc.setFontSize(8);doc.text(`${anio}     ${mes}     ${dia}`,PW/2,y,{align:'center'});
+            doc.setFontSize(6.5);doc.text('A\u00d1O                          MES                          D\u00cdA',PW/2,y+4,{align:'center'});
+            doc.save(`Boleta_Preescolar_${matricula}.pdf`);
+
+          // ================================================================
+          //  SECUNDARIA o PRIMARIA (shared template, different labels)
+          // ================================================================
+          } else {
+            const esSecundaria = nivel === 'SECUNDARIA';
+            const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'letter'});
+            const PW=215.9,M=10; let y=M;
+            doc.setFontSize(9);doc.setFont(undefined,'bold');
+            doc.text('CENTRO DE INVESTIGACI\u00d3N EDUCATIVA COLEGIO SAN DIEGO',PW/2,y,{align:'center'});y+=5;
+            doc.setFont(undefined,'normal');doc.setFontSize(7.5);
+            doc.text('Punta el Campanario #183 Col. Bah\u00eda de San Mart\u00edn',PW/2,y,{align:'center'});y+=4;
+            if(esSecundaria){
+              doc.text(`Nivel Secundaria ${ctt}`,PW/2,y,{align:'center'});y+=7;
+              doc.setFontSize(9);doc.setFont(undefined,'bold');
+              doc.text(`CICLO ESCOLAR ${anio-1}-${anio}`,PW/2,y,{align:'center'});y+=5;
+            } else {
+              doc.text('Nivel Primaria',PW/2,y,{align:'center'});y+=4;
+              doc.text(ctt,PW/2,y,{align:'center'});y+=5;
+            }
+            doc.setFontSize(9);doc.setFont(undefined,'bold');
+            doc.text('BOLETA INTERNA DE CALIFICACIONES',PW/2,y,{align:'center'});y+=9;
+            const fw=PW-2*M;
+            doc.rect(M,y,fw,8);
+            doc.setFontSize(7.5);doc.setFont(undefined,'normal');
+            doc.text('Nombre del (de la) alumno (a):',M+2,y+3);
+            const np=nombre.split(' ');
+            doc.setFont(undefined,'bold');
+            doc.text(np[0]||'',M+55,y+3);doc.text(np[1]||'',M+90,y+3);
+            doc.text(np.slice(2).join(' ')||'',M+125,y+3);
+            doc.text(`Grado y Grupo: ${grado}"${grupo||'A'}"`,M+160,y+3);y+=8;
+            doc.setFont(undefined,'normal');doc.setFontSize(6.5);
+            doc.text('PRIMER APELLIDO',M+55,y+2);doc.text('SEGUNDO APELLIDO',M+90,y+2);doc.text('NOMBRE(S)',M+125,y+2);y+=5;
+            doc.rect(M,y,fw,7);doc.setFontSize(7.5);
+            doc.text(`CURP  ${curp}`,M+2,y+4);doc.text(`Turno: ${turno}`,M+100,y+4);doc.text(`CTT  ${ctt}`,M+145,y+4);y+=11;
+            const aW=esSecundaria?50:55,trimW=esSecundaria?35:33,promW=esSecundaria?20:20,sigW=35;
+            const mainW=aW+3*trimW+promW;
+            hdrBlue(doc,M,y,aW,6,'ASIGNATURAS');
+            ['1er. Trimestre','2do. Trimestre','3er. Trimestre'].forEach((t,i)=>hdrBlue(doc,M+aW+i*trimW,y,trimW,6,t));
+            hdrBlue(doc,M+aW+3*trimW,y,promW,6,'Promedio Final');
+            fillCell(doc,M+mainW+2,y,sigW,22,30,85,160);
+            doc.setFontSize(6.5);doc.setFont(undefined,'bold');doc.setTextColor(255,255,255);
+            doc.text('FIRMA DEL PADRE DE\nFAMILIA O TUTOR',M+mainW+2+sigW/2,y+4,{align:'center',baseline:'middle'});
+            doc.setTextColor(0,0,0);y+=6;
+            doc.setFontSize(6);doc.setFont(undefined,'normal');
+            [aW,trimW,trimW,trimW,promW].forEach((w,i)=>{
+              const x=M+[0,aW,aW+trimW,aW+2*trimW,aW+3*trimW][i];
+              doc.rect(x,y,w,5);if(i>0)doc.text('Calificaci\u00f3n',x+w/2,y+2.5,{align:'center',baseline:'middle'});
+            });y+=5;
+            const rH=8;
+            materias.forEach(mat=>{
+              const t1=mat.T1.v!==''?mat.T1.v:'-',t2=mat.T2.v!==''?mat.T2.v:'-',t3=mat.T3.v!==''?mat.T3.v:'-';
+              const pr=mat.prom||'-',low=pr!=='-'&&pr!=='N/A'&&parseFloat(pr)<6;
+              doc.rect(M,y,aW,rH);doc.setFontSize(7);doc.setFont(undefined,'normal');
+              doc.text(mat.nombre.toUpperCase().substring(0,28),M+1.5,y+rH/2+0.5,{baseline:'middle'});
+              [t1,t2,t3].forEach((v,i)=>{
+                doc.rect(M+aW+i*trimW,y,trimW,rH);
+                doc.setFontSize(9);doc.setFont(undefined,'bold');
+                doc.setTextColor(v!=='-'?20:100,v!=='-'?80:100,v!=='-'?180:100);
+                doc.text(String(v),M+aW+i*trimW+trimW/2,y+rH/2+0.5,{align:'center',baseline:'middle'});
+              });
+              doc.setTextColor(low?200:0,low?30:0,low?30:0);
+              doc.rect(M+aW+3*trimW,y,promW,rH);
+              doc.setFontSize(9);doc.setFont(undefined,'bold');
+              doc.text(String(pr),M+aW+3*trimW+promW/2,y+rH/2+0.5,{align:'center',baseline:'middle'});
+              doc.setTextColor(0,0,0);y+=rH;
+            });
+            fillCell(doc,M+mainW+2,y,sigW,10,30,85,160);
+            doc.setFontSize(6.5);doc.setFont(undefined,'bold');doc.setTextColor(255,255,255);
+            doc.text('PROMEDIO FINAL DE\nGRADO',M+mainW+2+sigW/2,y+4,{align:'center',baseline:'middle'});
+            doc.setTextColor(0,0,0);doc.rect(M+mainW+2,y+10,sigW,8);
+            doc.setFontSize(10);doc.setFont(undefined,'bold');
+            doc.text(String(promGeneral),M+mainW+2+sigW/2,y+14,{align:'center',baseline:'middle'});y+=22;
+            doc.line(M+5,y+12,M+90,y+12);
+            doc.setFontSize(7);doc.setFont(undefined,'bold');
+            doc.text(esSecundaria?'NORMA MARIA IBARRA FONSECA':'MARIA J. GALINDO TOME',M+10,y+9);
+            doc.setFont(undefined,'normal');doc.setFontSize(6.5);
+            doc.text(esSecundaria?'NOMBRE Y FIRMA DEL DIRECTOR DEL PLANTEL':'NOMBRE Y FIRMA DEL DOCENTE',M+5,y+15);
+            doc.rect(PW-55,y,45,18);
+            doc.setFontSize(7);
+            doc.text(dia,PW-51,y+5);doc.text(mes,PW-39,y+5);doc.text(String(anio),PW-25,y+5);
+            doc.setFontSize(5.5);
+            doc.text('D\u00cdA',PW-51,y+9);doc.text('MES',PW-39,y+9);doc.text('A\u00d1O',PW-25,y+9);
+            y+=20;
+            doc.setFontSize(7);doc.setFont(undefined,'bold');doc.text('COATZACOALCOS, VERACRUZ',M,y+5);
+            doc.setFont(undefined,'normal');doc.setFontSize(6.5);doc.text('LUGAR DE EXPEDICI\u00d3N',M,y+9);
+            // ── SECCIÓN CLUBES EXTRACURRICULARES (solo Primaria) ──────────────
+            if (!esSecundaria) {
+              const clubs = this.historialExtraBoleta || [];
+              const taller = this.historialTallerBoleta || [];
+              const hayExtra = clubs.length > 0 || taller.length > 0;
+
+              if (hayExtra) {
+                doc.addPage();
+                let y2 = M;
+
+                // Mini-encabezado
+                doc.setFontSize(8); doc.setFont(undefined,'bold');
+                doc.text('CENTRO DE INVESTIGACI\u00d3N EDUCATIVA COLEGIO SAN DIEGO', PW/2, y2, {align:'center'}); y2+=5;
+                doc.setFont(undefined,'normal'); doc.setFontSize(7);
+                doc.text(`${nombre}  |  Grado y Grupo: ${grado}"${grupo||'A'}"  |  CURP: ${curp}`, PW/2, y2, {align:'center'}); y2+=8;
+
+                // ── CLUBES ──
+                if (clubs.length > 0) {
+                  doc.setFontSize(9); doc.setFont(undefined,'bold');
+                  doc.text('CLUBES EXTRACURRICULARES', PW/2, y2, {align:'center'}); y2+=6;
+
+                  const cW=55, ctW=33, cpW=20, csW=35, cmW=cW+3*ctW+cpW;
+                  hdrBlue(doc, M, y2, cW, 6, 'CLUB EXTRACURRICULAR');
+                  ['1er. Trimestre','2do. Trimestre','3er. Trimestre'].forEach((t,i)=>hdrBlue(doc,M+cW+i*ctW,y2,ctW,6,t));
+                  hdrBlue(doc, M+cW+3*ctW, y2, cpW, 6, 'Promedio');
+                  fillCell(doc, M+cmW+2, y2, csW, 14, 30, 85, 160);
+                  doc.setFontSize(6.5); doc.setFont(undefined,'bold'); doc.setTextColor(255,255,255);
+                  doc.text('FIRMA DEL PADRE DE\nFAMILIA O TUTOR', M+cmW+2+csW/2, y2+4, {align:'center',baseline:'middle'});
+                  doc.setTextColor(0,0,0); y2+=6;
+
+                  doc.setFontSize(6); doc.setFont(undefined,'normal');
+                  [cW,ctW,ctW,ctW,cpW].forEach((w,i)=>{
+                    const x=M+[0,cW,cW+ctW,cW+2*ctW,cW+3*ctW][i];
+                    doc.rect(x,y2,w,5); if(i>0) doc.text('Calificaci\u00f3n',x+w/2,y2+2.5,{align:'center',baseline:'middle'});
+                  }); y2+=5;
+
+                  const crH=8;
+                  clubs.forEach(club=>{
+                    const t1=club.T1.v!==''?club.T1.v:'-', t2=club.T2.v!==''?club.T2.v:'-', t3=club.T3.v!==''?club.T3.v:'-';
+                    const pr=club.prom||'-', low=pr!=='-'&&parseFloat(pr)<6;
+                    doc.rect(M,y2,cW,crH); doc.setFontSize(7); doc.setFont(undefined,'normal');
+                    doc.text(club.nombre.toUpperCase().substring(0,26), M+1.5, y2+crH/2+0.5,{baseline:'middle'});
+                    [t1,t2,t3].forEach((v,i)=>{
+                      doc.rect(M+cW+i*ctW,y2,ctW,crH);
+                      doc.setFontSize(9); doc.setFont(undefined,'bold');
+                      doc.setTextColor(v!=='-'?20:100,v!=='-'?80:100,v!=='-'?180:100);
+                      doc.text(String(v),M+cW+i*ctW+ctW/2,y2+crH/2+0.5,{align:'center',baseline:'middle'});
+                    });
+                    doc.setTextColor(low?200:0,low?30:0,low?30:0);
+                    doc.rect(M+cW+3*ctW,y2,cpW,crH); doc.setFontSize(9); doc.setFont(undefined,'bold');
+                    doc.text(String(pr),M+cW+3*ctW+cpW/2,y2+crH/2+0.5,{align:'center',baseline:'middle'});
+                    doc.setTextColor(0,0,0); y2+=crH;
+                  });
+                  y2+=8;
+                }
+
+                // ── TALLER ──
+                if (taller.length > 0) {
+                  doc.setFontSize(9); doc.setFont(undefined,'bold');
+                  doc.text('TALLER', PW/2, y2, {align:'center'}); y2+=6;
+
+                  const tW2=55, ttW=33, teW=35, tmW=tW2+3*ttW+teW;
+                  hdrBlue(doc, M, y2, tW2, 6, 'MATERIA TALLER');
+                  ['1er. Trimestre','2do. Trimestre','3er. Trimestre'].forEach((t,i)=>hdrBlue(doc,M+tW2+i*ttW,y2,ttW,6,t));
+                  hdrBlue(doc, M+tW2+3*ttW, y2, teW, 6, 'Evaluaci\u00f3n');
+                  doc.setTextColor(0,0,0); y2+=6;
+
+                  doc.setFontSize(6); doc.setFont(undefined,'normal');
+                  [tW2,ttW,ttW,ttW,teW].forEach((w,i)=>{
+                    const x=M+[0,tW2,tW2+ttW,tW2+2*ttW,tW2+3*ttW][i];
+                    doc.rect(x,y2,w,5); if(i>0) doc.text(i<4?'Calificaci\u00f3n':'Evaluaci\u00f3n',x+w/2,y2+2.5,{align:'center',baseline:'middle'});
+                  }); y2+=5;
+
+                  const trH=8;
+                  taller.forEach(tal=>{
+                    const t1=tal.T1.v!==''?tal.T1.v:'-', t2=tal.T2.v!==''?tal.T2.v:'-', t3=tal.T3.v!==''?tal.T3.v:'-';
+                    const ev=tal.eval||'-';
+                    const evColor=ev==='NA';
+                    doc.rect(M,y2,tW2,trH); doc.setFontSize(7); doc.setFont(undefined,'normal');
+                    doc.text(tal.nombre.toUpperCase().substring(0,26), M+1.5, y2+trH/2+0.5,{baseline:'middle'});
+                    [t1,t2,t3].forEach((v,i)=>{
+                      doc.rect(M+tW2+i*ttW,y2,ttW,trH);
+                      doc.setFontSize(9); doc.setFont(undefined,'bold');
+                      doc.setTextColor(v!=='-'?20:100,v!=='-'?80:100,v!=='-'?180:100);
+                      doc.text(String(v),M+tW2+i*ttW+ttW/2,y2+trH/2+0.5,{align:'center',baseline:'middle'});
+                    });
+                    doc.setTextColor(evColor?200:5,evColor?30:120,evColor?30:60);
+                    doc.rect(M+tW2+3*ttW,y2,teW,trH); doc.setFontSize(9); doc.setFont(undefined,'bold');
+                    doc.text(String(ev),M+tW2+3*ttW+teW/2,y2+trH/2+0.5,{align:'center',baseline:'middle'});
+                    doc.setTextColor(0,0,0); y2+=trH;
+                  });
+                  y2+=8;
+                }
+
+                // Pie de la segunda página
+                doc.line(M+5, y2+12, M+90, y2+12);
+                doc.setFontSize(7); doc.setFont(undefined,'bold');
+                doc.text('MARIA J. GALINDO TOME', M+10, y2+9);
+                doc.setFont(undefined,'normal'); doc.setFontSize(6.5);
+                doc.text('NOMBRE Y FIRMA DEL DOCENTE', M+5, y2+15);
+                doc.setFontSize(7);
+                doc.text(`${dia}        ${mes}        ${anio}`, PW-65, y2+5);
+                doc.setFontSize(5.5);
+                doc.text('D\u00cdA                  MES                  A\u00d1O', PW-65, y2+9);
+              }
+            }
+            doc.save(`Boleta_${esSecundaria?'Secundaria':'Primaria'}_${matricula}.pdf`);
+          }
+
+          window.saeApi.toast('exito', 'Boleta exportada en PDF.');
+        },
 
         // ── Permisos ─────────────────────────────────────────────────────────────
         async cargarPermisos() {
@@ -4280,6 +4826,8 @@
               if (['alumnos', 'tutores', 'pagos', 'becas', 'calificaciones', 'configuracion', 'colegiaturas'].includes(m)) perms[m] = 'escritura';
               else if (m === 'reportes') perms[m] = 'lectura';
               else perms[m] = 'NINGUNO';
+            } else if (u.rol === 'Administrador' || u.rol === 'ADMIN') {
+              perms[m] = 'escritura';
             } else {
               perms[m] = 'NINGUNO';
             }
@@ -4300,10 +4848,30 @@
             this.permisosEditando = perms;
           }
         },
+        restaurarPermisosPorDefecto() {
+          if (!this.usuarioPermisosActivo) return;
+          const u = this.usuarioPermisosActivo;
+          const perms = {};
+          this.todosModulos.forEach(m => {
+            if (u.rol === 'Docente' || u.rol === 'MAESTRA') {
+              if (m === 'tutores') perms[m] = 'lectura';
+              else if (m === 'calificaciones') perms[m] = 'escritura';
+              else perms[m] = 'NINGUNO';
+            } else if (u.rol === 'Gestor' || u.rol === 'GESTOR') {
+              if (['alumnos', 'tutores', 'pagos', 'becas', 'calificaciones', 'configuracion', 'colegiaturas'].includes(m)) perms[m] = 'escritura';
+              else if (m === 'reportes') perms[m] = 'lectura';
+              else perms[m] = 'NINGUNO';
+            } else if (u.rol === 'Administrador' || u.rol === 'ADMIN') {
+              perms[m] = 'escritura';
+            } else {
+              perms[m] = 'NINGUNO';
+            }
+          });
+          this.permisosEditando = perms;
+        },
         async guardarPermisosUsuario(usuarioId) {
           // Convertir el objeto { modulo: "NIVEL" } a un array
           const permisos = Object.keys(this.permisosEditando)
-            .filter(mod => this.permisosEditando[mod] !== 'NINGUNO')
             .map(mod => ({ modulo: mod, nivel: this.permisosEditando[mod] }));
 
           const res = await window.saeApi.permisos.actualizar({ usuarioId, permisos });
@@ -4346,7 +4914,6 @@
               this.tutorActualFicha = res.data;
               this.tutorFichaEditable = { ...res.data };
               this.tutorSeleccionado = true;
-              this._cargarPagosTutor();
             }
           } catch (e) {
             window.saeApi.toast('error', 'Error al cargar perfil del tutor');
@@ -4474,6 +5041,56 @@
           setTimeout(() => {
             this.seleccionarPagoAlumno(al);
           }, 50);
+        },
+        abrirModalVincularAlumno() {
+          this.busquedaVincularAlumno = '';
+          this.alumnosParaVincular = [];
+          this.modalVincularAlumno = true;
+        },
+        async buscarAlumnoParaVincular() {
+          const q = this.busquedaVincularAlumno.toLowerCase();
+          if (q.length < 3) {
+            this.alumnosParaVincular = [];
+            return;
+          }
+          try {
+            const res = await window.saeApi.alumnos.listar({ q: q, limit: 5 });
+            if (res && res.ok && Array.isArray(res.data)) {
+              this.alumnosParaVincular = res.data;
+            }
+          } catch (e) {
+            console.error(e);
+            this.alumnosParaVincular = [];
+          }
+        },
+        async confirmarVinculacionAlumno(alumno) {
+          try {
+            const payload = { alumnoId: alumno.id, tipoRelacion: 'tutor', esResponsableFinanciero: false };
+            const res = await window.saeApi.tutores.vincular(this.tutorActualFicha.tutorId, payload);
+            if (res && res.ok) {
+              window.saeApi.toast('exito', 'Alumno vinculado correctamente');
+              this.modalVincularAlumno = false;
+              this.seleccionarTutorFicha(this.tutorActualFicha); // recargar ficha
+            } else {
+              window.saeApi.toast('error', res?.message || 'Error al vincular alumno');
+            }
+          } catch (e) {
+            window.saeApi.toast('error', 'Error de red al vincular');
+          }
+        },
+        async desvincularAlumno(alumnoId) {
+          if(!confirm('¿Estás seguro de desvincular este alumno de este tutor?')) return;
+          try {
+            const res = await window.saeApi.tutores.desvincular(this.tutorActualFicha.tutorId, alumnoId);
+            if (res && res.ok) {
+              window.saeApi.toast('exito', 'Alumno desvinculado');
+              this.seleccionarTutorFicha(this.tutorActualFicha);
+            } else {
+              window.saeApi.toast('error', res?.message || 'Error al desvincular');
+            }
+          } catch (e) {
+            window.saeApi.toast('error', 'Error de red');
+          }
         },
         abrirModalVincularTutor() {
           this.busquedaVincularTutor = '';
@@ -4904,13 +5521,16 @@
             if (res && res.ok && res.data) {
               this.alumnoActualFicha = res.data;
               this.alumnoActualFicha.padresLista = res.data.padres || [];
+              let rawNivel = (res.data.nivel || res.data.grupo?.nivel || '');
+              let nivelFormateado = rawNivel ? rawNivel.charAt(0).toUpperCase() + rawNivel.slice(1).toLowerCase() : '';
+              
               this.alumnoFichaEditable = {
                 nombre: res.data.nombre,
                 curp: res.data.curp,
                 estado: res.data.estado || 'Activo',
                 autorizados: typeof res.data.personasAutorizadas === 'string' ? res.data.personasAutorizadas : (res.data.autorizados || ''),
                 fechaNacimiento: res.data.fechaNacimiento ? res.data.fechaNacimiento.split('T')[0] : '',
-                nivel: (res.data.nivel || res.data.grupo?.nivel || '').toUpperCase(),
+                nivel: nivelFormateado,
                 grado: res.data.grupo?.grado ? String(res.data.grupo.grado) : '',
                 grupoId: res.data.grupoId || ''
               };
@@ -5617,6 +6237,7 @@
           };
 
           const res = await window.saeApi.becas.asignar(payload);
+
           if (res.ok) {
             this.modalBecaActiva = false;
             this.cargarBecasAsignadas(); // Refresh list
@@ -6180,7 +6801,11 @@
             cargasIniciales.push(this._cargarAlumnosAPI());
           }
 
+          cargasIniciales.push(this.cargarNotificaciones());
+
           await Promise.all(cargasIniciales);
+
+          setInterval(() => this.cargarNotificaciones(), 60000);
 
           // Cargar datos del dashboard si tiene algún permiso financiero/admin
           if (this.tienePermiso('pagos', 'lectura') || this.esGestor()) {
@@ -6197,6 +6822,30 @@
 
           this.$watch('grupoExpandido', () => this.$nextTick(safeIcons));
           this.$nextTick(safeIcons);
+        },
+
+        async cargarNotificaciones() {
+          if (!window.saeApi || !window.saeApi.auth.getToken()) return;
+          try {
+            const res = await fetch('/api/v1/notificaciones', {
+              headers: { 'Authorization': 'Bearer ' + window.saeApi.auth.getToken() }
+            });
+            const data = await res.json();
+            if (res.ok && data.data) {
+              this.notificaciones = data.data.notificaciones || [];
+              this.notificacionesNoLeidas = data.data.noLeidas || 0;
+            }
+          } catch (err) { console.error(err); }
+        },
+
+        async marcarNotificacionLeida(id) {
+          try {
+            await fetch('/api/v1/notificaciones/' + id + '/leida', {
+              method: 'PATCH',
+              headers: { 'Authorization': 'Bearer ' + window.saeApi.auth.getToken() }
+            });
+            await this.cargarNotificaciones();
+          } catch (err) { console.error(err); }
         },
       }));
     });

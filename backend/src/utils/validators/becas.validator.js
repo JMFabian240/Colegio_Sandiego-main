@@ -12,10 +12,6 @@ const crearSolicitudBecaValidators = [
     .notEmpty().withMessage('El ID de la beca es obligatorio.')
     .isInt({ min: 1 }).withMessage('El ID de la beca debe ser numérico.'),
 
-  body('tipoSolicitud')
-    .optional()
-    .isIn(['asignacion', 'retiro']).withMessage('El tipo de solicitud debe ser asignacion o retiro.'),
-
   body('motivo')
     .optional()
     .trim()

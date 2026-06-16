@@ -11,15 +11,21 @@ async function listarCiclos() {
 async function crearCiclo(data, usuarioId) {
   const { withAudit } = require('../../utils/audit.utils');
   return withAudit(usuarioId, 'IP_AQUI', async (tx) => {
-    // Si el nuevo ciclo es activo, podemos desactivar los demás o simplemente crear este.
-    // Usualmente solo puede haber un activo, pero por simplicidad solo creamos.
+    let previousActiveCycleId = null;
     if (data.activo) {
+      const prevActive = await tx.cicloEscolar.findFirst({
+        where: { activo: true },
+        orderBy: { cicloId: 'desc' }
+      });
+      if (prevActive) previousActiveCycleId = prevActive.cicloId;
+
       await tx.cicloEscolar.updateMany({
         where: { activo: true },
         data: { activo: false }
       });
     }
-    return tx.cicloEscolar.create({
+
+    const nuevoCiclo = await tx.cicloEscolar.create({
       data: {
         nombre: data.nombre,
         fechaInicio: data.fechaInicio ? new Date(data.fechaInicio) : new Date(),
@@ -27,6 +33,42 @@ async function crearCiclo(data, usuarioId) {
         activo: data.activo === undefined ? true : data.activo
       }
     });
+
+    if (previousActiveCycleId) {
+      const gruposAnteriores = await tx.grupo.findMany({
+        where: { cicloId: previousActiveCycleId, eliminadoEn: null },
+        include: { gruposMaterias: true }
+      });
+
+      for (const grp of gruposAnteriores) {
+        const nuevoGrupo = await tx.grupo.create({
+          data: {
+            cicloId: nuevoCiclo.cicloId,
+            nivelId: grp.nivelId,
+            grado: grp.grado,
+            seccion: grp.seccion,
+            nombre: grp.nombre,
+            docenteTitularId: grp.docenteTitularId,
+            cupoMaximo: grp.cupoMaximo
+          }
+        });
+
+        if (grp.gruposMaterias && grp.gruposMaterias.length > 0) {
+          const nuevasMaterias = grp.gruposMaterias.map(m => ({
+            grupoId: nuevoGrupo.grupoId,
+            materiaId: m.materiaId,
+            docenteId: m.docenteId,
+            horario: m.horario,
+            aula: m.aula
+          }));
+          await tx.grupoMateria.createMany({
+            data: nuevasMaterias
+          });
+        }
+      }
+    }
+
+    return nuevoCiclo;
   });
 }
 

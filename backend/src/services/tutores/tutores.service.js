@@ -15,7 +15,24 @@ async function obtenerPorId(id) {
 }
 
 async function crear(datos, auditCtx) {
+  // Limpiar campos vacíos para evitar violaciones de clave única (ej. RFC vacío)
+  if (datos.rfc === '') datos.rfc = null;
+  if (datos.curp === '') datos.curp = null;
+  if (datos.correoElectronico === '') datos.correoElectronico = null;
+  if (datos.telefono === '') datos.telefono = null;
+  if (datos.regimenFiscal === '') datos.regimenFiscal = null;
+  if (datos.usoCfdi === '') datos.usoCfdi = null;
+  if (datos.codigoPostal === '') datos.codigoPostal = null;
+  if (datos.correoFacturacion === '') datos.correoFacturacion = null;
+
   if (datos.rfc) {
+    datos.rfc = datos.rfc.trim().toUpperCase();
+    if (datos.rfc.length < 12 || datos.rfc.length > 13) {
+      throw Object.assign(
+        new Error(`El RFC debe tener exactamente 12 o 13 caracteres.`),
+        { statusCode: 400 }
+      );
+    }
     const existente = await tutoresRepository.findByRfc(datos.rfc);
     if (existente) {
       throw Object.assign(
@@ -40,7 +57,24 @@ async function crear(datos, auditCtx) {
 async function actualizar(id, datos, auditCtx) {
   await obtenerPorId(id);
   
+  // Limpiar campos vacíos para evitar violaciones de clave única (ej. RFC vacío)
+  if (datos.rfc === '') datos.rfc = null;
+  if (datos.curp === '') datos.curp = null;
+  if (datos.correoElectronico === '') datos.correoElectronico = null;
+  if (datos.telefono === '') datos.telefono = null;
+  if (datos.regimenFiscal === '') datos.regimenFiscal = null;
+  if (datos.usoCfdi === '') datos.usoCfdi = null;
+  if (datos.codigoPostal === '') datos.codigoPostal = null;
+  if (datos.correoFacturacion === '') datos.correoFacturacion = null;
+
   if (datos.rfc) {
+    datos.rfc = datos.rfc.trim().toUpperCase();
+    if (datos.rfc.length < 12 || datos.rfc.length > 13) {
+      throw Object.assign(
+        new Error(`El RFC debe tener exactamente 12 o 13 caracteres.`),
+        { statusCode: 400 }
+      );
+    }
     const existente = await tutoresRepository.findByRfc(datos.rfc);
     if (existente && existente.tutorId !== Number(id)) {
       throw Object.assign(

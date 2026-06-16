@@ -693,7 +693,6 @@ model SolicitudBeca {
   alumnoId        Int       @map("alumno_id")
   becaId          Int       @map("beca_id")
   cicloId         Int       @map("ciclo_id")
-  tipoSolicitud   String    @default("asignacion") @map("tipo_solicitud") @db.VarChar(15)
   motivo          String
   estado          String    @default("pendiente") @db.VarChar(15)
   solicitadaPor   Int?      @map("solicitada_por")

@@ -273,7 +273,6 @@ async function createSolicitud(datos, auditCtx = {}) { return withAudit(auditCtx
       alumnoId:   Number(alumnoId),
       becaId:     beca.becaId,
       cicloId:    ciclo.cicloId,
-      tipoSolicitud: tipoSolicitud || 'asignacion',
       motivo:     motivo ?? '',
       estado:     'pendiente',
       solicitadaPor: solicitadoPorId ? Number(solicitadoPorId) : null,
@@ -305,36 +304,24 @@ async function resolverSolicitud(id, { estado, aprobadoPorId, observaciones }, a
 
   // Si se aprueba, materializar la acción de beca
   if (estadoNorm === 'aprobada') {
-    if (sol.tipoSolicitud === 'asignacion') {
-      // Desactivar becas anteriores del alumno en este ciclo
-      await tx.asignacionBeca.updateMany({
-        where: { alumnoId: sol.alumnoId, cicloId: sol.cicloId, estado: 'activa', becaId: { not: sol.becaId } },
-        data: { estado: 'retirada', fechaRetiro: new Date(), motivoRetiro: 'Reemplazada por nueva beca autorizada' }
-      });
+    // Desactivar becas anteriores del alumno en este ciclo
+    await tx.asignacionBeca.updateMany({
+      where: { alumnoId: sol.alumnoId, cicloId: sol.cicloId, estado: 'activa', becaId: { not: sol.becaId } },
+      data: { estado: 'retirada', fechaRetiro: new Date(), motivoRetiro: 'Reemplazada por nueva beca autorizada' }
+    });
 
-      await tx.asignacionBeca.upsert({
-        where: { alumnoId_becaId_cicloId: { alumnoId: sol.alumnoId, becaId: sol.becaId, cicloId: sol.cicloId } },
-        update: { estado: 'activa', fechaRetiro: null, motivoRetiro: null },
-        create: {
-          alumnoId:    sol.alumnoId,
-          becaId:      sol.becaId,
-          cicloId:     sol.cicloId,
-          solicitudId: sol.solicitudId,
-          estado:      'activa',
-          asignadaPor: aprobadoPorId ? Number(aprobadoPorId) : null,
-        },
-      });
-    } else if (sol.tipoSolicitud === 'retiro') {
-      await tx.asignacionBeca.updateMany({
-        where: { alumnoId: sol.alumnoId, becaId: sol.becaId, cicloId: sol.cicloId, estado: 'activa' },
-        data: { 
-          estado: 'retirada', 
-          fechaRetiro: new Date(),
-          motivoRetiro: sol.motivo,
-          retiradaPor: aprobadoPorId ? Number(aprobadoPorId) : null 
-        }
-      });
-    }
+    await tx.asignacionBeca.upsert({
+      where: { alumnoId_becaId_cicloId: { alumnoId: sol.alumnoId, becaId: sol.becaId, cicloId: sol.cicloId } },
+      update: { estado: 'activa', fechaRetiro: null, motivoRetiro: null },
+      create: {
+        alumnoId:    sol.alumnoId,
+        becaId:      sol.becaId,
+        cicloId:     sol.cicloId,
+        solicitudId: sol.solicitudId,
+        estado:      'activa',
+        asignadaPor: sol.resueltaPor,
+      },
+    });
   }
 
   return mapSolicitud(sol);

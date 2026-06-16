@@ -135,7 +135,7 @@ function mapAlumno(a) {
  *
  * @returns {Array|{data, pagination}} Sin page → array plano. Con page → { data, pagination }
  */
-async function findAll({ q, grupoId, nivel, grado, seccion, estado, page, limit } = {}) {
+async function findAll({ q, grupoId, nivel, grado, seccion, estado, page, limit } = {}, usuario = null) {
   const where = {};
 
   if (estado && estado !== 'Todos') {
@@ -162,15 +162,33 @@ async function findAll({ q, grupoId, nivel, grado, seccion, estado, page, limit 
     filterInscripcion = true;
   }
 
+  let filterGrupo = false;
+  const grupoWhere = {};
+
   if (grupoId) {
     inscripcionesSome.grupoId = Number(grupoId);
     filterInscripcion = true;
-  } else if (grado || seccion) {
-    // If no specific grupoId is provided but grado/seccion is, filter by those properties on the group
-    const grupoWhere = {};
-    if (grado) grupoWhere.grado = String(grado);
-    if (seccion) grupoWhere.seccion = seccion;
-    inscripcionesSome.grupo = { is: grupoWhere };
+  }
+  
+  if (grado) {
+    grupoWhere.grado = String(grado);
+    filterGrupo = true;
+  }
+  if (seccion) {
+    grupoWhere.seccion = seccion;
+    filterGrupo = true;
+  }
+
+  if (usuario && usuario.rol === 'MAESTRA') {
+    grupoWhere.OR = [
+      { docenteTitularId: usuario.id },
+      { gruposMaterias: { some: { docenteId: usuario.id, eliminadoEn: null } } }
+    ];
+    filterGrupo = true;
+  }
+
+  if (filterGrupo) {
+    inscripcionesSome.grupo = grupoWhere;
     filterInscripcion = true;
   }
 

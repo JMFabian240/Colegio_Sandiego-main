@@ -379,6 +379,9 @@
         <div class="nav-link" x-show="tienePermiso('becas', 'lectura')" :class="view==='becas'?'active':''"
           @click="cargarBecasAsignadas(); cargarCatalogoBecas(); view='becas'"><i data-lucide="award"
             class="w-4 h-4"></i> Gestión de Becas</div>
+        <div class="nav-link" x-show="tienePermiso('alumnos', 'lectura')" :class="view==='historialAcademico'?'active':''"
+          @click="view='historialAcademico'"><i data-lucide="history"
+            class="w-4 h-4"></i> Historial Académico</div>
 
         <template x-if="esAdmin()">
           <div>
@@ -703,7 +706,7 @@
                   <div class="flex border-b overflow-x-auto whitespace-nowrap">
                     <button class="px-4 py-3 text-sm font-medium"
                       :class="tabAlumnoFicha==='academicos'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'"
-                      @click="tabAlumnoFicha='academicos'">Expediente Escolar</button>
+                      @click="tabAlumnoFicha='academicos'">Información Escolar</button>
                     <button class="px-4 py-3 text-sm font-medium flex items-center"
                       :class="tabAlumnoFicha==='tutores'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'"
                       @click="tabAlumnoFicha='tutores'"><i data-lucide="users" class="w-4 h-4 mr-2"></i> Familia /
@@ -712,10 +715,10 @@
                       :class="tabAlumnoFicha==='planes_pago'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'"
                       @click="tabAlumnoFicha='planes_pago'"><i data-lucide="calendar" class="w-4 h-4 mr-2"></i> Plan de
                       Pago</button>
-                    <button class="px-4 py-3 text-sm font-medium flex items-center"
+                    <button class="px-4 py-3 text-sm font-medium flex items-center transition-colors relative"
                       :class="tabAlumnoFicha==='estado_cuenta'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'"
-                      @click="tabAlumnoFicha='estado_cuenta'; _cargarEstadoCuentaAlumnoFicha()"><i
-                        data-lucide="file-clock" class="w-4 h-4 mr-2"></i> Estado de Cuenta</button>
+                      @click="tabAlumnoFicha='estado_cuenta'; _cargarPagosAlumnoFicha()"><i
+                        data-lucide="clock" class="w-4 h-4 mr-2"></i> Estado de Cuenta</button>
                     <button class="px-4 py-3 text-sm font-medium flex items-center"
                       :class="tabAlumnoFicha==='historial_pagos'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'"
                       @click="tabAlumnoFicha='historial_pagos'; _cargarPagosAlumnoFicha()"><i data-lucide="receipt"
@@ -912,180 +915,122 @@
 
                   <!-- Pestaña: Estado de Cuenta (Línea del tiempo) -->
                   <div class="p-5" x-show="tabAlumnoFicha==='estado_cuenta'" x-cloak>
-                    <div class="flex justify-between items-center mb-6 border-b pb-4">
-                      <h3 class="font-bold text-navy-800">Estado de Cuenta</h3>
-                      <button class="btn-outline text-xs" @click="_cargarEstadoCuentaAlumnoFicha()"><i
+                    <div class="flex justify-between items-center mb-4">
+                      <h3 class="font-semibold text-gray-700">Estado de Cuenta</h3>
+                      <button class="btn-outline text-xs" @click="_cargarPagosAlumnoFicha()"><i
                           data-lucide="refresh-cw" class="w-4 h-4 mr-1"></i> Actualizar</button>
                     </div>
-
-                    <div class="relative border-l-2 border-gray-200 ml-4 space-y-8 pl-6">
-                      <template x-for="item in estadoCuentaAlumno" :key="item.timelineId">
-                        <div class="relative">
-                          <!-- Icono / Badge -->
-                          <div
-                            class="absolute -left-[35px] mt-1 w-6 h-6 rounded-full border-2 bg-white flex items-center justify-center"
-                            :class="item.estadoCalc === 'PAGADO' ? 'border-emerald-500 text-emerald-500' : (item.estadoCalc === 'VENCIDO' ? 'border-crimson-500 text-crimson-500' : 'border-amber-500 text-amber-500')">
-                            <i :data-lucide="item.estadoCalc === 'PAGADO' ? 'check-circle' : 'clock'"
-                              class="w-4 h-4"></i>
-                          </div>
-
-                          <!-- Contenido -->
-                          <div class="card-clean p-4">
-                            <div class="flex justify-between items-start mb-2">
-                              <div>
-                                <div class="font-bold text-navy-800 uppercase"
-                                  x-text="item.concepto + (item.mes ? ' ' + item.mes : '')"></div>
-                                <div class="text-xs text-gray-500" x-text="'Vencimiento: ' + item.fechaVencimiento">
-                                </div>
-                              </div>
-                              <span class="px-2 py-1 rounded text-[10px] font-bold"
-                                :class="item.estadoCalc === 'PAGADO' ? 'bg-emerald-100 text-emerald-700' : (item.estadoCalc === 'VENCIDO' ? 'bg-crimson-100 text-crimson-700' : 'bg-amber-100 text-amber-700')"
-                                x-text="item.estadoCalc"></span>
+                    <div class="relative border-l border-gray-200 ml-3 space-y-6">
+                      <template x-for="item in historialCalendarioAlumno" :key="item.calendarioPagoId">
+                        <div class="mb-6 ml-6">
+                          <span
+                            class="absolute flex items-center justify-center w-6 h-6 rounded-full -left-3 ring-4 ring-white"
+                            :class="{'bg-emerald-100': item.estadoCobro === 'pagado' || item.estadoCobro === 'liquidado',
+                                       'bg-amber-100': item.estadoCobro === 'pendiente',
+                                       'bg-red-100': item.estadoCobro === 'vencido'}">
+                            <i data-lucide="check-circle" class="w-3 h-3 text-emerald-600"
+                              x-show="item.estadoCobro === 'pagado' || item.estadoCobro === 'liquidado'"></i>
+                            <i data-lucide="clock" class="w-3 h-3 text-amber-600"
+                              x-show="item.estadoCobro === 'pendiente'"></i>
+                            <i data-lucide="alert-circle" class="w-3 h-3 text-red-600"
+                              x-show="item.estadoCobro === 'vencido'"></i>
+                          </span>
+                          <div class="bg-white p-4 rounded-lg border border-gray-100 shadow-sm">
+                            <div class="flex justify-between items-start mb-1">
+                              <h4 class="font-medium text-gray-800"
+                                x-text="item.concepto + (item.mes ? ' ' + item.mes : '')"></h4>
+                              <span class="text-xs font-semibold px-2 py-1 rounded-full" :class="{'bg-emerald-100 text-emerald-700': item.estadoCobro === 'pagado' || item.estadoCobro === 'liquidado',
+                                           'bg-amber-100 text-amber-700': item.estadoCobro === 'pendiente',
+                                           'bg-red-100 text-red-700': item.estadoCobro === 'vencido'}"
+                                x-text="item.estadoCobro.toUpperCase()">
+                              </span>
                             </div>
-                            <div class="grid grid-cols-3 gap-4 mt-3 pt-3 border-t">
+                            <p class="text-xs text-gray-500 mb-2">Vencimiento: <span
+                                x-text="item.fechaVencimiento.split('T')[0]"></span></p>
+                            <div class="grid grid-cols-2 gap-2 text-sm mt-3">
                               <div>
-                                <div class="text-[10px] text-gray-500">Monto Original</div>
-                                <div class="font-bold text-sm text-navy-700"
-                                  x-text="'$' + Number(item.montoOriginal).toFixed(2)"></div>
+                                <p class="text-gray-500 text-xs">Monto Original</p>
+                                <p class="font-medium text-gray-700"
+                                  x-text="'$' + Number(item.montoOriginal).toFixed(2)"></p>
+                              </div>
+                              <div x-show="Number(item.montoRecargo) > 0">
+                                <p class="text-gray-500 text-xs">Recargo</p>
+                                <p class="font-medium text-red-600"
+                                  x-text="'+$' + Number(item.montoRecargo).toFixed(2)"></p>
                               </div>
                               <div>
-                                <div class="text-[10px] text-gray-500">Monto Pagado</div>
-                                <div class="font-bold text-sm text-emerald-600"
-                                  x-text="'$' + Number(item.montoPagado).toFixed(2)"></div>
+                                <p class="text-gray-500 text-xs">Monto Pagado</p>
+                                <p class="font-medium text-emerald-600"
+                                  x-text="'$' + Number(item.montoPagado).toFixed(2)"></p>
                               </div>
                               <div>
-                                <div class="text-[10px] text-gray-500">Saldo Pendiente</div>
-                                <div class="font-bold text-sm"
-                                  :class="Number(item.saldoPendiente) > 0 ? 'text-crimson-600' : 'text-gray-700'"
-                                  x-text="'$' + Number(item.saldoPendiente).toFixed(2)"></div>
+                                <p class="text-gray-500 text-xs">Saldo Pendiente</p>
+                                <p class="font-bold"
+                                  :class="Number(item.saldoPendiente) > 0 ? 'text-navy-700' : 'text-gray-600'"
+                                  x-text="'$' + Number(item.saldoPendiente).toFixed(2)"></p>
                               </div>
                             </div>
                           </div>
                         </div>
                       </template>
-                      <div x-show="estadoCuentaAlumno.length === 0" class="text-gray-400 text-sm italic">
-                        No hay registros en el calendario de pagos.
+                      <div x-show="historialCalendarioAlumno.length === 0" class="ml-6 text-sm text-gray-500 py-4">
+                        No hay registro de estado de cuenta para este alumno.
                       </div>
                     </div>
                   </div>
 
                   <!-- Pestaña: Historial de Pagos -->
                   <div class="p-5" x-show="tabAlumnoFicha==='historial_pagos'">
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                      <!-- Columna 1: Estado de Cuenta y Línea de Tiempo -->
-                      <div>
-                        <div class="flex justify-between items-center mb-4">
-                          <h3 class="font-semibold text-gray-700">Estado de Cuenta</h3>
-                          <button class="btn-outline text-xs" @click="_cargarPagosAlumnoFicha()"><i
-                              data-lucide="refresh-cw" class="w-4 h-4 mr-1"></i> Actualizar</button>
-                        </div>
-                        <div class="relative border-l border-gray-200 ml-3 space-y-6">
-                          <template x-for="item in historialCalendarioAlumno" :key="item.calendarioPagoId">
-                            <div class="mb-6 ml-6">
-                              <span
-                                class="absolute flex items-center justify-center w-6 h-6 rounded-full -left-3 ring-4 ring-white"
-                                :class="{'bg-emerald-100': item.estadoCobro === 'pagado' || item.estadoCobro === 'liquidado',
-                                           'bg-amber-100': item.estadoCobro === 'pendiente',
-                                           'bg-red-100': item.estadoCobro === 'vencido'}">
-                                <i data-lucide="check-circle" class="w-3 h-3 text-emerald-600"
-                                  x-show="item.estadoCobro === 'pagado' || item.estadoCobro === 'liquidado'"></i>
-                                <i data-lucide="clock" class="w-3 h-3 text-amber-600"
-                                  x-show="item.estadoCobro === 'pendiente'"></i>
-                                <i data-lucide="alert-circle" class="w-3 h-3 text-red-600"
-                                  x-show="item.estadoCobro === 'vencido'"></i>
-                              </span>
-                              <div class="bg-white p-4 rounded-lg border border-gray-100 shadow-sm">
-                                <div class="flex justify-between items-start mb-1">
-                                  <h4 class="font-medium text-gray-800"
-                                    x-text="item.concepto + (item.mes ? ' ' + item.mes : '')"></h4>
-                                  <span class="text-xs font-semibold px-2 py-1 rounded-full" :class="{'bg-emerald-100 text-emerald-700': item.estadoCobro === 'pagado' || item.estadoCobro === 'liquidado',
-                                               'bg-amber-100 text-amber-700': item.estadoCobro === 'pendiente',
-                                               'bg-red-100 text-red-700': item.estadoCobro === 'vencido'}"
-                                    x-text="item.estadoCobro.toUpperCase()">
-                                  </span>
-                                </div>
-                                <p class="text-xs text-gray-500 mb-2">Vencimiento: <span
-                                    x-text="item.fechaVencimiento.split('T')[0]"></span></p>
-                                <div class="grid grid-cols-2 gap-2 text-sm mt-3">
-                                  <div>
-                                    <p class="text-gray-500 text-xs">Monto Original</p>
-                                    <p class="font-medium text-gray-700"
-                                      x-text="'$' + Number(item.montoOriginal).toFixed(2)"></p>
-                                  </div>
-                                  <div x-show="Number(item.montoRecargo) > 0">
-                                    <p class="text-gray-500 text-xs">Recargo</p>
-                                    <p class="font-medium text-red-600"
-                                      x-text="'+$' + Number(item.montoRecargo).toFixed(2)"></p>
-                                  </div>
-                                  <div>
-                                    <p class="text-gray-500 text-xs">Monto Pagado</p>
-                                    <p class="font-medium text-emerald-600"
-                                      x-text="'$' + Number(item.montoPagado).toFixed(2)"></p>
-                                  </div>
-                                  <div>
-                                    <p class="text-gray-500 text-xs">Saldo Pendiente</p>
-                                    <p class="font-bold"
-                                      :class="Number(item.saldoPendiente) > 0 ? 'text-navy-700' : 'text-gray-600'"
-                                      x-text="'$' + Number(item.saldoPendiente).toFixed(2)"></p>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </template>
-                          <div x-show="historialCalendarioAlumno.length === 0" class="ml-6 text-sm text-gray-500 py-4">
-                            No hay registro de estado de cuenta para este alumno.
-                          </div>
-                        </div>
+                    <div>
+                      <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-semibold text-gray-700">Recibos y Comprobantes</h3>
+                        <button class="btn-outline text-xs" @click="_cargarPagosAlumnoFicha()"><i
+                            data-lucide="refresh-cw" class="w-4 h-4 mr-1"></i> Actualizar</button>
                       </div>
-
-                      <!-- Columna 2: Recibos y Comprobantes -->
-                      <div>
-                        <h3 class="font-semibold text-gray-700 mb-4">Recibos y Comprobantes</h3>
-                        <div class="overflow-x-auto">
-                          <table class="w-full text-left text-sm text-gray-600">
-                            <thead class="bg-gray-50 text-gray-700 uppercase text-xs">
-                              <tr>
-                                <th class="px-4 py-3 rounded-tl-lg">Fecha</th>
-                                <th class="px-4 py-3">Concepto</th>
-                                <th class="px-4 py-3">Monto</th>
-                                <th class="px-4 py-3 text-center rounded-tr-lg">Ver</th>
-                              </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100">
-                              <template x-for="pago in historialPagosAlumno" :key="pago.id">
-                                <tr class="hover:bg-gray-50/50 transition-colors">
-                                  <td class="px-4 py-3 font-medium text-gray-900" x-text="pago.fecha.split('T')[0]">
-                                  </td>
-                                  <td class="px-4 py-3" x-text="pago.concepto"></td>
-                                  <td class="px-4 py-3 text-emerald-600 font-semibold"
-                                    x-text="'$' + Number(pago.monto).toFixed(2)"></td>
-                                  <td class="px-4 py-3 text-center">
-                                    <template x-if="pago.documentos && pago.documentos.length > 0">
-                                      <a :href="window.saeApi.pagos.descargarComprobante(pago.id)" target="_blank"
-                                        class="text-xs text-blue-600 hover:text-blue-800 font-medium inline-flex items-center"
-                                        title="Ver Comprobante">
-                                        <i data-lucide="file-text" class="w-4 h-4 mr-1"></i> PDF
-                                      </a>
-                                    </template>
-                                    <template x-if="!pago.documentos || pago.documentos.length === 0">
-                                      <label
-                                        class="cursor-pointer text-xs text-navy-600 hover:text-navy-800 font-medium inline-flex items-center">
-                                        <i data-lucide="upload" class="w-4 h-4 mr-1"></i>
-                                        <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png"
-                                          @change="subirComprobanteHistorial(pago.id, $event)">
-                                      </label>
-                                    </template>
-                                  </td>
-                                </tr>
-                              </template>
-                              <tr x-show="historialPagosAlumno.length === 0">
-                                <td colspan="4" class="px-4 py-8 text-center text-gray-500">
-                                  No hay recibos de pagos para este alumno.
+                      <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-600">
+                          <thead class="bg-gray-50 text-gray-700 uppercase text-xs">
+                            <tr>
+                              <th class="px-4 py-3 rounded-tl-lg">Fecha</th>
+                              <th class="px-4 py-3">Concepto</th>
+                              <th class="px-4 py-3">Monto</th>
+                              <th class="px-4 py-3 text-center rounded-tr-lg">Ver</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-gray-100">
+                            <template x-for="pago in historialPagosAlumno" :key="pago.id">
+                              <tr class="hover:bg-gray-50/50 transition-colors">
+                                <td class="px-4 py-3 font-medium text-gray-900" x-text="pago.fecha.split('T')[0]">
+                                </td>
+                                <td class="px-4 py-3" x-text="pago.concepto"></td>
+                                <td class="px-4 py-3 text-emerald-600 font-semibold"
+                                  x-text="'$' + Number(pago.monto).toFixed(2)"></td>
+                                <td class="px-4 py-3 text-center">
+                                  <template x-if="pago.documentos && pago.documentos.length > 0">
+                                    <a :href="window.saeApi.pagos.descargarComprobante(pago.id)" target="_blank"
+                                      class="text-xs text-blue-600 hover:text-blue-800 font-medium inline-flex items-center"
+                                      title="Ver Comprobante">
+                                      <i data-lucide="file-text" class="w-4 h-4 mr-1"></i> PDF
+                                    </a>
+                                  </template>
+                                  <template x-if="!pago.documentos || pago.documentos.length === 0">
+                                    <label
+                                      class="cursor-pointer text-xs text-navy-600 hover:text-navy-800 font-medium inline-flex items-center">
+                                      <i data-lucide="upload" class="w-4 h-4 mr-1"></i>
+                                      <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png"
+                                        @change="subirComprobanteHistorial(pago.id, $event)">
+                                    </label>
+                                  </template>
                                 </td>
                               </tr>
-                            </tbody>
-                          </table>
-                        </div>
+                            </template>
+                            <tr x-show="historialPagosAlumno.length === 0">
+                              <td colspan="4" class="px-4 py-8 text-center text-gray-500">
+                                No hay recibos de pagos para este alumno.
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </div>
                   </div>
@@ -1600,7 +1545,7 @@
                 <select class="input-modern" x-model="filtroCalifGrupo" @change="$nextTick(() => buscarAlumnoCalif())"
                   :disabled="!filtroCalifGrado">
                   <option value="">Grupo</option>
-                  <template x-for="s in ['A','B','C','D']" :key="s">
+                  <template x-for="s in ['A','B','C','D','E','F']" :key="s">
                     <option :value="s" x-text="s"></option>
                   </template>
                 </select>
@@ -1747,7 +1692,7 @@
                       </thead>
                       <tbody>
                         <tr class="border-b">
-                          <td class="p-3 font-medium text-gray-800 uppercase">Taller</td>
+                          <td class="p-3 font-medium text-gray-800 uppercase" x-text="tallerAlumno.nombre"></td>
                           <td class="p-2">
                             <select class="w-full input-modern text-center" x-model="tallerAlumno.T1.v">
                               <option value=""></option>
@@ -1798,6 +1743,151 @@
                   </div><button class="btn-primary text-xs">Seleccionar</button>
                 </div>
               </template></div>
+          </div>
+        </template>
+
+        <!-- HISTORIAL ACADEMICO -->
+        <template x-if="view==='historialAcademico'">
+          <div class="space-y-6">
+            <h2 class="text-xl font-bold text-navy-800">Historial Académico Completo</h2>
+            
+            <!-- Buscador -->
+            <div class="card-clean p-6">
+              <label class="text-sm font-medium text-gray-700 mb-2 block">Buscar alumno por nombre, matrícula o CURP</label>
+              <div class="relative">
+                <i data-lucide="search" class="absolute left-3 top-3 w-5 h-5 text-gray-400"></i>
+                <input type="text" class="input-modern w-full pl-10" placeholder="Ej. Juan Pérez..."
+                  x-model="busquedaHistorialQuery" @input.debounce.300ms="filtrarAlumnosHistorial()">
+              </div>
+              
+              <!-- Resultados -->
+              <div class="mt-4 bg-white border rounded-lg shadow-sm divide-y" x-show="resultadosBusquedaHistorial.length > 0">
+                <template x-for="al in resultadosBusquedaHistorial" :key="al.id">
+                  <div class="p-3 hover:bg-gray-50 cursor-pointer flex justify-between items-center transition"
+                    @click="seleccionarAlumnoHistorial(al)">
+                    <div>
+                      <div class="font-medium text-navy-800" x-text="al.nombre"></div>
+                      <div class="text-xs text-gray-500" x-text="(al.matricula ? 'Mat: '+al.matricula+' | ' : '') + (al.nivel || '') + ' ' + (al.grado || '') + ' ' + (al.grupoActual || '')"></div>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400"></i>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Despliegue del Historial -->
+            <div x-show="alumnoHistorialSeleccionado" class="space-y-6">
+              <!-- Info del alumno -->
+              <div class="bg-navy-800 text-white rounded-lg p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg">
+                <div>
+                  <h3 class="text-2xl font-bold" x-text="alumnoHistorialSeleccionado.nombre"></h3>
+                  <p class="text-white/70 text-sm mt-1" x-text="(alumnoHistorialSeleccionado.matricula || 'Sin Matrícula') + ' • ' + (alumnoHistorialSeleccionado.nivel || '')"></p>
+                </div>
+                <button class="btn-outline text-white border-white hover:bg-white/10" @click="window.print()">
+                  <i data-lucide="printer" class="w-4 h-4 mr-2"></i> Imprimir Historial
+                </button>
+              </div>
+
+              <!-- Sin historial -->
+              <div x-show="historialAcademicoCompleto.length === 0" class="card-clean p-8 text-center text-gray-500">
+                <i data-lucide="folder-open" class="w-12 h-12 mx-auto mb-3 opacity-50"></i>
+                <p>El alumno no cuenta con historial académico registrado.</p>
+              </div>
+
+              <!-- Iteración por ciclos -->
+              <template x-for="registro in historialAcademicoCompleto" :key="registro.ciclo.cicloId">
+                <div class="card-clean border-l-4 border-navy-600 overflow-hidden">
+                  <div class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                    <h3 class="font-bold text-lg text-navy-800 uppercase" x-text="'Ciclo Escolar ' + registro.ciclo.nombre"></h3>
+                  </div>
+
+                  <div class="p-6 space-y-8">
+                    <!-- Materias Curriculares -->
+                    <div x-show="registro.curriculares && registro.curriculares.length > 0">
+                      <h4 class="font-bold text-navy-700 border-b pb-2 mb-4 text-sm tracking-wider uppercase">Área de Formación Curricular</h4>
+                      <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-700">
+                          <thead class="bg-gray-100 text-gray-600 uppercase text-xs">
+                            <tr>
+                              <th class="px-4 py-2 rounded-tl">Experiencia Educativa</th>
+                              <th class="px-4 py-2 text-center">Créditos</th>
+                              <th class="px-4 py-2">Periodo</th>
+                              <th class="px-4 py-2 text-center">Calificación</th>
+                              <th class="px-4 py-2 rounded-tr">Fecha Aprobación</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-gray-100">
+                            <template x-for="c in registro.curriculares" :key="c.calificacionId">
+                              <tr class="hover:bg-gray-50/50">
+                                <td class="px-4 py-2 font-medium text-gray-900" x-text="c.materia"></td>
+                                <td class="px-4 py-2 text-center" x-text="c.creditos"></td>
+                                <td class="px-4 py-2" x-text="c.periodo"></td>
+                                <td class="px-4 py-2 text-center font-bold" :class="c.valorNumerico < 6 ? 'text-red-600' : 'text-emerald-700'" x-text="c.tipoEvaluacion === 'numerica' ? c.valorNumerico : c.valorCualitativo"></td>
+                                <td class="px-4 py-2 text-xs text-gray-500" x-text="new Date(c.fechaAprobacion).toLocaleDateString('es-MX')"></td>
+                              </tr>
+                            </template>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <!-- Talleres -->
+                    <div x-show="registro.talleres && registro.talleres.length > 0">
+                      <h4 class="font-bold text-navy-700 border-b pb-2 mb-4 text-sm tracking-wider uppercase">Talleres Formativos</h4>
+                      <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-700">
+                          <thead class="bg-gray-100 text-gray-600 uppercase text-xs">
+                            <tr>
+                              <th class="px-4 py-2 rounded-tl">Taller</th>
+                              <th class="px-4 py-2">Periodo</th>
+                              <th class="px-4 py-2 text-center">Evaluación</th>
+                              <th class="px-4 py-2 rounded-tr">Fecha Aprobación</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-gray-100">
+                            <template x-for="(t, idx) in registro.talleres" :key="idx">
+                              <tr class="hover:bg-gray-50/50">
+                                <td class="px-4 py-2 font-medium text-gray-900" x-text="t.taller"></td>
+                                <td class="px-4 py-2" x-text="t.periodo"></td>
+                                <td class="px-4 py-2 text-center font-bold" x-text="t.valorCualitativo || '-'"></td>
+                                <td class="px-4 py-2 text-xs text-gray-500" x-text="new Date(t.fechaAprobacion).toLocaleDateString('es-MX')"></td>
+                              </tr>
+                            </template>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <!-- Extracurriculares -->
+                    <div x-show="registro.extracurriculares && registro.extracurriculares.length > 0">
+                      <h4 class="font-bold text-navy-700 border-b pb-2 mb-4 text-sm tracking-wider uppercase">Clubes Extracurriculares</h4>
+                      <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-700">
+                          <thead class="bg-gray-100 text-gray-600 uppercase text-xs">
+                            <tr>
+                              <th class="px-4 py-2 rounded-tl">Club / Actividad</th>
+                              <th class="px-4 py-2">Periodo</th>
+                              <th class="px-4 py-2 text-center">Evaluación</th>
+                              <th class="px-4 py-2 rounded-tr">Fecha Aprobación</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-gray-100">
+                            <template x-for="(ex, idx) in registro.extracurriculares" :key="idx">
+                              <tr class="hover:bg-gray-50/50">
+                                <td class="px-4 py-2 font-medium text-gray-900 capitalize" x-text="ex.club"></td>
+                                <td class="px-4 py-2" x-text="ex.periodo"></td>
+                                <td class="px-4 py-2 text-center font-bold" x-text="ex.valorNumerico || '-'"></td>
+                                <td class="px-4 py-2 text-xs text-gray-500" x-text="new Date(ex.fechaAprobacion).toLocaleDateString('es-MX')"></td>
+                              </tr>
+                            </template>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
           </div>
         </template>
 
@@ -2299,16 +2389,13 @@
             <h2 class="text-xl font-bold text-navy-800">Grupos y materias</h2>
             <p class="text-sm text-gray-500 mt-1">Gestiona los grupos, asigna docentes titulares y administra las materias.</p>
           </div>
-          <button x-show="tienePermiso('grupos', 'escritura')" class="btn-primary" @click="abrirModalNuevoGrupo()">
-            <i data-lucide="plus" class="w-4 h-4 mr-2 inline"></i> Nuevo Grupo
-          </button>
         </div>
 
-        <!-- Barra de Filtros Globales -->
-        <div class="card-clean p-4 mb-4 flex gap-4 items-end bg-gray-50 border border-gray-200">
-          <div class="w-1/3">
-            <label class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1 block">Nivel Educativo</label>
-            <select class="input-field" x-model="filtroGruposNivel" @change="filtroGruposGrado=''; filtroGruposGrupo=''">
+        <!-- Barra de Filtros Globales (Estilo Calificaciones) -->
+        <div class="grid md:grid-cols-3 gap-4 mb-5">
+          <div>
+            <label class="text-xs font-medium text-gray-600">Nivel Escolar</label>
+            <select class="input-modern" x-model="filtroGruposNivel" @change="$nextTick(() => { filtroGruposGrado=''; filtroGruposGrupo=''; })">
               <option value="">Todos los niveles</option>
               <option value="PREESCOLAR">Preescolar</option>
               <option value="PRIMARIA">Primaria</option>
@@ -2316,23 +2403,39 @@
               <option value="BACHILLERATO">Bachillerato</option>
             </select>
           </div>
-          <div class="w-1/3">
-            <label class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1 block">Grado</label>
-            <select class="input-field" x-model="filtroGruposGrado" @change="filtroGruposGrupo=''">
+          <div>
+            <label class="text-xs font-medium text-gray-600">Grado</label>
+            <select class="input-modern" x-model="filtroGruposGrado" @change="$nextTick(() => { filtroGruposGrupo=''; })">
               <option value="">Todos los grados</option>
-              <template x-for="g in gradosDisponiblesFiltro()" :key="g">
+              <template x-for="g in gradosDisponiblesFiltroGrupos" :key="g">
                 <option :value="g" x-text="g + '° Grado'"></option>
               </template>
             </select>
           </div>
-          <div class="w-1/3">
-            <label class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1 block">Grupo / Sección</label>
-            <select class="input-field" x-model="filtroGruposGrupo">
+          <div>
+            <label class="text-xs font-medium text-gray-600">Grupo</label>
+            <select class="input-modern" x-model="filtroGruposGrupo">
               <option value="">Todas las secciones</option>
-              <template x-for="s in seccionesDisponiblesFiltro()" :key="s">
+              <template x-for="s in seccionesDisponiblesFiltroGrupos" :key="s">
                 <option :value="s" x-text="'Sección ' + s"></option>
               </template>
             </select>
+          </div>
+          <div x-show="rol === 'ADMIN' || rol === 'GESTOR'">
+            <label class="text-xs font-medium text-gray-600">Docente Titular</label>
+            <div class="autocomplete-wrapper relative" @click.outside="mostrarDropdownDocenteFiltro=false">
+              <input type="text" class="input-modern" placeholder="Buscar por nombre..." 
+                     x-model="busquedaDocenteFiltro" 
+                     @input="buscarDocenteFiltroInput()"
+                     @focus="buscarDocenteFiltroInput()" autocomplete="off">
+              <div class="autocomplete-list" x-show="mostrarDropdownDocenteFiltro && resultadosDocenteFiltro.length > 0">
+                <template x-for="docente in resultadosDocenteFiltro" :key="docente.id">
+                  <div class="autocomplete-item" @click="seleccionarDocenteFiltro(docente)">
+                    <div class="font-medium text-sm text-navy-700" x-text="docente.nombre"></div>
+                  </div>
+                </template>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2352,8 +2455,23 @@
 
         <!-- Pestaña 1: GRUPOS -->
         <div x-show="tabGruposMaterias === 'grupos'" class="space-y-3">
+          
+          <div class="flex justify-between items-center mb-4">
+            <div class="text-sm font-medium text-gray-600" x-show="rol === 'ADMIN' || rol === 'GESTOR'">
+              <span class="bg-navy-50 text-navy-700 px-3 py-1.5 rounded-full">
+                Grupos encontrados: <span class="font-bold" x-text="gruposFiltradosList().length"></span>
+              </span>
+            </div>
+            <div x-show="tienePermiso('grupos', 'escritura')">
+              <button class="btn-primary" @click="abrirModalNuevoGrupo()">
+                <i data-lucide="plus" class="w-4 h-4 mr-2 inline"></i> Nuevo Grupo
+              </button>
+            </div>
+          </div>
           <template x-for="grupo in gruposFiltradosList()" :key="grupo.id">
-            <div class="card-clean overflow-hidden p-4 flex justify-between items-center">
+            <div class="card-clean overflow-hidden p-4 flex justify-between items-center" 
+                 x-show="rol !== 'MAESTRA' || (saeApi && saeApi.getUsuario()?.nombre === grupo.titular)"
+                 x-init="setTimeout(() => { if(window.lucide) window.lucide.createIcons(); }, 50)">
               <div class="flex items-center gap-4">
                 <div class="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
                   <span class="font-bold text-blue-700" x-text="grupo.grado + '° ' + grupo.seccion"></span>
@@ -2412,6 +2530,17 @@
           <div class="card-clean overflow-hidden">
             <div class="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
               <h3 class="font-bold text-gray-700">Materias Asignadas (<span x-text="materiasFiltradasList().length"></span>)</h3>
+              
+              <!-- Filtro de Tipo de Materia -->
+              <div class="flex items-center gap-2">
+                <label class="text-xs font-medium text-gray-600">Tipo:</label>
+                <select class="input-modern py-1 text-sm h-8 w-40" x-model="filtroMateriasTipo" @change="$nextTick(() => { if(window.lucide) window.lucide.createIcons(); })">
+                  <option value="">Todas</option>
+                  <option value="curricular">Curriculares</option>
+                  <option value="club">Extracurriculares / Club</option>
+                  <option value="taller">Talleres</option>
+                </select>
+              </div>
             </div>
             <table class="w-full text-sm text-left">
               <thead class="bg-white border-b border-gray-200">
@@ -2426,7 +2555,7 @@
               </thead>
               <tbody class="divide-y divide-gray-100">
                 <template x-for="(m, idx) in materiasFiltradasList()" :key="idx">
-                  <tr class="hover:bg-gray-50 transition-colors">
+                  <tr class="hover:bg-gray-50 transition-colors" x-init="setTimeout(() => { if(window.lucide) window.lucide.createIcons(); }, 50)">
                     <td class="p-4 font-bold text-navy-700" x-text="m.materia || m.nombre"></td>
                     <td class="p-4">
                       <div class="flex items-center gap-2">
@@ -2439,9 +2568,15 @@
                     </td>
                     <td class="p-4 text-gray-500" x-text="m.horario || '-'"></td>
                     <td class="p-4 text-gray-500" x-text="m.aula || '-'"></td>
-                    <td class="p-4 text-center">
+                    <td class="p-4 text-center flex justify-center gap-2">
+                      <button class="btn-icon text-indigo-600 hover:bg-indigo-50 rounded" @click="abrirModalAsignarAlumnos(m)" x-show="(m.tipo === 'taller' || m.tipo === 'club') && tienePermiso('grupos', 'escritura')" title="Asignar Alumnos">
+                        <i data-lucide="users" class="w-4 h-4"></i>
+                      </button>
                       <button class="btn-icon text-blue-600 hover:bg-blue-50 rounded" @click="abrirModalEditarMateria(m)" x-show="tienePermiso('grupos', 'escritura')">
                         <i data-lucide="edit" class="w-4 h-4"></i>
+                      </button>
+                      <button class="btn-icon text-red-600 hover:bg-red-50 rounded" @click="eliminarMateriaCRUD(m)" x-show="tienePermiso('grupos', 'escritura')">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
                       </button>
                     </td>
                   </tr>
@@ -2473,16 +2608,28 @@
               <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <!-- Nombre Materia -->
                 <div class="md:col-span-2">
-                  <label class="text-xs font-semibold text-gray-600 uppercase mb-1 block">Nombre de la Materia *</label>
-                  <input type="text" class="input-field" placeholder="Ej. Matemáticas" x-model="nuevaMateria.nombre">
+                  <label class="text-xs font-medium text-gray-600 block mb-1">Nombre de la Materia *</label>
+                  <input type="text" class="input-modern" placeholder="Ej. Matemáticas" x-model="nuevaMateria.nombre">
                 </div>
 
-                <!-- Nivel, Grado, Grupo (Solo habilitados al crear) -->
-                <div class="md:col-span-2 grid grid-cols-3 gap-4" x-show="materiaEditandoIndex === null">
+                <!-- Tipo de Materia -->
+                <div class="md:col-span-2">
+                  <label class="text-xs font-medium text-gray-600 block mb-1">Tipo de Materia *</label>
+                  <div class="flex flex-wrap gap-2">
+                    <template x-for="t in [{label: 'Curricular', value: 'curricular'}, {label: 'Extracurricular', value: 'club'}, {label: 'Taller', value: 'taller'}]" :key="t.value">
+                      <button type="button" class="px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors"
+                        :class="nuevaMateria.tipo === t.value ? 'bg-navy-600 border-navy-600 text-white' : 'border-gray-200 text-gray-600 hover:border-navy-400 hover:text-navy-600'"
+                        @click="nuevaMateria.tipo = t.value" x-text="t.label"></button>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- Nivel, Grado, Grupo -->
+                <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label class="text-xs font-semibold text-gray-600 uppercase mb-1 block">Nivel *</label>
-                    <select class="input-field" x-model="nuevaMateria.nivel" @change="nuevaMateria.grado=''; nuevaMateria.grupo=''">
-                      <option value="">Selecciona nivel...</option>
+                    <label class="text-xs font-medium text-gray-600 block mb-1">Nivel *</label>
+                    <select class="input-modern" x-model="nuevaMateria.nivel" @change="nuevaMateria.grado=''; nuevaMateria.grupo=''">
+                      <option value="">- Nivel -</option>
                       <option value="PREESCOLAR">Preescolar</option>
                       <option value="PRIMARIA">Primaria</option>
                       <option value="SECUNDARIA">Secundaria</option>
@@ -2490,19 +2637,19 @@
                     </select>
                   </div>
                   <div>
-                    <label class="text-xs font-semibold text-gray-600 uppercase mb-1 block">Grado *</label>
-                    <select class="input-field" x-model="nuevaMateria.grado" @change="nuevaMateria.grupo=''">
-                      <option value="">Selecciona grado...</option>
-                      <template x-for="g in gradosDisponiblesFiltro(nuevaMateria.nivel)" :key="g">
+                    <label class="text-xs font-medium text-gray-600 block mb-1">Grado *</label>
+                    <select class="input-modern" x-model="nuevaMateria.grado" @change="nuevaMateria.grupo=''">
+                      <option value="">- Grado -</option>
+                      <template x-for="g in gradosDisponiblesPorNivel(nuevaMateria.nivel)" :key="g">
                         <option :value="g" x-text="g + '°'"></option>
                       </template>
                     </select>
                   </div>
-                  <div>
-                    <label class="text-xs font-semibold text-gray-600 uppercase mb-1 block">Sección *</label>
-                    <select class="input-field" x-model="nuevaMateria.grupo">
-                      <option value="">Selecciona sección...</option>
-                      <template x-for="s in seccionesDisponiblesFiltro()" :key="s">
+                  <div x-show="nuevaMateria.tipo === 'curricular'">
+                    <label class="text-xs font-medium text-gray-600 block mb-1">Sección *</label>
+                    <select class="input-modern" x-model="nuevaMateria.grupo">
+                      <option value="">- Sección -</option>
+                      <template x-for="s in seccionesDisponiblesPorNivelYGrado(nuevaMateria.nivel, nuevaMateria.grado)" :key="s">
                         <option :value="s" x-text="s"></option>
                       </template>
                     </select>
@@ -2511,10 +2658,10 @@
 
                 <!-- Autocompletado de Docente -->
                 <div class="md:col-span-2">
-                  <label class="text-xs font-semibold text-gray-600 uppercase mb-1 block">Docente Asignado *</label>
+                  <label class="text-xs font-medium text-gray-600 block mb-1">Docente Asignado *</label>
                   <div class="relative" @click.away="mostrarDropdownDocenteMateria = false">
                     <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-3"></i>
-                    <input type="text" class="input-field pl-9" placeholder="Buscar maestro..." x-model="busquedaDocenteMateria" @input="buscarDocenteMateriaInput()" @focus="buscarDocenteMateriaInput()">
+                    <input type="text" class="input-modern pl-9" placeholder="Buscar maestro..." x-model="busquedaDocenteMateria" @input="buscarDocenteMateriaInput()" @focus="buscarDocenteMateriaInput()">
                     <div x-show="mostrarDropdownDocenteMateria && resultadosDocenteMateria.length > 0" class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
                       <template x-for="r in resultadosDocenteMateria" :key="r.id">
                         <div class="px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer" @click="busquedaDocenteMateria = r.nombre; nuevaMateria.docente = r.nombre; mostrarDropdownDocenteMateria = false" x-text="r.nombre"></div>
@@ -2525,33 +2672,32 @@
 
                 <!-- Horario: Días de la Semana -->
                 <div class="md:col-span-2">
-                  <label class="text-xs font-semibold text-gray-600 uppercase mb-2 block">Días de impartición</label>
+                  <label class="text-xs font-medium text-gray-600 block mb-1">Días de Impartición</label>
                   <div class="flex flex-wrap gap-2">
-                    <template x-for="dia in diasSemana" :key="dia">
-                      <label class="inline-flex items-center p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors" :class="nuevaMateria.dias.includes(dia) ? 'bg-blue-50 border-blue-200 text-blue-700' : 'text-gray-600'">
-                        <input type="checkbox" :value="dia" x-model="nuevaMateria.dias" class="hidden">
-                        <span class="text-sm font-medium select-none" x-text="dia"></span>
-                      </label>
+                    <template x-for="dia in ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab']" :key="dia">
+                      <button type="button" class="px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors"
+                        :class="nuevaMateria.dias.includes(dia) ? 'bg-navy-600 border-navy-600 text-white' : 'border-gray-200 text-gray-600 hover:border-navy-400 hover:text-navy-600'"
+                        @click="toggleDiaMateria(dia)" x-text="dia"></button>
                     </template>
                   </div>
                 </div>
 
                 <!-- Horario: Horas -->
                 <div>
-                  <label class="text-xs font-semibold text-gray-600 uppercase mb-1 block">Hora de Inicio</label>
-                  <input type="time" class="input-field" x-model="nuevaMateria.horaInicio">
+                  <label class="text-xs font-medium text-gray-600 block mb-1">Hora de Inicio</label>
+                  <input type="time" class="input-modern" x-model="nuevaMateria.horaInicio">
                 </div>
                 <div>
-                  <label class="text-xs font-semibold text-gray-600 uppercase mb-1 block">Hora de Fin</label>
-                  <input type="time" class="input-field" x-model="nuevaMateria.horaFin">
+                  <label class="text-xs font-medium text-gray-600 block mb-1">Hora de Fin</label>
+                  <input type="time" class="input-modern" x-model="nuevaMateria.horaFin">
                 </div>
 
                 <!-- Aula -->
                 <div class="md:col-span-2">
-                  <label class="text-xs font-semibold text-gray-600 uppercase mb-1 block">Aula Asignada</label>
+                  <label class="text-xs font-medium text-gray-600 block mb-1">Aula Asignada</label>
                   <div class="relative">
                     <i data-lucide="map-pin" class="w-4 h-4 text-gray-400 absolute left-3 top-3"></i>
-                    <input type="text" class="input-field pl-9" placeholder="Ej. Laboratorio 2, Salón 1A..." x-model="nuevaMateria.aula">
+                    <input type="text" class="input-modern pl-9" placeholder="Ej. Aula 101, Lab de Computo..." x-model="nuevaMateria.aula">
                   </div>
                 </div>
 
@@ -2561,6 +2707,72 @@
             <div class="p-5 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
               <button class="btn-outline" @click="modalMateria = false">Cancelar</button>
               <button class="btn-primary" @click="guardarMateriaModal()">Guardar Materia</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal de Asignación de Alumnos -->
+        <div x-show="modalAsignarAlumnos" class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm" x-cloak>
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]" @click.away="modalAsignarAlumnos = false">
+            <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <div>
+                <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  Inscribir Alumnos
+                  <span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs font-semibold" x-text="alumnosAsignacionFiltrados().length + ' alumnos'"></span>
+                </h3>
+                <p class="text-sm text-gray-500" x-text="'Materia: ' + (materiaActualAsignacion ? (materiaActualAsignacion.materia || materiaActualAsignacion.nombre) : '')"></p>
+              </div>
+              <button @click="modalAsignarAlumnos = false" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <div class="p-5 flex-1 overflow-y-auto">
+              <div class="mb-4">
+                <div class="relative">
+                  <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-3"></i>
+                  <input type="text" x-model="busquedaAsignacion" class="input-modern pl-9" placeholder="Buscar alumno por nombre o matrícula...">
+                </div>
+              </div>
+
+              <div class="border rounded-xl overflow-hidden bg-white">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="bg-gray-50/80 border-b border-gray-100 text-sm text-gray-500">
+                      <th class="p-3 w-10 text-center">Inscrito</th>
+                      <th class="p-3">Matrícula</th>
+                      <th class="p-3">Nombre del Alumno</th>
+                      <th class="p-3">Grado</th>
+                      <th class="p-3">Grupo</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-50">
+                    <template x-for="al in alumnosAsignacionFiltrados()" :key="al.id || al.alumnoId">
+                      <tr class="hover:bg-gray-50/50 cursor-pointer transition-colors" @click="toggleSeleccionAlumnoAsignacion(al.id || al.alumnoId)">
+                        <td class="p-3 text-center">
+                          <input type="checkbox" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                            :checked="alumnosAsignacionSeleccionados.includes(Number(al.id || al.alumnoId))"
+                            @click.stop="toggleSeleccionAlumnoAsignacion(al.id || al.alumnoId)">
+                        </td>
+                        <td class="p-3 text-sm text-gray-500 font-mono" x-text="al.matricula"></td>
+                        <td class="p-3 text-sm font-medium text-gray-800" x-text="al.nombre || al.nombreCompleto"></td>
+                        <td class="p-3 text-sm text-gray-600" x-text="al.grado ? al.grado + '°' : '-'"></td>
+                        <td class="p-3 text-sm text-gray-600" x-text="al.seccion || '-'"></td>
+                      </tr>
+                    </template>
+                    <tr x-show="alumnosAsignacionFiltrados().length === 0">
+                      <td colspan="5" class="p-8 text-center text-gray-400">
+                        No se encontraron alumnos disponibles.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            <div class="p-5 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 mt-auto">
+              <button class="btn-outline" @click="modalAsignarAlumnos = false">Cancelar</button>
+              <button class="btn-primary flex items-center gap-2" @click="guardarAsignacionAlumnos()">
+                <i data-lucide="save" class="w-4 h-4"></i> Guardar Inscripciones
+              </button>
             </div>
           </div>
         </div>
@@ -3350,12 +3562,25 @@
         nuevoAlumnoData: { nombre: '', matricula: '', curp: '', nivel: '', grado: '', grupoId: null, padre: '', telefono: '', tutorId: null },
         erroresNuevoAlumno: {},
 
+        // ── Historial Académico Completo (RF-64) ────────────────────────────────
+        busquedaHistorialQuery: '',
+        resultadosBusquedaHistorial: [],
+        alumnoHistorialSeleccionado: null,
+        historialAcademicoCompleto: [],
+
         // ── Grupos y Materias (Reestructuración) ────────────────────────────────
         tabGruposMaterias: 'grupos',
         filtroGruposNivel: '',
         filtroGruposGrado: '',
         filtroGruposGrupo: '',
+        filtroMateriasTipo: '',
+        filtroGruposDocente: '',
         modalMateria: false,
+        modalAsignarAlumnos: false,
+        materiaActualAsignacion: null,
+        alumnosAsignacionDisponibles: [],
+        alumnosAsignacionSeleccionados: [],
+        busquedaAsignacion: '',
         materiaEditandoIndex: null,
         materiaEditandoGrupoId: null,
         diasSemana: ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'],
@@ -3363,6 +3588,27 @@
         busquedaDocenteMateria: '',
         resultadosDocenteMateria: [],
         mostrarDropdownDocenteMateria: false,
+
+        busquedaDocenteFiltro: '',
+        resultadosDocenteFiltro: [],
+        mostrarDropdownDocenteFiltro: false,
+        
+        async buscarDocenteFiltroInput() {
+          if (this.busquedaDocenteFiltro.length < 2) {
+            this.resultadosDocenteFiltro = [];
+            this.filtroGruposDocente = this.busquedaDocenteFiltro;
+            return;
+          }
+          this.resultadosDocenteFiltro = await this.buscarDocenteAutocomplete(this.busquedaDocenteFiltro);
+          this.mostrarDropdownDocenteFiltro = true;
+          this.filtroGruposDocente = this.busquedaDocenteFiltro;
+        },
+
+        seleccionarDocenteFiltro(docente) {
+          this.busquedaDocenteFiltro = docente.nombre;
+          this.filtroGruposDocente = docente.nombre;
+          this.mostrarDropdownDocenteFiltro = false;
+        },
         
         async buscarDocenteMateriaInput() {
           if (this.busquedaDocenteMateria.length < 2) {
@@ -3378,27 +3624,43 @@
             const mNivel = !this.filtroGruposNivel || g.nivel.toLowerCase() === this.filtroGruposNivel.toLowerCase();
             const mGrado = !this.filtroGruposGrado || g.grado.toString() === this.filtroGruposGrado.toString();
             const mGrupo = !this.filtroGruposGrupo || g.seccion.toLowerCase() === this.filtroGruposGrupo.toLowerCase();
-            return mNivel && mGrado && mGrupo;
+            const qDocente = this.filtroGruposDocente.toLowerCase();
+            const mDocente = !qDocente || (g.titular && g.titular.toLowerCase().includes(qDocente));
+            return mNivel && mGrado && mGrupo && mDocente;
           });
         },
         materiasFiltradasList() {
           const list = [];
-          this.gruposFiltradosList().forEach(g => {
-            if(g.materias) {
+          const qDocente = this.filtroGruposDocente.toLowerCase();
+          
+          this.gruposData.forEach(g => {
+            const mNivel = !this.filtroGruposNivel || g.nivel.toLowerCase() === this.filtroGruposNivel.toLowerCase();
+            const mGrado = !this.filtroGruposGrado || g.grado.toString() === this.filtroGruposGrado.toString();
+            const mGrupo = !this.filtroGruposGrupo || g.seccion.toLowerCase() === this.filtroGruposGrupo.toLowerCase();
+            
+            if (mNivel && mGrado && mGrupo && g.materias) {
               g.materias.forEach((m, index) => {
-                list.push({ ...m, grupoId: g.id, nivel: g.nivel, grado: g.grado, seccion: g.seccion, originalIndex: index });
+                const matTipo = m.tipo || 'curricular';
+                if (!this.filtroMateriasTipo || matTipo === this.filtroMateriasTipo) {
+                  if (qDocente) {
+                    if (!m.docente || !m.docente.toLowerCase().includes(qDocente)) return;
+                  }
+                  list.push({ ...m, grupoId: g.id, nivel: g.nivel, grado: g.grado, seccion: g.seccion, originalIndex: index });
+                }
               });
             }
           });
           return list;
         },
-        gradosDisponiblesFiltro(nivelSelect) {
-          const n = (nivelSelect || this.filtroGruposNivel || '').toUpperCase();
-          if (n === 'PREESCOLAR' || n === 'SECUNDARIA') return ['1', '2', '3'];
+        gradosDisponiblesPorNivel(nivelSelect) {
+          const n = (nivelSelect || '').toUpperCase();
+          if (n === 'PREESCOLAR') return ['1', '2', '3'];
           return ['1', '2', '3', '4', '5', '6'];
         },
-        seccionesDisponiblesFiltro() {
-          return ['A', 'B', 'C', 'D'];
+        seccionesDisponiblesPorNivelYGrado(nivelStr, gradoStr) {
+          if (!nivelStr || !gradoStr) return [];
+          const n = nivelStr.toUpperCase();
+          return [...new Set(this.gruposData.filter(g => g.nivel && g.nivel.toUpperCase() === n && String(g.grado) === String(gradoStr)).map(g => g.seccion))].filter(Boolean);
         },
         async buscarDocenteAutocomplete(query) {
           if (!query || query.trim().length < 2) return [];
@@ -3431,7 +3693,7 @@
         abrirModalNuevaMateria() {
           this.materiaEditandoIndex = null;
           this.materiaEditandoGrupoId = null;
-          this.nuevaMateria = { nombre: '', docente: '', horario: '', aula: '', grado: '', grupo: '', nivel: '', dias: [], horaInicio: '', horaFin: '' };
+          this.nuevaMateria = { nombre: '', docente: '', horario: '', aula: '', grado: '', grupo: '', nivel: '', dias: [], horaInicio: '', horaFin: '', tipo: 'curricular' };
           this.busquedaDocenteMateria = '';
           this.resultadosDocenteMateria = [];
           this.modalMateria = true;
@@ -3466,16 +3728,99 @@
             nivel: materia.nivel,
             dias: diasParsed,
             horaInicio: hInicio,
-            horaFin: hFin
+            horaFin: hFin,
+            tipo: materia.tipo || 'curricular'
           };
           this.busquedaDocenteMateria = materia.docente || '';
           this.resultadosDocenteMateria = [];
           this.modalMateria = true;
           this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
         },
+        toggleDiaMateria(dia) {
+          if (this.nuevaMateria.dias.includes(dia)) {
+            this.nuevaMateria.dias = this.nuevaMateria.dias.filter(d => d !== dia);
+          } else {
+            this.nuevaMateria.dias.push(dia);
+          }
+        },
+        async abrirModalAsignarAlumnos(materia) {
+          this.materiaActualAsignacion = materia;
+          this.busquedaAsignacion = '';
+          this.alumnosAsignacionDisponibles = [];
+          this.alumnosAsignacionSeleccionados = [];
+          this.modalAsignarAlumnos = true;
+          this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
+          
+          const params = { estado: 'Activo', nivel: materia.nivel, grado: materia.grado };
+          const resAlumnos = await window.saeApi.alumnos.listar(params);
+          if (resAlumnos.ok) {
+            const arr = Array.isArray(resAlumnos.data) ? resAlumnos.data : (resAlumnos.data?.data || []);
+            this.alumnosAsignacionDisponibles = arr.map(window.saeApi.mapAlumno);
+          }
+          
+          const resAsignados = await window.saeApi.fetchApi(`/grupos/materias/${materia.id}/alumnos`);
+          if (resAsignados.ok && resAsignados.data) {
+            this.alumnosAsignacionSeleccionados = resAsignados.data.map(a => Number(a.id || a.alumnoId));
+          }
+        },
+        toggleSeleccionAlumnoAsignacion(id) {
+          const numId = Number(id);
+          const index = this.alumnosAsignacionSeleccionados.indexOf(numId);
+          if (index > -1) {
+            this.alumnosAsignacionSeleccionados.splice(index, 1);
+          } else {
+            this.alumnosAsignacionSeleccionados.push(numId);
+          }
+        },
+        async guardarAsignacionAlumnos() {
+          const res = await window.saeApi.fetchApi(`/grupos/materias/${this.materiaActualAsignacion.id}/alumnos`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ alumnosIds: this.alumnosAsignacionSeleccionados })
+          });
+          if (res.ok) {
+            window.saeApi.toast('exito', 'Alumnos asignados correctamente.');
+            this.modalAsignarAlumnos = false;
+          } else {
+            window.saeApi.toast('error', res.message || 'Error al asignar alumnos.');
+          }
+        },
+        alumnosAsignacionFiltrados() {
+          const q = this.busquedaAsignacion.toLowerCase();
+          return this.alumnosAsignacionDisponibles.filter(a => 
+            !q || (a.nombre && a.nombre.toLowerCase().includes(q)) || (a.nombreCompleto && a.nombreCompleto.toLowerCase().includes(q)) || (a.matricula && a.matricula.toLowerCase().includes(q))
+          );
+        },
+        eliminarMateriaCRUD: async function(materia) {
+          const confirmar = confirm(`¿Estás seguro de que deseas eliminar la materia ${materia.materia || materia.nombre} asignada al docente ${materia.docente || 'sin asignar'}?`);
+          if (!confirmar) return;
+
+          const grupoTarget = this.gruposData.find(g => g.id === materia.grupoId);
+          if (!grupoTarget) return window.saeApi.toast('error', 'No se encontró el grupo al que pertenece esta materia.');
+
+          // Filter out the materia by its originalIndex
+          const materiasActuales = grupoTarget.materias.map(m => ({
+            nombre: m.materia || m.nombre,
+            docente: m.docente,
+            horario: m.horario,
+            aula: m.aula,
+            tipo: m.tipo || 'curricular'
+          })).filter((_, index) => index !== materia.originalIndex);
+
+          const res = await window.saeApi.grupos.actualizar(grupoTarget.id, { materias: materiasActuales });
+          if (res.ok) {
+            window.saeApi.toast('exito', 'Materia eliminada correctamente.');
+            this._cargarGruposAPI();
+          } else {
+            window.saeApi.toast('error', res.message || 'Error al eliminar materia.');
+          }
+        },
         async guardarMateriaModal() {
-          const { nombre, docente, aula, grado, grupo, nivel, dias, horaInicio, horaFin } = this.nuevaMateria;
-          if (!nombre || !docente || !grado || !grupo || !nivel) return window.saeApi.toast('advertencia', 'Nombre, Docente, Nivel, Grado y Grupo son obligatorios.');
+          const { nombre, docente, aula, grado, grupo, nivel, dias, horaInicio, horaFin, tipo } = this.nuevaMateria;
+          const esCurricular = tipo === 'curricular';
+          
+          if (!nombre || !docente || !grado || !nivel) return window.saeApi.toast('advertencia', 'Nombre, Docente, Nivel y Grado son obligatorios.');
+          if (esCurricular && !grupo) return window.saeApi.toast('advertencia', 'La Sección es obligatoria para materias curriculares.');
           
           const docentes = await this.buscarDocenteAutocomplete(docente);
           const existe = docentes.find(d => d.nombre.toLowerCase() === docente.trim().toLowerCase());
@@ -3489,49 +3834,64 @@
           }
 
           let grupoTarget;
-          if (this.materiaEditandoGrupoId) {
-             grupoTarget = this.gruposData.find(g => g.id === this.materiaEditandoGrupoId);
-          } else {
+          if (esCurricular) {
              grupoTarget = this.gruposData.find(g => 
                g.grado.toString() === grado.toString() && 
                g.seccion.toLowerCase() === grupo.toLowerCase() &&
                g.nivel.toLowerCase() === nivel.toLowerCase()
              );
+          } else {
+             grupoTarget = this.gruposData.find(g => 
+               g.grado.toString() === grado.toString() && 
+               g.nivel.toLowerCase() === nivel.toLowerCase()
+             );
           }
 
-          if (!grupoTarget) return window.saeApi.toast('error', 'No se encontró un grupo en el sistema con ese Nivel, Grado y Sección.');
+          if (!grupoTarget) return window.saeApi.toast('error', 'No se encontró un grupo en el sistema con ese Nivel, Grado y/o Sección.');
 
-          const materiasActuales = grupoTarget.materias.map(m => ({
-            nombre: m.materia || m.nombre,
-            docente: m.docente,
-            horario: m.horario,
-            aula: m.aula
-          }));
+          const materiaObjeto = {
+            nombre: nombre,
+            docente: existe.nombre,
+            horario: horarioString || this.nuevaMateria.horario,
+            aula: aula,
+            tipo: tipo || 'curricular'
+          };
 
           if (this.materiaEditandoIndex !== null) {
-            materiasActuales[this.materiaEditandoIndex] = {
-              nombre: nombre,
-              docente: existe.nombre,
-              horario: horarioString || this.nuevaMateria.horario,
-              aula: aula
-            };
+            if (this.materiaEditandoGrupoId === grupoTarget.id) {
+              const materiasActuales = grupoTarget.materias.map(m => ({
+                nombre: m.materia || m.nombre, docente: m.docente, horario: m.horario, aula: m.aula, tipo: m.tipo || 'curricular'
+              }));
+              materiasActuales[this.materiaEditandoIndex] = materiaObjeto;
+              const res = await window.saeApi.grupos.actualizar(grupoTarget.id, { materias: materiasActuales });
+              if (!res.ok) return window.saeApi.toast('error', res.message || 'Error al actualizar materia.');
+            } else {
+              const grupoViejo = this.gruposData.find(g => g.id === this.materiaEditandoGrupoId);
+              if (grupoViejo) {
+                const materiasViejas = grupoViejo.materias.map(m => ({
+                  nombre: m.materia || m.nombre, docente: m.docente, horario: m.horario, aula: m.aula, tipo: m.tipo || 'curricular'
+                })).filter((_, i) => i !== this.materiaEditandoIndex);
+                await window.saeApi.grupos.actualizar(grupoViejo.id, { materias: materiasViejas });
+              }
+              const materiasNuevas = grupoTarget.materias ? grupoTarget.materias.map(m => ({
+                nombre: m.materia || m.nombre, docente: m.docente, horario: m.horario, aula: m.aula, tipo: m.tipo || 'curricular'
+              })) : [];
+              materiasNuevas.push(materiaObjeto);
+              const res2 = await window.saeApi.grupos.actualizar(grupoTarget.id, { materias: materiasNuevas });
+              if (!res2.ok) return window.saeApi.toast('error', res2.message || 'Error al mover materia.');
+            }
           } else {
-            materiasActuales.push({
-              nombre: nombre,
-              docente: existe.nombre,
-              horario: horarioString || this.nuevaMateria.horario,
-              aula: aula
-            });
+            const materiasActuales = grupoTarget.materias ? grupoTarget.materias.map(m => ({
+              nombre: m.materia || m.nombre, docente: m.docente, horario: m.horario, aula: m.aula, tipo: m.tipo || 'curricular'
+            })) : [];
+            materiasActuales.push(materiaObjeto);
+            const res = await window.saeApi.grupos.actualizar(grupoTarget.id, { materias: materiasActuales });
+            if (!res.ok) return window.saeApi.toast('error', res.message || 'Error al guardar materia.');
           }
 
-          const res = await window.saeApi.grupos.actualizar(grupoTarget.id, { materias: materiasActuales });
-          if (res.ok) {
-            window.saeApi.toast('exito', `Materia ${this.materiaEditandoIndex !== null ? 'actualizada' : 'creada y vinculada'} correctamente.`);
-            this.modalMateria = false;
-            this._cargarGruposAPI();
-          } else {
-            window.saeApi.toast('error', res.message || 'Error al guardar materia');
-          }
+          window.saeApi.toast('exito', `Materia ${this.materiaEditandoIndex !== null ? 'actualizada' : 'creada y vinculada'} correctamente.`);
+          this.modalMateria = false;
+          this._cargarGruposAPI();
         },
         modalNuevoCiclo: false,
         nuevoCicloData: { nombre: '', activo: true },
@@ -3691,7 +4051,7 @@
             dashboard: 'Dashboard', pagos: 'Pagos', deudores: 'Deudores',
             alumnos: 'Alumnos', grupos: 'Grupos & Materias', calificaciones: 'Calificaciones',
             becas: 'Becas', cicloEscolar: 'Ciclo escolar', usuarios: 'Usuarios', reportes: 'Reportes',
-            bitacora: 'Bitácora del Sistema', permisos: 'Permisos Granulares'
+            bitacora: 'Bitácora del Sistema', permisos: 'Permisos Granulares', historialAcademico: 'Historial Académico'
           };
           return labels[this.view] || this.view;
         },
@@ -3701,21 +4061,28 @@
         get gradosDisponiblesFiltro() {
           if (!this.filtroNivel) return [];
           const nivel = this.filtroNivel.toUpperCase();
-          if (nivel === 'PREESCOLAR' || nivel === 'SECUNDARIA') return ['1', '2', '3'];
-          if (nivel === 'PRIMARIA' || nivel === 'BACHILLERATO') return ['1', '2', '3', '4', '5', '6'];
-          return ['1', '2', '3'];
+          if (nivel === 'PREESCOLAR') return ['1', '2', '3'];
+          return ['1', '2', '3', '4', '5', '6'];
         },
         get seccionesDisponiblesFiltro() {
           if (!this.filtroNivel || !this.filtroGrado) return [];
-          const nivel = this.filtroNivel.toUpperCase();
-          return [...new Set(this.gruposData.filter(g => g.nivel && g.nivel.toUpperCase() === nivel && String(g.grado) === String(this.filtroGrado)).map(g => g.seccion))].filter(Boolean);
+          return ['A', 'B', 'C', 'D', 'E', 'F'];
+        },
+        get gradosDisponiblesFiltroGrupos() {
+          if (!this.filtroGruposNivel) return [];
+          const nivel = this.filtroGruposNivel.toUpperCase();
+          if (nivel === 'PREESCOLAR') return ['1', '2', '3'];
+          return ['1', '2', '3', '4', '5', '6'];
+        },
+        get seccionesDisponiblesFiltroGrupos() {
+          if (!this.filtroGruposNivel || !this.filtroGruposGrado) return [];
+          return ['A', 'B', 'C', 'D', 'E', 'F'];
         },
         get gradosDisponiblesNuevo() {
           if (!this.nuevoAlumnoData.nivel) return [];
           const nivel = this.nuevoAlumnoData.nivel.toUpperCase();
-          if (nivel === 'PREESCOLAR' || nivel === 'SECUNDARIA') return ['1', '2', '3'];
-          if (nivel === 'PRIMARIA' || nivel === 'BACHILLERATO') return ['1', '2', '3', '4', '5', '6'];
-          return ['1', '2', '3'];
+          if (nivel === 'PREESCOLAR') return ['1', '2', '3'];
+          return ['1', '2', '3', '4', '5', '6'];
         },
         get gruposDisponiblesNuevo() {
           if (!this.nuevoAlumnoData.nivel || !this.nuevoAlumnoData.grado) return [];
@@ -3725,14 +4092,46 @@
         get gradosDisponiblesFicha() {
           if (!this.alumnoFichaEditable || !this.alumnoFichaEditable.nivel) return [];
           const nivel = this.alumnoFichaEditable.nivel.toUpperCase();
-          if (nivel === 'PREESCOLAR' || nivel === 'SECUNDARIA') return ['1', '2', '3'];
-          if (nivel === 'PRIMARIA' || nivel === 'BACHILLERATO') return ['1', '2', '3', '4', '5', '6'];
-          return ['1', '2', '3'];
+          if (nivel === 'PREESCOLAR') return ['1', '2', '3'];
+          return ['1', '2', '3', '4', '5', '6'];
         },
         get gruposDisponiblesFicha() {
           if (!this.alumnoFichaEditable || !this.alumnoFichaEditable.nivel || !this.alumnoFichaEditable.grado) return [];
           const nivel = this.alumnoFichaEditable.nivel.toUpperCase();
           return this.gruposData.filter(g => g.nivel && g.nivel.toUpperCase() === nivel && String(g.grado) === String(this.alumnoFichaEditable.grado));
+        },
+
+        // ── Historial Académico Completo (RF-64) ────────────────────────────────
+        filtrarAlumnosHistorial() {
+          const q = this.busquedaHistorialQuery.trim().toLowerCase();
+          if (!q) {
+            this.resultadosBusquedaHistorial = [];
+            return;
+          }
+          this.resultadosBusquedaHistorial = this.listaAlumnos.filter(al =>
+            al.nombre.toLowerCase().includes(q) ||
+            (al.matricula && al.matricula.toLowerCase().includes(q)) ||
+            (al.curp && al.curp.toLowerCase().includes(q))
+          ).slice(0, 10);
+        },
+        async seleccionarAlumnoHistorial(al) {
+          this.alumnoHistorialSeleccionado = al;
+          this.busquedaHistorialQuery = al.nombre;
+          this.resultadosBusquedaHistorial = [];
+          this.historialAcademicoCompleto = [];
+          
+          try {
+            const res = await window.saeApi.fetchApi(`/alumnos/${al.id}/historial-academico`);
+            
+            if (res && res.ok && res.data) {
+              this.historialAcademicoCompleto = res.data.historial;
+            } else if (res && !res.ok) {
+              throw new Error(res.message || 'Error desconocido');
+            }
+          } catch (e) {
+            console.error(e);
+            window.saeApi.toast('error', `Error: ${e.message}`);
+          }
         },
 
         // ── Carga inicial de datos ───────────────────────────────────────────────
@@ -4531,9 +4930,11 @@
                   const esPre = (grupoRes.data.nivel === 'PREESCOLAR' || (al.nivel && al.nivel.toUpperCase() === 'PREESCOLAR'));
                   let sumGral = 0, countGral = 0;
 
-                  const materiasArr = grupoRes.data.materias.map(m => ({
-                    id: m.id, nombre: m.materia, T1: { v: '', t: '' }, T2: { v: '', t: '' }, T3: { v: '', t: '' }, prom: null
-                  }));
+                  const materiasArr = grupoRes.data.materias
+                    .filter(m => m.tipo === 'curricular' || !m.tipo)
+                    .map(m => ({
+                      id: m.id, nombre: m.materia, tipo: m.tipo || 'curricular', T1: { v: '', t: '' }, T2: { v: '', t: '' }, T3: { v: '', t: '' }, prom: null
+                    }));
 
                   const calRes = await window.saeApi.calificaciones.porAlumno(al.id, undefined);
                   if (calRes.ok && calRes.data) {
@@ -4573,8 +4974,16 @@
               this.historialExtraBoleta = [];
               try {
                 const resExtra = await window.saeApi.calificacionesExtra.porAlumno(al.id);
+                const clubesMap = {};
+                
+                // Pre-cargar clubes a los que está inscrito (aunque no tengan calificación)
+                if (al.materiasExtra && al.materiasExtra.length > 0) {
+                  al.materiasExtra.filter(m => m.tipo === 'club').forEach(m => {
+                    clubesMap[m.materia] = { id: m.materia, nombre: m.materia, T1: { v: '' }, T2: { v: '' }, T3: { v: '' }, prom: '-' };
+                  });
+                }
+
                 if (resExtra && resExtra.data) {
-                  const clubesMap = {};
                   resExtra.data.forEach(c => {
                     if (!clubesMap[c.club]) {
                       clubesMap[c.club] = { id: c.club, nombre: c.club, T1: { v: '' }, T2: { v: '' }, T3: { v: '' }, prom: '-' };
@@ -4588,40 +4997,50 @@
                       clubesMap[c.club][key].v = c.valorNumerico;
                     }
                   });
-                  this.historialExtraBoleta = Object.values(clubesMap).map(club => {
-                    let s = 0, c = 0;
-                    if (club.T1.v !== '') { s += parseFloat(club.T1.v); c++; }
-                    if (club.T2.v !== '') { s += parseFloat(club.T2.v); c++; }
-                    if (club.T3.v !== '') { s += parseFloat(club.T3.v); c++; }
-                    if (c > 0) club.prom = (s / c).toFixed(1);
-                    return club;
-                  });
                 }
+                this.historialExtraBoleta = Object.values(clubesMap).map(club => {
+                  let s = 0, c = 0;
+                  if (club.T1.v !== '') { s += parseFloat(club.T1.v); c++; }
+                  if (club.T2.v !== '') { s += parseFloat(club.T2.v); c++; }
+                  if (club.T3.v !== '') { s += parseFloat(club.T3.v); c++; }
+                  if (c > 0) club.prom = (s / c).toFixed(1);
+                  return club;
+                });
               } catch (e) { console.error('Error al cargar extracurriculares:', e); }
 
               // Cargar taller
               this.historialTallerBoleta = [];
               try {
                 const resTaller = await window.saeApi.calificacionesTaller.porAlumno(al.id);
-                if (resTaller && resTaller.data) {
-                  const tallerObj = { id: 'taller', nombre: 'Taller', T1: { v: '' }, T2: { v: '' }, T3: { v: '' } };
-                  resTaller.data.forEach(c => {
-                    const num = c.periodo?.numero;
-                    let key = null;
-                    if (num === 1) key = 'T1';
-                    if (num === 2) key = 'T2';
-                    if (num === 3) key = 'T3';
-                    if (key) {
-                      tallerObj[key].v = c.valorCualitativo;
-                    }
-                  });
-                  if (tallerObj.T1.v || tallerObj.T2.v || tallerObj.T3.v) {
-                    const vals = [tallerObj.T1.v, tallerObj.T2.v, tallerObj.T3.v].filter(x => x === 'A' || x === 'NA');
-                    const countA = vals.filter(x => x === 'A').length;
-                    const countNA = vals.filter(x => x === 'NA').length;
-                    tallerObj.eval = vals.length > 0 ? (countA >= countNA ? 'A' : 'NA') : '-';
-                    this.historialTallerBoleta = [tallerObj];
+                
+                // Determinar el nombre del taller si está inscrito a alguno
+                let nombreTaller = 'Taller';
+                const tieneTallerAsignado = al.materiasExtra && al.materiasExtra.some(m => m.tipo === 'taller');
+                if (tieneTallerAsignado) {
+                  const tallerAsignado = al.materiasExtra.find(m => m.tipo === 'taller');
+                  nombreTaller = tallerAsignado.materia;
+                }
+
+                if ((resTaller && resTaller.data && resTaller.data.length > 0) || tieneTallerAsignado) {
+                  const tallerObj = { id: 'taller', nombre: nombreTaller, T1: { v: '' }, T2: { v: '' }, T3: { v: '' } };
+                  if (resTaller && resTaller.data) {
+                    resTaller.data.forEach(c => {
+                      const num = c.periodo?.numero;
+                      let key = null;
+                      if (num === 1) key = 'T1';
+                      if (num === 2) key = 'T2';
+                      if (num === 3) key = 'T3';
+                      if (key) {
+                        tallerObj[key].v = c.valorCualitativo;
+                      }
+                    });
                   }
+                  
+                  const vals = [tallerObj.T1.v, tallerObj.T2.v, tallerObj.T3.v].filter(x => x === 'A' || x === 'NA');
+                  const countA = vals.filter(x => x === 'A').length;
+                  const countNA = vals.filter(x => x === 'NA').length;
+                  tallerObj.eval = vals.length > 0 ? (countA >= countNA ? 'A' : 'NA') : '-';
+                  this.historialTallerBoleta = [tallerObj];
                 }
               } catch (e) { console.error('Error al cargar taller:', e); }
 
@@ -4774,12 +5193,19 @@
           this.alumnoActualCalif = al;
           this.alumnoSeleccionadoCalif = true;
           this.materiasAlumno = []; this.esPreescolar = false;
-          this.clubesAlumno = [
-            { id: 'inglés', nombre: 'Inglés', T1: { v: '', orig: null, califId: null }, T2: { v: '', orig: null, califId: null }, T3: { v: '', orig: null, califId: null }, prom: '-' },
-            { id: 'computación', nombre: 'Computación', T1: { v: '', orig: null, califId: null }, T2: { v: '', orig: null, califId: null }, T3: { v: '', orig: null, califId: null }, prom: '-' },
-            { id: 'danza', nombre: 'Danza', T1: { v: '', orig: null, califId: null }, T2: { v: '', orig: null, califId: null }, T3: { v: '', orig: null, califId: null }, prom: '-' }
-          ];
-          this.tallerAlumno = { T1: { v: '', orig: null, califId: null }, T2: { v: '', orig: null, califId: null }, T3: { v: '', orig: null, califId: null } };
+          
+          this.clubesAlumno = [];
+          if (al.materiasExtra && al.materiasExtra.length > 0) {
+            al.materiasExtra.filter(m => m.tipo === 'club').forEach(m => {
+              this.clubesAlumno.push({ id: m.materia, nombre: m.materia, T1: { v: '', orig: null, califId: null }, T2: { v: '', orig: null, califId: null }, T3: { v: '', orig: null, califId: null }, prom: '-' });
+            });
+          }
+          
+          this.tallerAlumno = { nombre: 'Taller', T1: { v: '', orig: null, califId: null }, T2: { v: '', orig: null, califId: null }, T3: { v: '', orig: null, califId: null } };
+          const tieneTaller = al.materiasExtra && al.materiasExtra.find(m => m.tipo === 'taller');
+          if (tieneTaller) {
+            this.tallerAlumno.nombre = tieneTaller.materia;
+          }
 
           this.busquedaCalif = '';
 
@@ -4791,9 +5217,11 @@
             const grupoRes = await window.saeApi.grupos.obtener(al.grupoId);
             if (grupoRes.ok && grupoRes.data && grupoRes.data.materias) {
               this.esPreescolar = (grupoRes.data.nivel === 'PREESCOLAR' || (al.nivel && al.nivel.toUpperCase() === 'PREESCOLAR'));
-              grupoRes.data.materias.forEach(m => {
-                this.materiasAlumno.push({ id: m.id, nombre: m.materia, T1: { v: '', t: '' }, T2: { v: '', t: '' }, T3: { v: '', t: '' }, prom: null });
-              });
+              grupoRes.data.materias
+                .filter(m => m.tipo === 'curricular' || !m.tipo)
+                .forEach(m => {
+                  this.materiasAlumno.push({ id: m.id, nombre: m.materia, tipo: m.tipo || 'curricular', T1: { v: '', t: '', califId: null }, T2: { v: '', t: '', califId: null }, T3: { v: '', t: '', califId: null }, prom: null });
+                });
             }
 
             const calRes = await window.saeApi.calificaciones.porAlumno(al.id, undefined);
@@ -4999,7 +5427,8 @@
           try {
             const res = await window.saeApi.calificacionesTaller.porAlumno(this.alumnoActualCalif.id);
             if (res && res.data) {
-              this.tallerAlumno = { T1: { v: '', orig: null, califId: null }, T2: { v: '', orig: null, califId: null }, T3: { v: '', orig: null, califId: null } };
+              const currentNombre = this.tallerAlumno.nombre || 'Taller';
+              this.tallerAlumno = { nombre: currentNombre, T1: { v: '', orig: null, califId: null }, T2: { v: '', orig: null, califId: null }, T3: { v: '', orig: null, califId: null } };
               
               res.data.forEach(c => {
                 const num = c.periodo?.numero;

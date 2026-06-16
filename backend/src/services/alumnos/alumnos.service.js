@@ -109,4 +109,136 @@ async function eliminar(id, auditCtx) {
   return alumnosRepository.softDelete(id, auditCtx);
 }
 
-module.exports = { listar, obtenerPorId, crear, actualizar, eliminar };
+async function obtenerHistorialAcademico(id) {
+  const { PrismaClient } = require('@prisma/client');
+  const prisma = new PrismaClient();
+  const alumnosRepository = require('../../repositories/alumnos/alumnos.repository');
+
+  const alumno = await alumnosRepository.findById(id);
+
+  if (!alumno) {
+    throw Object.assign(new Error('Alumno no encontrado.'), { statusCode: 404 });
+  }
+
+  const curricularesRaw = await prisma.calificacion.findMany({
+    where: { alumnoId: Number(id) },
+    include: {
+      periodo: true,
+      grupoMateria: {
+        include: {
+          materia: true,
+          grupo: {
+            include: {
+              ciclo: true
+            }
+          }
+        }
+      }
+    }
+  });
+
+  const extraRaw = await prisma.calificacionExtracurricular.findMany({
+    where: { alumnoId: Number(id) },
+    include: {
+      periodo: true,
+      ciclo: true
+    }
+  });
+
+  const tallerRaw = await prisma.calificacionTaller.findMany({
+    where: { alumnoId: Number(id) },
+    include: {
+      periodo: true,
+      ciclo: true
+    }
+  });
+
+  const historialPorCiclo = {};
+
+  curricularesRaw.forEach(c => {
+    if (!c.grupoMateria || !c.grupoMateria.grupo || !c.grupoMateria.grupo.ciclo) return;
+    const ciclo = c.grupoMateria.grupo.ciclo;
+    const cicloId = ciclo.cicloId;
+
+    if (!historialPorCiclo[cicloId]) {
+      historialPorCiclo[cicloId] = {
+        ciclo: ciclo,
+        curriculares: [],
+        extracurriculares: [],
+        talleres: []
+      };
+    }
+
+    historialPorCiclo[cicloId].curriculares.push({
+      calificacionId: c.calificacionId,
+      materia: c.grupoMateria.materia.nombre,
+      creditos: c.grupoMateria.materia.creditos || 0,
+      tipoEvaluacion: c.tipoEvaluacion,
+      valorNumerico: c.valorNumerico,
+      valorCualitativo: c.valorCualitativo,
+      periodo: c.periodo.nombre,
+      fechaAprobacion: c.actualizadoEn,
+      grupo: c.grupoMateria.grupo.nombre
+    });
+  });
+
+  extraRaw.forEach(e => {
+    if (!e.ciclo) return;
+    const cicloId = e.ciclo.cicloId;
+
+    if (!historialPorCiclo[cicloId]) {
+      historialPorCiclo[cicloId] = {
+        ciclo: e.ciclo,
+        curriculares: [],
+        extracurriculares: [],
+        talleres: []
+      };
+    }
+
+    historialPorCiclo[cicloId].extracurriculares.push({
+      club: e.club,
+      valorNumerico: e.valorNumerico,
+      periodo: e.periodo.nombre,
+      fechaAprobacion: e.actualizadoEn
+    });
+  });
+
+  tallerRaw.forEach(t => {
+    if (!t.ciclo) return;
+    const cicloId = t.ciclo.cicloId;
+
+    if (!historialPorCiclo[cicloId]) {
+      historialPorCiclo[cicloId] = {
+        ciclo: t.ciclo,
+        curriculares: [],
+        extracurriculares: [],
+        talleres: []
+      };
+    }
+
+    historialPorCiclo[cicloId].talleres.push({
+      taller: 'Taller',
+      valorCualitativo: t.valorCualitativo,
+      periodo: t.periodo.nombre,
+      fechaAprobacion: t.actualizadoEn
+    });
+  });
+
+  const historialArray = Object.values(historialPorCiclo).sort((a, b) => {
+    return new Date(b.ciclo.fechaInicio) - new Date(a.ciclo.fechaInicio);
+  });
+
+  return {
+    alumno: {
+      id: alumno.id,
+      nombre: alumno.nombre,
+      matricula: alumno.matricula,
+      nivel: alumno.nivel,
+      grado: alumno.grupo?.grado,
+      grupoActual: alumno.grupo?.nombre
+    },
+    historial: historialArray
+  };
+}
+
+module.exports = { listar, obtenerPorId, crear, actualizar, eliminar, obtenerHistorialAcademico };

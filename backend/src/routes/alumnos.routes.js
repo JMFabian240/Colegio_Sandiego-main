@@ -29,6 +29,12 @@ router.get('/', buscarAlumnoValidators, validate,
   alumnosController.listar
 );
 
+// GET /api/v1/alumnos/:id/historial-academico
+router.get('/:id/historial-academico',
+  authorizePermiso('alumnos', 'lectura'),
+  alumnosController.obtenerHistorialAcademico
+);
+
 // GET /api/v1/alumnos/:id
 router.get('/:id',
   authorizePermiso('alumnos', 'lectura'),

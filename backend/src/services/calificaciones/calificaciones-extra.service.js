@@ -2,17 +2,10 @@ const calificacionesExtraRepository = require('../../repositories/calificaciones
 const prisma = require('../../config/database');
 
 
-const CLUBES_VALIDOS = ['inglés', 'computación', 'danza'];
-
 /**
  * Registra una nueva calificación extracurricular
  */
 async function registrarCalificacion({ alumnoId, club, numeroTrimestre, cicloId, valorNumerico, usuarioId }) {
-  if (!CLUBES_VALIDOS.includes(club.toLowerCase())) {
-    const err = new Error('Club extracurricular inválido. Opciones: ' + CLUBES_VALIDOS.join(', '));
-    err.statusCode = 400;
-    throw err;
-  }
 
   // Resolver periodo real
   const alumno = await prisma.alumno.findUnique({ where: { alumnoId: parseInt(alumnoId, 10) } });

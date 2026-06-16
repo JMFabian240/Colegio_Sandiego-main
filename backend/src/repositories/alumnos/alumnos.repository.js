@@ -43,6 +43,19 @@ const INCLUDE_COMPLETO = {
   asignacionesBeca: {
     where: { estado: 'activa' },
     include: { beca: true }
+  },
+  inscripcionesMateria: {
+    include: {
+      grupoMateria: {
+        select: {
+          grupoMateriaId: true,
+          horario: true,
+          aula: true,
+          materia: { select: { materiaId: true, nombre: true, tipo: true } },
+          docente: { select: { usuarioId: true, nombreCompleto: true } }
+        }
+      }
+    }
   }
 };
 
@@ -94,6 +107,14 @@ function mapAlumno(a) {
     mesesAdeudo: inscripcionActual?.mesesAdeudo ?? 0,
     planPago:    inscripcionActual?.planDepago ?? null,
     beca:        a.asignacionesBeca?.length > 0 ? a.asignacionesBeca[0].beca : null,
+    materiasExtra: (a.inscripcionesMateria ?? []).map(im => ({
+      id:      im.grupoMateria.grupoMateriaId,
+      materia: im.grupoMateria.materia?.nombre ?? null,
+      docente: im.grupoMateria.docente?.nombreCompleto ?? null,
+      horario: im.grupoMateria.horario ?? null,
+      aula:    im.grupoMateria.aula ?? null,
+      tipo:    im.grupoMateria.materia?.tipo ?? 'curricular',
+    })),
     createdAt:   a.creadoEn,
     updatedAt:   a.actualizadoEn,
   };
@@ -147,7 +168,7 @@ async function findAll({ q, grupoId, nivel, grado, seccion, estado, page, limit 
   } else if (grado || seccion) {
     // If no specific grupoId is provided but grado/seccion is, filter by those properties on the group
     const grupoWhere = {};
-    if (grado) grupoWhere.grado = grado;
+    if (grado) grupoWhere.grado = String(grado);
     if (seccion) grupoWhere.seccion = seccion;
     inscripcionesSome.grupo = { is: grupoWhere };
     filterInscripcion = true;

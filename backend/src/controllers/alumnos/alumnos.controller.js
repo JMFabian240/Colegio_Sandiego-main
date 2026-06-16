@@ -59,4 +59,14 @@ async function eliminar(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { listar, obtener, crear, actualizar, eliminar };
+async function obtenerHistorialAcademico(req, res, next) {
+  try {
+    const historial = await alumnosService.obtenerHistorialAcademico(req.params.id);
+    return success(res, historial);
+  } catch (err) {
+    require('fs').appendFileSync('debug.log', new Date().toISOString() + ' ERROR: ' + err.stack + '\n');
+    next(err); 
+  }
+}
+
+module.exports = { listar, obtener, crear, actualizar, eliminar, obtenerHistorialAcademico };

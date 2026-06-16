@@ -150,6 +150,8 @@
         if (filtros.q)       params.set('q',       filtros.q);
         if (filtros.grupoId) params.set('grupoId', filtros.grupoId);
         if (filtros.nivel)   params.set('nivel',   filtros.nivel);
+        if (filtros.grado)   params.set('grado',   filtros.grado);
+        if (filtros.seccion) params.set('seccion', filtros.seccion);
         if (filtros.estado)  params.set('estado',  filtros.estado);
         if (filtros.page)    params.set('page',    filtros.page);
         if (filtros.limit)   params.set('limit',   filtros.limit);

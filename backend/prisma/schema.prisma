@@ -216,9 +216,23 @@ model GrupoMateria {
   docente        Usuario? @relation("DocenteGrupoMateria", fields: [docenteId], references: [usuarioId], onDelete: SetNull)
   calificaciones Calificacion[]
   asistencias    Asistencia[]
+  inscripcionesMateria InscripcionMateria[]
 
   @@unique([grupoId, materiaId])
   @@map("grupo_materia")
+}
+
+model InscripcionMateria {
+  inscripcionId  Int      @id @default(autoincrement()) @map("inscripcion_materia_id")
+  alumnoId       Int      @map("alumno_id")
+  grupoMateriaId Int      @map("grupo_materia_id")
+  creadoEn       DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  alumno       Alumno       @relation(fields: [alumnoId], references: [alumnoId], onDelete: Cascade)
+  grupoMateria GrupoMateria @relation(fields: [grupoMateriaId], references: [grupoMateriaId], onDelete: Cascade)
+
+  @@unique([alumnoId, grupoMateriaId])
+  @@map("inscripcion_materia")
 }
 
 model PeriodoEvaluacion {
@@ -311,6 +325,7 @@ model Alumno {
   solicitudesBeca  SolicitudBeca[]
   documentos       Documento[]      @relation("DocumentoAlumno")
   notificaciones   Notificacion[]   @relation("NotificacionAlumno")
+  inscripcionesMateria InscripcionMateria[]
 
   @@map("alumno")
 }
@@ -678,7 +693,6 @@ model SolicitudBeca {
   alumnoId        Int       @map("alumno_id")
   becaId          Int       @map("beca_id")
   cicloId         Int       @map("ciclo_id")
-  tipoSolicitud   String    @default("asignacion") @map("tipo_solicitud") @db.VarChar(15)
   motivo          String
   estado          String    @default("pendiente") @db.VarChar(15)
   solicitadaPor   Int?      @map("solicitada_por")
@@ -890,3 +904,5 @@ model UsuarioPermisoModulo {
   @@unique([usuarioId, modulo])
   @@map("usuario_permiso_modulo")
 }
+
+

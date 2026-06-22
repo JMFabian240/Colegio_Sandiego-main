@@ -1058,7 +1058,7 @@
         this.mostrarSugerenciasPago = false;
         this.nuevoPago           = { alumno: '', alumnoId: null, concepto: 'Colegiatura', monto: '', fecha: new Date().toISOString().slice(0,10) };
       },
-      filtrarPagoAlumnos() {
+      async filtrarPagoAlumnos() {
         const q = this.busquedaPagoAlumno.trim().toLowerCase();
         if (!q) {
           this.pagoCoincidencias      = [];
@@ -1067,9 +1067,17 @@
           this.nuevoPago.alumnoId     = null;
           return;
         }
-        this.pagoCoincidencias      = this.listaAlumnos
-          .filter(a => a.nombre.toLowerCase().includes(q) || a.matricula.toLowerCase().includes(q))
-          .slice(0, 8);
+        try {
+          const res = await window.saeApi.alumnos.listar({ q: q, limit: 10 });
+          if (res.ok) {
+            const data = res.pagination ? res.data : (Array.isArray(res.data) ? res.data : []);
+            this.pagoCoincidencias = data.map(window.saeApi.mapAlumno);
+          } else {
+            this.pagoCoincidencias = [];
+          }
+        } catch (e) {
+          this.pagoCoincidencias = [];
+        }
         this.mostrarSugerenciasPago = true;
         if (this.nuevoPago.alumno && this.busquedaPagoAlumno !== this.nuevoPago.alumno) {
           this.nuevoPago.alumno   = '';
@@ -1211,7 +1219,7 @@
           res = await window.saeApi.pagos.adelantado({
             alumnoId:  this.nuevoPago.alumnoId,
             meses:     parseInt(this.nuevoPago.mesesAdelantar),
-            metodoPago: 'efectivo',
+            metodoPago: 'transferencia',
             fecha:     this.nuevoPago.fecha,
             monto:     parseFloat(this.nuevoPago.monto)
           });

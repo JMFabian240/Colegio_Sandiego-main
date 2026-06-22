@@ -37,6 +37,7 @@ function mapGrupo(g) {
       docente: gm.docente?.nombreCompleto ?? null,
       horario: gm.horario ?? null,
       aula:    gm.aula ?? null,
+      tipo:    gm.materia?.tipo ?? 'curricular',
     })),
     _count: {
       alumnos: g._count?.inscripciones ?? 0,
@@ -58,7 +59,7 @@ const INCLUDE_COMPLETO = {
       grupoMateriaId: true,
       horario: true,
       aula: true,
-      materia: { select: { materiaId: true, nombre: true } },
+      materia: { select: { materiaId: true, nombre: true, tipo: true } },
       docente: { select: { usuarioId: true, nombreCompleto: true } },
     },
   },
@@ -85,7 +86,7 @@ function parsarGradoSeccion(nombre) {
 
 // ── Queries ───────────────────────────────────────────────────
 
-async function findAll({ nivel, cicloId } = {}) {
+async function findAll({ nivel, cicloId } = {}, usuario = null) {
   const where = { eliminadoEn: null };
 
   if (nivel) {
@@ -99,9 +100,21 @@ async function findAll({ nivel, cicloId } = {}) {
     if (cicloActivo) where.cicloId = cicloActivo.cicloId;
   }
 
+  // RBAC para MAESTRA
+  const include = JSON.parse(JSON.stringify(INCLUDE_COMPLETO));
+  if (usuario && usuario.rol === 'MAESTRA') {
+    // Solo ver los grupos donde es titular o da clases
+    where.OR = [
+      { docenteTitularId: usuario.id },
+      { gruposMaterias: { some: { docenteId: usuario.id, eliminadoEn: null } } }
+    ];
+    // Y dentro de esos grupos, ver solo las materias que imparte
+    include.gruposMaterias.where.docenteId = usuario.id;
+  }
+
   const grupos = await prisma.grupo.findMany({
     where,
-    include: INCLUDE_COMPLETO,
+    include,
     orderBy: { nombre: 'asc' },
   });
 
@@ -201,6 +214,7 @@ async function create(datos, auditCtx = {}) { return withAudit(auditCtx.usuarioI
         where: {
           nombre: { equals: mat.materia ?? mat.nombre, mode: 'insensitive' },
           ...(nivelId ? { nivelId } : {}),
+          tipo: mat.tipo || 'curricular',
           eliminadoEn: null,
         },
       });
@@ -210,6 +224,7 @@ async function create(datos, auditCtx = {}) { return withAudit(auditCtx.usuarioI
           data: {
             nombre: mat.materia ?? mat.nombre,
             nivelId: nivelId ?? 1,
+            tipo: mat.tipo || 'curricular',
             cuentaParaPromedio: true,
           },
         });
@@ -309,11 +324,11 @@ async function update(id, datos, auditCtx = {}) { return withAudit(auditCtx.usua
     for (const mat of materias) {
       const nombreMateria = mat.materia ?? mat.nombre;
       let materiaReg = await tx.materia.findFirst({
-        where: { nombre: { equals: nombreMateria, mode: 'insensitive' }, eliminadoEn: null },
+        where: { nombre: { equals: nombreMateria, mode: 'insensitive' }, tipo: mat.tipo || 'curricular', eliminadoEn: null },
       });
       if (!materiaReg) {
         materiaReg = await tx.materia.create({
-          data: { nombre: nombreMateria, nivelId: nivelIdFinal ?? 1, obligatoria: true },
+          data: { nombre: nombreMateria, nivelId: nivelIdFinal ?? 1, tipo: mat.tipo || 'curricular' },
         });
       }
 
@@ -372,4 +387,29 @@ async function softDelete(id, auditCtx = {}) { return withAudit(auditCtx.usuario
 });
 }
 
-module.exports = { findAll, findById, create, update, softDelete };
+async function obtenerAlumnosMateria(grupoMateriaId) {
+  const inscripciones = await prisma.inscripcionMateria.findMany({
+    where: { grupoMateriaId: Number(grupoMateriaId) },
+    include: { alumno: { select: { alumnoId: true, matricula: true, nombreCompleto: true } } }
+  });
+  return inscripciones.map(i => i.alumno);
+}
+
+async function actualizarAlumnosMateria(grupoMateriaId, alumnosIds, auditCtx = {}) {
+  return withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
+    await tx.inscripcionMateria.deleteMany({
+      where: { grupoMateriaId: Number(grupoMateriaId) }
+    });
+    
+    if (alumnosIds && alumnosIds.length > 0) {
+      await tx.inscripcionMateria.createMany({
+        data: alumnosIds.map(id => ({
+          grupoMateriaId: Number(grupoMateriaId),
+          alumnoId: Number(id)
+        }))
+      });
+    }
+  });
+}
+
+module.exports = { findAll, findById, create, update, softDelete, obtenerAlumnosMateria, actualizarAlumnosMateria };

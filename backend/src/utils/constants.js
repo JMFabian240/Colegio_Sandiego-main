@@ -109,11 +109,24 @@ const PERIODOS = Object.freeze({
 
 const PERIODOS_VALIDOS = Object.values(PERIODOS);
 
-// ── Redirecciones por rol ─────────────────────────────────────
+// 🛑 Redirecciones por rol 🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑
 const REDIRECT_POR_ROL = Object.freeze({
   ADMIN:   '/admin_panel.html',
   GESTOR:  '/gestor_panel.html',
   MAESTRA: '/maestra_panel.html',
+});
+
+const PERMISOS_POR_DEFECTO = Object.freeze({
+  GESTOR: {
+    alumnos: 'escritura', tutores: 'escritura', grupos: 'escritura', pagos: 'escritura',
+    becas: 'escritura', colegiaturas: 'escritura', calificaciones: 'escritura',
+    reportes: 'lectura', bitacora: 'NINGUNO', usuarios: 'NINGUNO', configuracion: 'NINGUNO'
+  },
+  MAESTRA: {
+    alumnos: 'lectura', tutores: 'NINGUNO', grupos: 'lectura', pagos: 'NINGUNO',
+    becas: 'NINGUNO', colegiaturas: 'NINGUNO', calificaciones: 'escritura',
+    reportes: 'NINGUNO', bitacora: 'NINGUNO', usuarios: 'NINGUNO', configuracion: 'NINGUNO'
+  }
 });
 
 module.exports = {
@@ -128,4 +141,5 @@ module.exports = {
   ESTADOS_ASISTENCIA,       ESTADOS_ASISTENCIA_VALIDOS,
   PERIODOS,                 PERIODOS_VALIDOS,
   REDIRECT_POR_ROL,
+  PERMISOS_POR_DEFECTO,
 };

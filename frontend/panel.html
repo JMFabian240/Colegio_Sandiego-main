@@ -379,6 +379,9 @@
         <div class="nav-link" x-show="tienePermiso('becas', 'lectura')" :class="view==='becas'?'active':''"
           @click="cargarBecasAsignadas(); cargarCatalogoBecas(); view='becas'"><i data-lucide="award"
             class="w-4 h-4"></i> Gestión de Becas</div>
+        <div class="nav-link" x-show="tienePermiso('alumnos', 'lectura')" :class="view==='historialAcademico'?'active':''"
+          @click="view='historialAcademico'"><i data-lucide="history"
+            class="w-4 h-4"></i> Historial Académico</div>
 
         <template x-if="esAdmin()">
           <div>
@@ -404,7 +407,7 @@
           x-text="(saeApi.getUsuario()?.nombre||'').charAt(0).toUpperCase()||'?'">?</div>
         <div class="flex-1 min-w-0">
           <div class="text-white text-sm truncate" x-text="saeApi.getUsuario()?.nombre||'Usuario'">Usuario</div>
-          <div class="text-white/40 text-[11px]" x-text="rol"></div>
+          <div class="text-white/40 text-[11px]" x-text="rol === 'MAESTRA' ? 'DOCENTE' : rol"></div>
         </div>
         <button title="Cerrar sesión" @click="saeLogout()"
           class="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition flex-shrink-0">
@@ -422,6 +425,9 @@
           <span class="gestor-role-pill" x-show="esGestor()">Gestor — Becas requieren autorización del
             Administrador</span>
           <span class="text-sm text-gray-400" x-text="fechaActual"></span>
+          
+
+
           <button x-show="tienePermiso('pagos', 'escritura') && (view === 'dashboard' || view === 'pagos')"
             class="btn-primary text-sm" @click="abrirModalPago()">+ Pago rápido</button>
         </div>
@@ -434,6 +440,12 @@
             <!-- Dashboard financiero (ADMIN y GESTOR) -->
             <template x-if="tieneFinanzas()">
               <div>
+                <div class="flex justify-end mb-4">
+                  <button @click="_cargarDashboard()" class="btn-outline text-sm flex items-center gap-2 px-3 py-1.5" title="Actualizar datos">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-cw"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    Actualizar Dashboard
+                  </button>
+                </div>
                 <div class="grid grid-cols-4 gap-5">
                   <div class="card-clean p-5">
                     <div class="text-xs text-gray-400">Ingresos hoy</div>
@@ -485,31 +497,25 @@
                 </div>
                 <div class="mt-8">
                   <h2 class="text-xl font-bold text-navy-800 mb-4">Lista de deudores · sanciones por nivel</h2>
-                  <div x-show="listaAlumnos.filter(a=>a.mesesAdeudo>0).length===0" class="text-sm text-gray-400 py-4">
+                  <div x-show="dashDeudores.length===0" class="text-sm text-gray-400 py-4">
                     Sin alumnos con adeudos activos.</div>
                   <div class="space-y-3">
                     <template
-                      x-for="a in listaAlumnos.filter(a=>a.mesesAdeudo>0).sort((x,y)=>y.mesesAdeudo-x.mesesAdeudo)"
-                      :key="a.id">
-                      <div class="card-clean p-4"
-                        :class="{'severity-critical':a.mesesAdeudo>=3,'severity-high':a.mesesAdeudo===2,'severity-medium':a.mesesAdeudo===1}">
+                      x-for="a in dashDeudores"
+                      :key="a.alumnoId">
+                      <div class="card-clean p-4 severity-critical">
                         <div class="flex justify-between items-start">
                           <div>
-                            <div class="font-bold"
-                              :class="{'text-crimson-700':a.mesesAdeudo>=3,'text-amber-700':a.mesesAdeudo===2,'text-emerald-700':a.mesesAdeudo===1}"
-                              x-text="a.nombre"></div>
+                            <div class="font-bold text-crimson-700" x-text="a.nombre"></div>
                             <div class="text-sm text-gray-600 mt-1"
                               x-text="a.mesesAdeudo+' mes(es) de adeudo · Matrícula: '+a.matricula"></div>
                             <div class="mt-2">
-                              <template x-if="a.mesesAdeudo>=3"><span class="badge-crimson">⚠ Baja temporal (sanción
-                                  máxima)</span></template>
-                              <template x-if="a.mesesAdeudo===2"><span class="badge-amber">📚 Examen restringido
-                                  (sanción académica)</span></template>
-                              <template x-if="a.mesesAdeudo===1"><span class="badge-emerald">⏳ Aviso preventivo
-                                  (notificación familiar)</span></template>
+                              <template x-if="a.mesesAdeudo>=3"><span class="badge-crimson">⚠ Baja temporal (sanción máxima)</span></template>
+                              <template x-if="a.mesesAdeudo===2"><span class="badge-crimson">📚 Examen restringido (sanción académica)</span></template>
+                              <template x-if="a.mesesAdeudo===1"><span class="badge-crimson">⏳ Aviso preventivo (notificación familiar)</span></template>
                             </div>
                           </div>
-                          <button class="btn-primary text-sm" @click="abrirModalPago()">Registrar pago</button>
+                          <button class="btn-primary text-sm" @click="abrirModalPagoDesdeAlumno(a)">Registrar pago</button>
                         </div>
                       </div>
                     </template>
@@ -703,7 +709,7 @@
                   <div class="flex border-b overflow-x-auto whitespace-nowrap">
                     <button class="px-4 py-3 text-sm font-medium"
                       :class="tabAlumnoFicha==='academicos'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'"
-                      @click="tabAlumnoFicha='academicos'">Expediente Escolar</button>
+                      @click="tabAlumnoFicha='academicos'">Información Escolar</button>
                     <button class="px-4 py-3 text-sm font-medium flex items-center"
                       :class="tabAlumnoFicha==='tutores'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'"
                       @click="tabAlumnoFicha='tutores'"><i data-lucide="users" class="w-4 h-4 mr-2"></i> Familia /
@@ -712,10 +718,10 @@
                       :class="tabAlumnoFicha==='planes_pago'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'"
                       @click="tabAlumnoFicha='planes_pago'"><i data-lucide="calendar" class="w-4 h-4 mr-2"></i> Plan de
                       Pago</button>
-                    <button class="px-4 py-3 text-sm font-medium flex items-center"
+                    <button class="px-4 py-3 text-sm font-medium flex items-center transition-colors relative"
                       :class="tabAlumnoFicha==='estado_cuenta'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'"
-                      @click="tabAlumnoFicha='estado_cuenta'; _cargarEstadoCuentaAlumnoFicha()"><i
-                        data-lucide="file-clock" class="w-4 h-4 mr-2"></i> Estado de Cuenta</button>
+                      @click="tabAlumnoFicha='estado_cuenta'; _cargarPagosAlumnoFicha()"><i
+                        data-lucide="clock" class="w-4 h-4 mr-2"></i> Estado de Cuenta</button>
                     <button class="px-4 py-3 text-sm font-medium flex items-center"
                       :class="tabAlumnoFicha==='historial_pagos'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'"
                       @click="tabAlumnoFicha='historial_pagos'; _cargarPagosAlumnoFicha()"><i data-lucide="receipt"
@@ -912,180 +918,122 @@
 
                   <!-- Pestaña: Estado de Cuenta (Línea del tiempo) -->
                   <div class="p-5" x-show="tabAlumnoFicha==='estado_cuenta'" x-cloak>
-                    <div class="flex justify-between items-center mb-6 border-b pb-4">
-                      <h3 class="font-bold text-navy-800">Estado de Cuenta</h3>
-                      <button class="btn-outline text-xs" @click="_cargarEstadoCuentaAlumnoFicha()"><i
+                    <div class="flex justify-between items-center mb-4">
+                      <h3 class="font-semibold text-gray-700">Estado de Cuenta</h3>
+                      <button class="btn-outline text-xs" @click="_cargarPagosAlumnoFicha()"><i
                           data-lucide="refresh-cw" class="w-4 h-4 mr-1"></i> Actualizar</button>
                     </div>
-
-                    <div class="relative border-l-2 border-gray-200 ml-4 space-y-8 pl-6">
-                      <template x-for="item in estadoCuentaAlumno" :key="item.timelineId">
-                        <div class="relative">
-                          <!-- Icono / Badge -->
-                          <div
-                            class="absolute -left-[35px] mt-1 w-6 h-6 rounded-full border-2 bg-white flex items-center justify-center"
-                            :class="item.estadoCalc === 'PAGADO' ? 'border-emerald-500 text-emerald-500' : (item.estadoCalc === 'VENCIDO' ? 'border-crimson-500 text-crimson-500' : 'border-amber-500 text-amber-500')">
-                            <i :data-lucide="item.estadoCalc === 'PAGADO' ? 'check-circle' : 'clock'"
-                              class="w-4 h-4"></i>
-                          </div>
-
-                          <!-- Contenido -->
-                          <div class="card-clean p-4">
-                            <div class="flex justify-between items-start mb-2">
-                              <div>
-                                <div class="font-bold text-navy-800 uppercase"
-                                  x-text="item.concepto + (item.mes ? ' ' + item.mes : '')"></div>
-                                <div class="text-xs text-gray-500" x-text="'Vencimiento: ' + item.fechaVencimiento">
-                                </div>
-                              </div>
-                              <span class="px-2 py-1 rounded text-[10px] font-bold"
-                                :class="item.estadoCalc === 'PAGADO' ? 'bg-emerald-100 text-emerald-700' : (item.estadoCalc === 'VENCIDO' ? 'bg-crimson-100 text-crimson-700' : 'bg-amber-100 text-amber-700')"
-                                x-text="item.estadoCalc"></span>
+                    <div class="relative border-l border-gray-200 ml-3 space-y-6">
+                      <template x-for="item in historialCalendarioAlumno" :key="item.calendarioPagoId">
+                        <div class="mb-6 ml-6">
+                          <span
+                            class="absolute flex items-center justify-center w-6 h-6 rounded-full -left-3 ring-4 ring-white"
+                            :class="{'bg-emerald-100': item.estadoCobro === 'pagado' || item.estadoCobro === 'liquidado',
+                                       'bg-amber-100': item.estadoCobro === 'pendiente',
+                                       'bg-red-100': item.estadoCobro === 'vencido'}">
+                            <i data-lucide="check-circle" class="w-3 h-3 text-emerald-600"
+                              x-show="item.estadoCobro === 'pagado' || item.estadoCobro === 'liquidado'"></i>
+                            <i data-lucide="clock" class="w-3 h-3 text-amber-600"
+                              x-show="item.estadoCobro === 'pendiente'"></i>
+                            <i data-lucide="alert-circle" class="w-3 h-3 text-red-600"
+                              x-show="item.estadoCobro === 'vencido'"></i>
+                          </span>
+                          <div class="bg-white p-4 rounded-lg border border-gray-100 shadow-sm">
+                            <div class="flex justify-between items-start mb-1">
+                              <h4 class="font-medium text-gray-800"
+                                x-text="item.concepto + (item.mes ? ' ' + item.mes : '')"></h4>
+                              <span class="text-xs font-semibold px-2 py-1 rounded-full" :class="{'bg-emerald-100 text-emerald-700': item.estadoCobro === 'pagado' || item.estadoCobro === 'liquidado',
+                                           'bg-amber-100 text-amber-700': item.estadoCobro === 'pendiente',
+                                           'bg-red-100 text-red-700': item.estadoCobro === 'vencido'}"
+                                x-text="item.estadoCobro.toUpperCase()">
+                              </span>
                             </div>
-                            <div class="grid grid-cols-3 gap-4 mt-3 pt-3 border-t">
+                            <p class="text-xs text-gray-500 mb-2">Vencimiento: <span
+                                x-text="item.fechaVencimiento.split('T')[0]"></span></p>
+                            <div class="grid grid-cols-2 gap-2 text-sm mt-3">
                               <div>
-                                <div class="text-[10px] text-gray-500">Monto Original</div>
-                                <div class="font-bold text-sm text-navy-700"
-                                  x-text="'$' + Number(item.montoOriginal).toFixed(2)"></div>
+                                <p class="text-gray-500 text-xs">Monto Original</p>
+                                <p class="font-medium text-gray-700"
+                                  x-text="'$' + Number(item.montoOriginal).toFixed(2)"></p>
+                              </div>
+                              <div x-show="Number(item.montoRecargo) > 0">
+                                <p class="text-gray-500 text-xs">Recargo</p>
+                                <p class="font-medium text-red-600"
+                                  x-text="'+$' + Number(item.montoRecargo).toFixed(2)"></p>
                               </div>
                               <div>
-                                <div class="text-[10px] text-gray-500">Monto Pagado</div>
-                                <div class="font-bold text-sm text-emerald-600"
-                                  x-text="'$' + Number(item.montoPagado).toFixed(2)"></div>
+                                <p class="text-gray-500 text-xs">Monto Pagado</p>
+                                <p class="font-medium text-emerald-600"
+                                  x-text="'$' + Number(item.montoPagado).toFixed(2)"></p>
                               </div>
                               <div>
-                                <div class="text-[10px] text-gray-500">Saldo Pendiente</div>
-                                <div class="font-bold text-sm"
-                                  :class="Number(item.saldoPendiente) > 0 ? 'text-crimson-600' : 'text-gray-700'"
-                                  x-text="'$' + Number(item.saldoPendiente).toFixed(2)"></div>
+                                <p class="text-gray-500 text-xs">Saldo Pendiente</p>
+                                <p class="font-bold"
+                                  :class="Number(item.saldoPendiente) > 0 ? 'text-navy-700' : 'text-gray-600'"
+                                  x-text="'$' + Number(item.saldoPendiente).toFixed(2)"></p>
                               </div>
                             </div>
                           </div>
                         </div>
                       </template>
-                      <div x-show="estadoCuentaAlumno.length === 0" class="text-gray-400 text-sm italic">
-                        No hay registros en el calendario de pagos.
+                      <div x-show="historialCalendarioAlumno.length === 0" class="ml-6 text-sm text-gray-500 py-4">
+                        No hay registro de estado de cuenta para este alumno.
                       </div>
                     </div>
                   </div>
 
                   <!-- Pestaña: Historial de Pagos -->
                   <div class="p-5" x-show="tabAlumnoFicha==='historial_pagos'">
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                      <!-- Columna 1: Estado de Cuenta y Línea de Tiempo -->
-                      <div>
-                        <div class="flex justify-between items-center mb-4">
-                          <h3 class="font-semibold text-gray-700">Estado de Cuenta</h3>
-                          <button class="btn-outline text-xs" @click="_cargarPagosAlumnoFicha()"><i
-                              data-lucide="refresh-cw" class="w-4 h-4 mr-1"></i> Actualizar</button>
-                        </div>
-                        <div class="relative border-l border-gray-200 ml-3 space-y-6">
-                          <template x-for="item in historialCalendarioAlumno" :key="item.calendarioPagoId">
-                            <div class="mb-6 ml-6">
-                              <span
-                                class="absolute flex items-center justify-center w-6 h-6 rounded-full -left-3 ring-4 ring-white"
-                                :class="{'bg-emerald-100': item.estadoCobro === 'pagado' || item.estadoCobro === 'liquidado',
-                                           'bg-amber-100': item.estadoCobro === 'pendiente',
-                                           'bg-red-100': item.estadoCobro === 'vencido'}">
-                                <i data-lucide="check-circle" class="w-3 h-3 text-emerald-600"
-                                  x-show="item.estadoCobro === 'pagado' || item.estadoCobro === 'liquidado'"></i>
-                                <i data-lucide="clock" class="w-3 h-3 text-amber-600"
-                                  x-show="item.estadoCobro === 'pendiente'"></i>
-                                <i data-lucide="alert-circle" class="w-3 h-3 text-red-600"
-                                  x-show="item.estadoCobro === 'vencido'"></i>
-                              </span>
-                              <div class="bg-white p-4 rounded-lg border border-gray-100 shadow-sm">
-                                <div class="flex justify-between items-start mb-1">
-                                  <h4 class="font-medium text-gray-800"
-                                    x-text="item.concepto + (item.mes ? ' ' + item.mes : '')"></h4>
-                                  <span class="text-xs font-semibold px-2 py-1 rounded-full" :class="{'bg-emerald-100 text-emerald-700': item.estadoCobro === 'pagado' || item.estadoCobro === 'liquidado',
-                                               'bg-amber-100 text-amber-700': item.estadoCobro === 'pendiente',
-                                               'bg-red-100 text-red-700': item.estadoCobro === 'vencido'}"
-                                    x-text="item.estadoCobro.toUpperCase()">
-                                  </span>
-                                </div>
-                                <p class="text-xs text-gray-500 mb-2">Vencimiento: <span
-                                    x-text="item.fechaVencimiento.split('T')[0]"></span></p>
-                                <div class="grid grid-cols-2 gap-2 text-sm mt-3">
-                                  <div>
-                                    <p class="text-gray-500 text-xs">Monto Original</p>
-                                    <p class="font-medium text-gray-700"
-                                      x-text="'$' + Number(item.montoOriginal).toFixed(2)"></p>
-                                  </div>
-                                  <div x-show="Number(item.montoRecargo) > 0">
-                                    <p class="text-gray-500 text-xs">Recargo</p>
-                                    <p class="font-medium text-red-600"
-                                      x-text="'+$' + Number(item.montoRecargo).toFixed(2)"></p>
-                                  </div>
-                                  <div>
-                                    <p class="text-gray-500 text-xs">Monto Pagado</p>
-                                    <p class="font-medium text-emerald-600"
-                                      x-text="'$' + Number(item.montoPagado).toFixed(2)"></p>
-                                  </div>
-                                  <div>
-                                    <p class="text-gray-500 text-xs">Saldo Pendiente</p>
-                                    <p class="font-bold"
-                                      :class="Number(item.saldoPendiente) > 0 ? 'text-navy-700' : 'text-gray-600'"
-                                      x-text="'$' + Number(item.saldoPendiente).toFixed(2)"></p>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </template>
-                          <div x-show="historialCalendarioAlumno.length === 0" class="ml-6 text-sm text-gray-500 py-4">
-                            No hay registro de estado de cuenta para este alumno.
-                          </div>
-                        </div>
+                    <div>
+                      <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-semibold text-gray-700">Recibos y Comprobantes</h3>
+                        <button class="btn-outline text-xs" @click="_cargarPagosAlumnoFicha()"><i
+                            data-lucide="refresh-cw" class="w-4 h-4 mr-1"></i> Actualizar</button>
                       </div>
-
-                      <!-- Columna 2: Recibos y Comprobantes -->
-                      <div>
-                        <h3 class="font-semibold text-gray-700 mb-4">Recibos y Comprobantes</h3>
-                        <div class="overflow-x-auto">
-                          <table class="w-full text-left text-sm text-gray-600">
-                            <thead class="bg-gray-50 text-gray-700 uppercase text-xs">
-                              <tr>
-                                <th class="px-4 py-3 rounded-tl-lg">Fecha</th>
-                                <th class="px-4 py-3">Concepto</th>
-                                <th class="px-4 py-3">Monto</th>
-                                <th class="px-4 py-3 text-center rounded-tr-lg">Ver</th>
-                              </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100">
-                              <template x-for="pago in historialPagosAlumno" :key="pago.id">
-                                <tr class="hover:bg-gray-50/50 transition-colors">
-                                  <td class="px-4 py-3 font-medium text-gray-900" x-text="pago.fecha.split('T')[0]">
-                                  </td>
-                                  <td class="px-4 py-3" x-text="pago.concepto"></td>
-                                  <td class="px-4 py-3 text-emerald-600 font-semibold"
-                                    x-text="'$' + Number(pago.monto).toFixed(2)"></td>
-                                  <td class="px-4 py-3 text-center">
-                                    <template x-if="pago.documentos && pago.documentos.length > 0">
-                                      <a :href="window.saeApi.pagos.descargarComprobante(pago.id)" target="_blank"
-                                        class="text-xs text-blue-600 hover:text-blue-800 font-medium inline-flex items-center"
-                                        title="Ver Comprobante">
-                                        <i data-lucide="file-text" class="w-4 h-4 mr-1"></i> PDF
-                                      </a>
-                                    </template>
-                                    <template x-if="!pago.documentos || pago.documentos.length === 0">
-                                      <label
-                                        class="cursor-pointer text-xs text-navy-600 hover:text-navy-800 font-medium inline-flex items-center">
-                                        <i data-lucide="upload" class="w-4 h-4 mr-1"></i>
-                                        <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png"
-                                          @change="subirComprobanteHistorial(pago.id, $event)">
-                                      </label>
-                                    </template>
-                                  </td>
-                                </tr>
-                              </template>
-                              <tr x-show="historialPagosAlumno.length === 0">
-                                <td colspan="4" class="px-4 py-8 text-center text-gray-500">
-                                  No hay recibos de pagos para este alumno.
+                      <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-600">
+                          <thead class="bg-gray-50 text-gray-700 uppercase text-xs">
+                            <tr>
+                              <th class="px-4 py-3 rounded-tl-lg">Fecha</th>
+                              <th class="px-4 py-3">Concepto</th>
+                              <th class="px-4 py-3">Monto</th>
+                              <th class="px-4 py-3 text-center rounded-tr-lg">Ver</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-gray-100">
+                            <template x-for="pago in historialPagosAlumno" :key="pago.id">
+                              <tr class="hover:bg-gray-50/50 transition-colors">
+                                <td class="px-4 py-3 font-medium text-gray-900" x-text="pago.fecha.split('T')[0]">
+                                </td>
+                                <td class="px-4 py-3" x-text="pago.concepto"></td>
+                                <td class="px-4 py-3 text-emerald-600 font-semibold"
+                                  x-text="'$' + Number(pago.monto).toFixed(2)"></td>
+                                <td class="px-4 py-3 text-center">
+                                  <template x-if="pago.documentos && pago.documentos.length > 0">
+                                    <a :href="window.saeApi.pagos.descargarComprobante(pago.id)" target="_blank"
+                                      class="text-xs text-blue-600 hover:text-blue-800 font-medium inline-flex items-center"
+                                      title="Ver Comprobante">
+                                      <i data-lucide="file-text" class="w-4 h-4 mr-1"></i> PDF
+                                    </a>
+                                  </template>
+                                  <template x-if="!pago.documentos || pago.documentos.length === 0">
+                                    <label
+                                      class="cursor-pointer text-xs text-navy-600 hover:text-navy-800 font-medium inline-flex items-center">
+                                      <i data-lucide="upload" class="w-4 h-4 mr-1"></i>
+                                      <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png"
+                                        @change="subirComprobanteHistorial(pago.id, $event)">
+                                    </label>
+                                  </template>
                                 </td>
                               </tr>
-                            </tbody>
-                          </table>
-                        </div>
+                            </template>
+                            <tr x-show="historialPagosAlumno.length === 0">
+                              <td colspan="4" class="px-4 py-8 text-center text-gray-500">
+                                No hay recibos de pagos para este alumno.
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </div>
                   </div>
@@ -1101,6 +1049,9 @@
                           </button>
                           <button class="btn-primary px-3 py-1 text-xs flex items-center" @click="view = 'calificaciones'; $nextTick(() => seleccionarAlumnoCalif(alumnoActualFicha))">
                             <i data-lucide="edit" class="w-3 h-3 mr-1"></i> Editar
+                          </button>
+                          <button x-show="historialAcademico.length > 0" class="btn-outline px-3 py-1 text-xs flex items-center border-red-200 text-red-600 hover:bg-red-50" @click="exportarBoletaPDF(alumnoActualFicha)">
+                            <i data-lucide="file-text" class="w-3 h-3 mr-1"></i> Exportar PDF
                           </button>
                         </div>
                         <div class="text-right" x-show="historialAcademico.length > 0">
@@ -1307,11 +1258,11 @@
                       Alumnos</button>
                     <button class="px-4 py-3 text-sm font-medium flex items-center"
                       :class="tabTutorFicha==='estado_cuenta_consolidado'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'"
-                      @click="tabTutorFicha='estado_cuenta_consolidado'; _cargarEstadoCuentaConsolidado()"><i
+                      @click="tabTutorFicha='estado_cuenta_consolidado'"><i
                         data-lucide="wallet" class="w-4 h-4 mr-2"></i> Estado de Cuenta Consolidado</button>
                     <button class="px-4 py-3 text-sm font-medium flex items-center"
                       :class="tabTutorFicha==='historial_pagos'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'"
-                      @click="tabTutorFicha='historial_pagos'; _cargarPagosTutorFicha()"><i data-lucide="receipt"
+                      @click="tabTutorFicha='historial_pagos'"><i data-lucide="receipt"
                         class="w-4 h-4 mr-2"></i> Historial de Pagos</button>
                     <button class="px-4 py-3 text-sm font-medium"
                       :class="tabTutorFicha==='informacion'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'"
@@ -1322,6 +1273,7 @@
                   <div class="p-5 space-y-4" x-show="tabTutorFicha==='alumnos'">
                     <div class="flex justify-between items-center border-b pb-2 mb-4">
                       <h3 class="font-bold text-navy-800">Alumnos / Hijos Vinculados</h3>
+                      <button class="btn-outline text-xs" @click="abrirModalVincularAlumno()">+ Vincular Alumno</button>
                     </div>
                     <div class="space-y-3">
                       <template x-for="al in tutorActualFicha?.alumnos || []">
@@ -1335,6 +1287,8 @@
                             <div class="text-[11px] mt-1 font-medium text-emerald-600 uppercase"
                               x-text="al.tipoRelacion"></div>
                           </div>
+                          <button class="btn-outline text-crimson-600 border-crimson-200 text-xs py-1 px-3 ml-2"
+                            @click="desvincularAlumno(al.alumnoId || al.alumno?.id)">Desvincular</button>
                         </div>
                       </template>
                       <div x-show="!tutorActualFicha?.alumnos || tutorActualFicha.alumnos.length === 0"
@@ -1422,22 +1376,22 @@
                       <h3 class="font-bold text-navy-800">Datos de Facturación (Opcional)</h3>
                       <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-700 font-medium">
                         <input type="checkbox" class="rounded border-gray-300 text-navy-600 focus:ring-navy-600"
-                          x-model="tutorFichaEditable.requiereFactura" :disabled="!editandoFacturacionTutor">
+                          x-model="tutorFichaEditable.requiereFactura">
                         Requiere facturación
                       </label>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4 mt-4">
+                    <div class="grid grid-cols-2 gap-4 mt-4" x-show="tutorFichaEditable.requiereFactura" x-collapse>
                       <div>
                         <label class="text-xs font-medium text-gray-600">RFC</label>
                         <input type="text" class="input-modern uppercase" maxlength="13"
-                          x-model="tutorFichaEditable.rfc" :readonly="!editandoFacturacionTutor"
+                          x-model="tutorFichaEditable.rfc"
                           :class="errorFacturacion && (!tutorFichaEditable.rfc || tutorFichaEditable.rfc.length < 12) ? 'border-crimson-500 ring-crimson-500' : ''">
                       </div>
                       <div>
                         <label class="text-xs font-medium text-gray-600">Régimen Fiscal (Código)</label>
                         <select class="input-modern" x-model="tutorFichaEditable.regimenFiscal"
-                          :disabled="!editandoFacturacionTutor"
+                         
                           :class="errorFacturacion && !tutorFichaEditable.regimenFiscal ? 'border-crimson-500 ring-crimson-500' : ''">
                           <option value="">Seleccionar...</option>
                           <option value="601">601 - General de Ley PM</option>
@@ -1455,7 +1409,7 @@
                       <div>
                         <label class="text-xs font-medium text-gray-600">Uso de CFDI</label>
                         <select class="input-modern" x-model="tutorFichaEditable.usoCfdi"
-                          :disabled="!editandoFacturacionTutor"
+                         
                           :class="errorFacturacion && !tutorFichaEditable.usoCfdi ? 'border-crimson-500 ring-crimson-500' : ''">
                           <option value="">Seleccionar...</option>
                           <option value="G01">G01 - Adquisición de mercancías</option>
@@ -1471,25 +1425,25 @@
                       <div>
                         <label class="text-xs font-medium text-gray-600">Código Postal Fiscal</label>
                         <input type="text" class="input-modern" maxlength="5" placeholder="Ej: 37000"
-                          x-model="tutorFichaEditable.codigoPostal" :readonly="!editandoFacturacionTutor"
+                          x-model="tutorFichaEditable.codigoPostal"
                           :class="errorFacturacion && (!tutorFichaEditable.codigoPostal || tutorFichaEditable.codigoPostal.length !== 5) ? 'border-crimson-500 ring-crimson-500' : ''">
                       </div>
                       <div class="col-span-2">
                         <label class="text-xs font-medium text-gray-600">Dirección Fiscal</label>
                         <textarea class="input-modern" rows="2" placeholder="Calle, número, colonia, ciudad, estado"
-                          x-model="tutorFichaEditable.direccionFiscal" :readonly="!editandoFacturacionTutor"
+                          x-model="tutorFichaEditable.direccionFiscal"
                           :class="errorFacturacion && (!tutorFichaEditable.direccionFiscal || tutorFichaEditable.direccionFiscal.trim() === '') ? 'border-crimson-500 ring-crimson-500' : ''"></textarea>
                       </div>
                       <div class="col-span-2">
                         <label class="text-xs font-medium text-gray-600">Correo para envío de CFDI</label>
                         <input type="email" class="input-modern" x-model="tutorFichaEditable.correoFacturacion"
-                          :readonly="!editandoFacturacionTutor"
+                         
                           :class="errorFacturacion && (!tutorFichaEditable.correoFacturacion || !tutorFichaEditable.correoFacturacion.includes('@')) ? 'border-crimson-500 ring-crimson-500' : ''">
                       </div>
                     </div>
 
                     <!-- Campos informativos para CFDI Educativo -->
-                    <div class="mt-6 border-t pt-4">
+                    <div class="mt-6 border-t pt-4" x-show="tutorFichaEditable.requiereFactura" x-collapse>
                       <h4 class="text-sm font-bold text-navy-800 mb-2">Información para Complemento Educativo (CFDI)
                       </h4>
                       <p class="text-xs text-gray-500 mb-3">Estos datos son extraídos automáticamente de los expedientes
@@ -1513,6 +1467,13 @@
                         <div x-show="!tutorActualFicha?.alumnos || tutorActualFicha.alumnos.length === 0"
                           class="text-xs text-gray-400 italic">No hay alumnos vinculados.</div>
                       </div>
+                    </div>
+
+                    <div class="flex justify-end mt-4 pt-4 border-t border-gray-200">
+                      
+                      <button class="btn-primary flex items-center" x-show="tutorFichaEditable.requiereFactura"
+                        @click="guardarFacturacionTutor()"><i data-lucide="save" class="w-4 h-4 mr-2"></i> Guardar Datos
+                        Fiscales</button>
                     </div>
                   </div>
                 </div>
@@ -1564,9 +1525,11 @@
 
         <!-- CALIFICACIONES -->
         <template x-if="view==='calificaciones'">
-          <div>
-            <h2 class="text-xl font-bold text-navy-800 mb-3">Calificaciones
-              — Buscador inteligente</h2>
+          <div x-init="buscarAlumnoCalif()">
+            <h2 class="text-xl font-bold text-navy-800 mb-3 flex items-center">
+              Calificaciones — Buscador inteligente
+              <span class="text-sm font-normal text-gray-500 ml-2" x-show="!alumnoSeleccionadoCalif" x-text="`(${alumnosCoincidencias.length} alumnos)`"></span>
+            </h2>
 
             <div class="grid md:grid-cols-4 gap-4 mb-5" x-show="!alumnoSeleccionadoCalif">
               <div>
@@ -1600,7 +1563,7 @@
                 <select class="input-modern" x-model="filtroCalifGrupo" @change="$nextTick(() => buscarAlumnoCalif())"
                   :disabled="!filtroCalifGrado">
                   <option value="">Grupo</option>
-                  <template x-for="s in ['A','B','C','D']" :key="s">
+                  <template x-for="s in ['A','B','C','D','E','F']" :key="s">
                     <option :value="s" x-text="s"></option>
                   </template>
                 </select>
@@ -1747,7 +1710,7 @@
                       </thead>
                       <tbody>
                         <tr class="border-b">
-                          <td class="p-3 font-medium text-gray-800 uppercase">Taller</td>
+                          <td class="p-3 font-medium text-gray-800 uppercase" x-text="tallerAlumno.nombre"></td>
                           <td class="p-2">
                             <select class="w-full input-modern text-center" x-model="tallerAlumno.T1.v">
                               <option value=""></option>
@@ -1798,6 +1761,221 @@
                   </div><button class="btn-primary text-xs">Seleccionar</button>
                 </div>
               </template></div>
+          </div>
+        </template>
+
+        <!-- HISTORIAL ACADEMICO -->
+        <template x-if="view==='historialAcademico'">
+          <div class="space-y-6" x-init="filtrarAlumnosHistorial()">
+            <h2 class="text-xl font-bold text-navy-800">Historial Académico Completo</h2>
+            
+            <!-- Buscador y Filtros -->
+            <div x-show="!alumnoHistorialSeleccionado">
+              <div class="grid md:grid-cols-4 gap-4 mb-5">
+                <div>
+                  <label class="text-xs font-medium text-gray-600">Alumno</label>
+                  <input type="text" class="input-modern" placeholder="Nombre o matrícula..."
+                    x-model="busquedaHistorialQuery" @input.debounce.400ms="filtrarAlumnosHistorial()">
+                </div>
+                <div>
+                  <label class="text-xs font-medium text-gray-600">Nivel Escolar</label>
+                  <select class="input-modern" x-model="filtroHistorialNivel"
+                    @change="$nextTick(() => { filtroHistorialGrado=''; filtroHistorialGrupo=''; filtrarAlumnosHistorial(); })">
+                    <option value="">Todos los niveles</option>
+                    <template x-for="n in nivelesDisponibles" :key="n">
+                      <option :value="n" x-text="n"></option>
+                    </template>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-xs font-medium text-gray-600">Grado</label>
+                  <select class="input-modern" x-model="filtroHistorialGrado"
+                    @change="$nextTick(() => { filtroHistorialGrupo=''; filtrarAlumnosHistorial(); })"
+                    :disabled="!filtroHistorialNivel">
+                    <option value="">Grado</option>
+                    <template x-for="g in ['1','2','3','4','5','6']" :key="g">
+                      <option :value="g" x-text="g + '°'"></option>
+                    </template>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-xs font-medium text-gray-600">Grupo</label>
+                  <select class="input-modern" x-model="filtroHistorialGrupo" @change="$nextTick(() => filtrarAlumnosHistorial())"
+                    :disabled="!filtroHistorialGrado">
+                    <option value="">Grupo</option>
+                    <template x-for="s in ['A','B','C','D','E','F']" :key="s">
+                      <option :value="s" x-text="s"></option>
+                    </template>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Lista de alumnos -->
+              <div class="card-clean overflow-hidden">
+                <table class="w-full text-sm">
+                  <thead class="bg-gray-50">
+                    <tr>
+                      <th class="p-3 text-left">Alumno</th>
+                      <th class="p-3 text-left">Nivel</th>
+                      <th class="p-3 text-left">Grado y Grupo</th>
+                      <th class="p-3 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <template x-for="al in resultadosBusquedaHistorial" :key="al.id">
+                      <tr class="border-b hover:bg-gray-50">
+                        <td class="p-3 font-medium">
+                          <span x-text="al.nombre"></span>
+                          <div class="text-xs text-gray-500" x-text="'Matrícula: ' + (al.matricula || 'S/M')"></div>
+                        </td>
+                        <td class="p-3" x-text="al.nivel || 'N/A'"></td>
+                        <td class="p-3" x-text="(al.grado ? al.grado + '° ' : '') + (al.grupoActual || '')"></td>
+                        <td class="p-3 text-right">
+                          <button class="btn-outline text-xs py-1 px-3" @click="seleccionarAlumnoHistorial(al)">
+                            Ver Historial
+                          </button>
+                        </td>
+                      </tr>
+                    </template>
+                    <tr x-show="resultadosBusquedaHistorial.length === 0">
+                      <td colspan="4" class="p-6 text-center text-gray-500">No se encontraron alumnos con los criterios especificados.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Despliegue del Historial -->
+            <div x-show="alumnoHistorialSeleccionado" class="space-y-6" id="historialAcademicoImprimible">
+              <div class="flex items-center gap-4 mb-4 print:hidden">
+                <button class="btn-outline px-3 py-1 text-sm flex items-center" @click="alumnoHistorialSeleccionado = null; filtrarAlumnosHistorial();">
+                  <i data-lucide="arrow-left" class="w-4 h-4 mr-1"></i> Volver a la lista
+                </button>
+              </div>
+              
+              <!-- Info del alumno -->
+              <div class="bg-navy-800 text-white rounded-lg p-6 md:p-8 shadow-lg relative">
+                <div class="absolute top-6 right-6 print:hidden">
+                  <button class="btn-outline text-white border-white hover:bg-white/10" @click="window.print()">
+                    <i data-lucide="printer" class="w-4 h-4 mr-2"></i> Imprimir
+                  </button>
+                </div>
+                
+                <div class="grid grid-cols-[80px_1fr] md:grid-cols-[100px_1fr] gap-x-4 gap-y-3 text-sm text-white/80 pr-32">
+                  <div class="font-bold text-white/60">Alumno:</div>
+                  <div class="uppercase text-white">
+                    <span class="font-bold mr-6" x-text="alumnoHistorialSeleccionado.matricula || 'S/M'"></span> 
+                    <span x-text="alumnoHistorialSeleccionado.nombre"></span>
+                  </div>
+                  
+                  <div class="font-bold text-white/60">Programa:</div>
+                  <div class="uppercase text-white" x-text="'EDUCACIÓN BÁSICA - ' + (alumnoHistorialSeleccionado.nivel || '')"></div>
+
+                  <div class="font-bold text-white/60">Campus:</div>
+                  <div class="uppercase flex flex-wrap gap-x-8 gap-y-2 text-white">
+                    <span>COLEGIO SAN DIEGO</span>
+                    <span><span class="font-bold text-white/60">Modalidad:</span> ESCOLARIZADO</span>
+                    <span><span class="font-bold text-white/60">Nivel:</span> <span x-text="alumnoHistorialSeleccionado.nivel || ''"></span></span>
+                  </div>
+                </div>
+                
+                <div class="text-center italic text-white/50 text-xs mt-8">
+                  "Los datos que se presentan son únicamente de carácter informativo y carecen de validez oficial."
+                </div>
+              </div>
+
+              <!-- Sin historial -->
+              <div x-show="historialAcademicoCompleto.length === 0" class="card-clean p-8 text-center text-gray-500">
+                <i data-lucide="folder-open" class="w-12 h-12 mx-auto mb-3 opacity-50"></i>
+                <p>El alumno no cuenta con historial académico registrado.</p>
+              </div>
+
+              <!-- Iteración por ciclos -->
+              <template x-for="registro in historialAcademicoCompleto" :key="registro.ciclo.cicloId">
+                <div class="card-clean border-l-4 border-navy-600 overflow-hidden">
+                  <div class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                    <h3 class="font-bold text-lg text-navy-800 uppercase" x-text="'Ciclo Escolar ' + registro.ciclo.nombre"></h3>
+                  </div>
+
+                  <div class="p-6 space-y-8">
+                    <!-- Materias Curriculares -->
+                    <div x-show="registro.curriculares && registro.curriculares.length > 0">
+                      <h4 class="font-bold text-navy-700 border-b pb-2 mb-4 text-sm tracking-wider uppercase">Área de Formación Curricular</h4>
+                      <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-700">
+                          <thead class="bg-gray-100 text-gray-600 uppercase text-xs">
+                            <tr>
+                              <th class="px-4 py-2 rounded-tl">Experiencia Educativa</th>
+                              <th class="px-4 py-2">Periodo</th>
+                              <th class="px-4 py-2 text-center rounded-tr">Calificación</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-gray-100">
+                            <template x-for="c in registro.curriculares" :key="c.materia">
+                              <tr class="hover:bg-gray-50/50">
+                                <td class="px-4 py-2 font-medium text-gray-900" x-text="c.materia"></td>
+                                <td class="px-4 py-2" x-text="c.periodo"></td>
+                                <td class="px-4 py-2 text-center font-bold" :class="(!isNaN(c.promedio) && c.promedio < 6) ? 'text-red-600' : 'text-emerald-700'" x-text="c.promedio"></td>
+                              </tr>
+                            </template>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <!-- Talleres -->
+                    <div x-show="registro.talleres && registro.talleres.length > 0">
+                      <h4 class="font-bold text-navy-700 border-b pb-2 mb-4 text-sm tracking-wider uppercase">Talleres Formativos</h4>
+                      <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-700">
+                          <thead class="bg-gray-100 text-gray-600 uppercase text-xs">
+                            <tr>
+                              <th class="px-4 py-2 rounded-tl">Taller</th>
+                              <th class="px-4 py-2">Periodo</th>
+                              <th class="px-4 py-2 text-center rounded-tr">Evaluación</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-gray-100">
+                            <template x-for="(t, idx) in registro.talleres" :key="idx">
+                              <tr class="hover:bg-gray-50/50">
+                                <td class="px-4 py-2 font-medium text-gray-900" x-text="t.taller"></td>
+                                <td class="px-4 py-2" x-text="t.periodo"></td>
+                                <td class="px-4 py-2 text-center font-bold" x-text="t.valorCualitativo || '-'"></td>
+                              </tr>
+                            </template>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <!-- Extracurriculares -->
+                    <div x-show="registro.extracurriculares && registro.extracurriculares.length > 0">
+                      <h4 class="font-bold text-navy-700 border-b pb-2 mb-4 text-sm tracking-wider uppercase">Clubes Extracurriculares</h4>
+                      <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-700">
+                          <thead class="bg-gray-100 text-gray-600 uppercase text-xs">
+                            <tr>
+                              <th class="px-4 py-2 rounded-tl">Club / Actividad</th>
+                              <th class="px-4 py-2">Periodo</th>
+                              <th class="px-4 py-2 text-center rounded-tr">Evaluación</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-gray-100">
+                            <template x-for="(ex, idx) in registro.extracurriculares" :key="idx">
+                              <tr class="hover:bg-gray-50/50">
+                                <td class="px-4 py-2 font-medium text-gray-900 capitalize" x-text="ex.club"></td>
+                                <td class="px-4 py-2" x-text="ex.periodo"></td>
+                                <td class="px-4 py-2 text-center font-bold" x-text="ex.valorNumerico || '-'"></td>
+                              </tr>
+                            </template>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
           </div>
         </template>
 
@@ -1901,9 +2079,9 @@
 
             <select class="input-modern w-48" x-model="filtroRolUsuario">
               <option value="">Todos los roles</option>
-              <option value="Administrador">Administrador</option>
-              <option value="Gestor">Gestor</option>
-              <option value="Docente">Docente</option>
+              <option value="ADMIN">Administrador</option>
+              <option value="GESTOR">Gestor</option>
+              <option value="MAESTRA">Docente</option>
             </select>
           </div>
 
@@ -1924,7 +2102,7 @@
                       <div class="font-medium text-gray-800" x-text="user.nombre"></div>
                       <div class="text-xs text-gray-500" x-text="'@' + user.username"></div>
                     </td>
-                    <td class="p-3 text-gray-600" x-text="user.rol"></td>
+                    <td class="p-3 text-gray-600" x-text="user.rol === 'MAESTRA' ? 'DOCENTE' : user.rol"></td>
                     <td class="p-3">
                       <span x-show="user.activo" class="badge-emerald">Activo</span>
                       <span x-show="!user.activo" class="badge-gray">Inactivo</span>
@@ -1981,9 +2159,14 @@
           <div class="col-span-2 card-clean flex flex-col" x-show="usuarioPermisosActivo?.rol !== 'Administrador'">
             <div class="p-4 border-b flex justify-between items-center bg-gray-50">
               <h3 class="font-bold text-navy-800">Permisos de Acceso a Módulos</h3>
-              <button class="btn-primary text-xs py-1 px-3" @click="guardarPermisosUsuario(usuarioPermisosActivo.id)"
-                :disabled="!usuarioPermisosActivo?.activo"
-                :class="!usuarioPermisosActivo?.activo ? 'opacity-50 cursor-not-allowed' : ''">Guardar cambios</button>
+              <div class="flex gap-2">
+                <button class="btn-outline text-xs py-1 px-3" @click="restaurarPermisosPorDefecto()"
+                  :disabled="!usuarioPermisosActivo?.activo"
+                  :class="!usuarioPermisosActivo?.activo ? 'opacity-50 cursor-not-allowed' : ''">Default</button>
+                <button class="btn-primary text-xs py-1 px-3" @click="guardarPermisosUsuario(usuarioPermisosActivo.id)"
+                  :disabled="!usuarioPermisosActivo?.activo"
+                  :class="!usuarioPermisosActivo?.activo ? 'opacity-50 cursor-not-allowed' : ''">Guardar cambios</button>
+              </div>
             </div>
             <div class="p-5 flex-1">
               <div x-show="!usuarioPermisosActivo?.activo"
@@ -2059,10 +2242,10 @@
               <div class="text-xs text-gray-500">Pagos registrados</div>
               <div class="text-2xl font-bold text-emerald-700" x-text="reporteCorte?.cantidadPagos || 0"></div>
             </div>
-            <div class="bg-amber-50 p-4 rounded-xl text-center">
-              <div class="text-xs text-gray-500">Efectivo</div>
-              <div class="text-2xl font-bold text-amber-700"
-                x-text="'$' + (reporteCorte?.resumen?.porMetodo?.efectivo || 0).toLocaleString('es-MX')"></div>
+            <div class="bg-indigo-50 p-4 rounded-xl text-center">
+              <div class="text-xs text-gray-500">Transferencia</div>
+              <div class="text-2xl font-bold text-indigo-700"
+                x-text="'$' + (reporteCorte?.resumen?.porMetodo?.transferencia || 0).toLocaleString('es-MX')"></div>
             </div>
           </div>
           <table class="w-full text-sm">
@@ -2249,9 +2432,19 @@
             <h3 class="font-semibold text-gray-800 mb-3">Montos Configurables</h3>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <label class="text-xs font-medium text-gray-600">Colegiatura Mensual</label>
+                <label class="text-xs font-medium text-gray-600">Colegiatura Anual Total</label>
                 <input type="number" class="input-modern mt-1" x-model="configTarifas.conceptos.colegiatura"
                   :disabled="!configTarifas.cicloActivo">
+                <div x-show="configTarifas.conceptos.colegiatura > 0" class="mt-2 text-[10px] text-gray-500 bg-gray-50 p-2 rounded-lg border border-gray-100">
+                  <div class="flex justify-between mb-1">
+                    <span>A 10 meses:</span> 
+                    <span class="font-semibold text-gray-700" x-text="'$' + (Number(configTarifas.conceptos.colegiatura) / 10).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})"></span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span>A 12 meses:</span> 
+                    <span class="font-semibold text-gray-700" x-text="'$' + (Number(configTarifas.conceptos.colegiatura) / 12).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})"></span>
+                  </div>
+                </div>
               </div>
               <div>
                 <label class="text-xs font-medium text-gray-600">Inscripción Anual</label>
@@ -2299,16 +2492,13 @@
             <h2 class="text-xl font-bold text-navy-800">Grupos y materias</h2>
             <p class="text-sm text-gray-500 mt-1">Gestiona los grupos, asigna docentes titulares y administra las materias.</p>
           </div>
-          <button x-show="tienePermiso('grupos', 'escritura')" class="btn-primary" @click="abrirModalNuevoGrupo()">
-            <i data-lucide="plus" class="w-4 h-4 mr-2 inline"></i> Nuevo Grupo
-          </button>
         </div>
 
-        <!-- Barra de Filtros Globales -->
-        <div class="card-clean p-4 mb-4 flex gap-4 items-end bg-gray-50 border border-gray-200">
-          <div class="w-1/3">
-            <label class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1 block">Nivel Educativo</label>
-            <select class="input-field" x-model="filtroGruposNivel" @change="filtroGruposGrado=''; filtroGruposGrupo=''">
+        <!-- Barra de Filtros Globales (Estilo Calificaciones) -->
+        <div class="grid md:grid-cols-3 gap-4 mb-5">
+          <div>
+            <label class="text-xs font-medium text-gray-600">Nivel Escolar</label>
+            <select class="input-modern" x-model="filtroGruposNivel" @change="$nextTick(() => { filtroGruposGrado=''; filtroGruposGrupo=''; })">
               <option value="">Todos los niveles</option>
               <option value="PREESCOLAR">Preescolar</option>
               <option value="PRIMARIA">Primaria</option>
@@ -2316,23 +2506,39 @@
               <option value="BACHILLERATO">Bachillerato</option>
             </select>
           </div>
-          <div class="w-1/3">
-            <label class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1 block">Grado</label>
-            <select class="input-field" x-model="filtroGruposGrado" @change="filtroGruposGrupo=''">
+          <div>
+            <label class="text-xs font-medium text-gray-600">Grado</label>
+            <select class="input-modern" x-model="filtroGruposGrado" @change="$nextTick(() => { filtroGruposGrupo=''; })">
               <option value="">Todos los grados</option>
-              <template x-for="g in gradosDisponiblesFiltro()" :key="g">
+              <template x-for="g in gradosDisponiblesFiltroGrupos" :key="g">
                 <option :value="g" x-text="g + '° Grado'"></option>
               </template>
             </select>
           </div>
-          <div class="w-1/3">
-            <label class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1 block">Grupo / Sección</label>
-            <select class="input-field" x-model="filtroGruposGrupo">
+          <div>
+            <label class="text-xs font-medium text-gray-600">Grupo</label>
+            <select class="input-modern" x-model="filtroGruposGrupo">
               <option value="">Todas las secciones</option>
-              <template x-for="s in seccionesDisponiblesFiltro()" :key="s">
+              <template x-for="s in seccionesDisponiblesFiltroGrupos" :key="s">
                 <option :value="s" x-text="'Sección ' + s"></option>
               </template>
             </select>
+          </div>
+          <div x-show="rol === 'ADMIN' || rol === 'GESTOR'">
+            <label class="text-xs font-medium text-gray-600">Docente Titular</label>
+            <div class="autocomplete-wrapper relative" @click.outside="mostrarDropdownDocenteFiltro=false">
+              <input type="text" class="input-modern" placeholder="Buscar por nombre..." 
+                     x-model="busquedaDocenteFiltro" 
+                     @input="buscarDocenteFiltroInput()"
+                     @focus="buscarDocenteFiltroInput()" autocomplete="off">
+              <div class="autocomplete-list" x-show="mostrarDropdownDocenteFiltro && resultadosDocenteFiltro.length > 0">
+                <template x-for="docente in resultadosDocenteFiltro" :key="docente.id">
+                  <div class="autocomplete-item" @click="seleccionarDocenteFiltro(docente)">
+                    <div class="font-medium text-sm text-navy-700" x-text="docente.nombre"></div>
+                  </div>
+                </template>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2352,8 +2558,23 @@
 
         <!-- Pestaña 1: GRUPOS -->
         <div x-show="tabGruposMaterias === 'grupos'" class="space-y-3">
+          
+          <div class="flex justify-between items-center mb-4">
+            <div class="text-sm font-medium text-gray-600" x-show="rol === 'ADMIN' || rol === 'GESTOR'">
+              <span class="bg-navy-50 text-navy-700 px-3 py-1.5 rounded-full">
+                Grupos encontrados: <span class="font-bold" x-text="gruposFiltradosList().length"></span>
+              </span>
+            </div>
+            <div x-show="tienePermiso('grupos', 'escritura')">
+              <button class="btn-primary" @click="abrirModalNuevoGrupo()">
+                <i data-lucide="plus" class="w-4 h-4 mr-2 inline"></i> Nuevo Grupo
+              </button>
+            </div>
+          </div>
           <template x-for="grupo in gruposFiltradosList()" :key="grupo.id">
-            <div class="card-clean overflow-hidden p-4 flex justify-between items-center">
+            <div class="card-clean overflow-hidden p-4 flex justify-between items-center" 
+                 x-show="rol !== 'MAESTRA' || (saeApi && saeApi.getUsuario()?.nombre === grupo.titular)"
+                 x-init="setTimeout(() => { if(window.lucide) window.lucide.createIcons(); }, 50)">
               <div class="flex items-center gap-4">
                 <div class="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
                   <span class="font-bold text-blue-700" x-text="grupo.grado + '° ' + grupo.seccion"></span>
@@ -2412,6 +2633,17 @@
           <div class="card-clean overflow-hidden">
             <div class="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
               <h3 class="font-bold text-gray-700">Materias Asignadas (<span x-text="materiasFiltradasList().length"></span>)</h3>
+              
+              <!-- Filtro de Tipo de Materia -->
+              <div class="flex items-center gap-2">
+                <label class="text-xs font-medium text-gray-600">Tipo:</label>
+                <select class="input-modern py-1 text-sm h-8 w-40" x-model="filtroMateriasTipo" @change="$nextTick(() => { if(window.lucide) window.lucide.createIcons(); })">
+                  <option value="">Todas</option>
+                  <option value="curricular">Curriculares</option>
+                  <option value="club">Extracurriculares / Club</option>
+                  <option value="taller">Talleres</option>
+                </select>
+              </div>
             </div>
             <table class="w-full text-sm text-left">
               <thead class="bg-white border-b border-gray-200">
@@ -2426,7 +2658,7 @@
               </thead>
               <tbody class="divide-y divide-gray-100">
                 <template x-for="(m, idx) in materiasFiltradasList()" :key="idx">
-                  <tr class="hover:bg-gray-50 transition-colors">
+                  <tr class="hover:bg-gray-50 transition-colors" x-init="setTimeout(() => { if(window.lucide) window.lucide.createIcons(); }, 50)">
                     <td class="p-4 font-bold text-navy-700" x-text="m.materia || m.nombre"></td>
                     <td class="p-4">
                       <div class="flex items-center gap-2">
@@ -2439,9 +2671,15 @@
                     </td>
                     <td class="p-4 text-gray-500" x-text="m.horario || '-'"></td>
                     <td class="p-4 text-gray-500" x-text="m.aula || '-'"></td>
-                    <td class="p-4 text-center">
+                    <td class="p-4 text-center flex justify-center gap-2">
+                      <button class="btn-icon text-indigo-600 hover:bg-indigo-50 rounded" @click="abrirModalAsignarAlumnos(m)" x-show="(m.tipo === 'taller' || m.tipo === 'club') && tienePermiso('grupos', 'escritura')" title="Asignar Alumnos">
+                        <i data-lucide="users" class="w-4 h-4"></i>
+                      </button>
                       <button class="btn-icon text-blue-600 hover:bg-blue-50 rounded" @click="abrirModalEditarMateria(m)" x-show="tienePermiso('grupos', 'escritura')">
                         <i data-lucide="edit" class="w-4 h-4"></i>
+                      </button>
+                      <button class="btn-icon text-red-600 hover:bg-red-50 rounded" @click="eliminarMateriaCRUD(m)" x-show="tienePermiso('grupos', 'escritura')">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
                       </button>
                     </td>
                   </tr>
@@ -2473,16 +2711,28 @@
               <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <!-- Nombre Materia -->
                 <div class="md:col-span-2">
-                  <label class="text-xs font-semibold text-gray-600 uppercase mb-1 block">Nombre de la Materia *</label>
-                  <input type="text" class="input-field" placeholder="Ej. Matemáticas" x-model="nuevaMateria.nombre">
+                  <label class="text-xs font-medium text-gray-600 block mb-1">Nombre de la Materia *</label>
+                  <input type="text" class="input-modern" placeholder="Ej. Matemáticas" x-model="nuevaMateria.nombre">
                 </div>
 
-                <!-- Nivel, Grado, Grupo (Solo habilitados al crear) -->
-                <div class="md:col-span-2 grid grid-cols-3 gap-4" x-show="materiaEditandoIndex === null">
+                <!-- Tipo de Materia -->
+                <div class="md:col-span-2">
+                  <label class="text-xs font-medium text-gray-600 block mb-1">Tipo de Materia *</label>
+                  <div class="flex flex-wrap gap-2">
+                    <template x-for="t in [{label: 'Curricular', value: 'curricular'}, {label: 'Extracurricular', value: 'club'}, {label: 'Taller', value: 'taller'}]" :key="t.value">
+                      <button type="button" class="px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors"
+                        :class="nuevaMateria.tipo === t.value ? 'bg-navy-600 border-navy-600 text-white' : 'border-gray-200 text-gray-600 hover:border-navy-400 hover:text-navy-600'"
+                        @click="nuevaMateria.tipo = t.value" x-text="t.label"></button>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- Nivel, Grado, Grupo -->
+                <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label class="text-xs font-semibold text-gray-600 uppercase mb-1 block">Nivel *</label>
-                    <select class="input-field" x-model="nuevaMateria.nivel" @change="nuevaMateria.grado=''; nuevaMateria.grupo=''">
-                      <option value="">Selecciona nivel...</option>
+                    <label class="text-xs font-medium text-gray-600 block mb-1">Nivel *</label>
+                    <select class="input-modern" x-model="nuevaMateria.nivel" @change="nuevaMateria.grado=''; nuevaMateria.grupo=''">
+                      <option value="">- Nivel -</option>
                       <option value="PREESCOLAR">Preescolar</option>
                       <option value="PRIMARIA">Primaria</option>
                       <option value="SECUNDARIA">Secundaria</option>
@@ -2490,19 +2740,19 @@
                     </select>
                   </div>
                   <div>
-                    <label class="text-xs font-semibold text-gray-600 uppercase mb-1 block">Grado *</label>
-                    <select class="input-field" x-model="nuevaMateria.grado" @change="nuevaMateria.grupo=''">
-                      <option value="">Selecciona grado...</option>
-                      <template x-for="g in gradosDisponiblesFiltro(nuevaMateria.nivel)" :key="g">
+                    <label class="text-xs font-medium text-gray-600 block mb-1">Grado *</label>
+                    <select class="input-modern" x-model="nuevaMateria.grado" @change="nuevaMateria.grupo=''">
+                      <option value="">- Grado -</option>
+                      <template x-for="g in gradosDisponiblesPorNivel(nuevaMateria.nivel)" :key="g">
                         <option :value="g" x-text="g + '°'"></option>
                       </template>
                     </select>
                   </div>
-                  <div>
-                    <label class="text-xs font-semibold text-gray-600 uppercase mb-1 block">Sección *</label>
-                    <select class="input-field" x-model="nuevaMateria.grupo">
-                      <option value="">Selecciona sección...</option>
-                      <template x-for="s in seccionesDisponiblesFiltro()" :key="s">
+                  <div x-show="nuevaMateria.tipo === 'curricular'">
+                    <label class="text-xs font-medium text-gray-600 block mb-1">Sección *</label>
+                    <select class="input-modern" x-model="nuevaMateria.grupo">
+                      <option value="">- Sección -</option>
+                      <template x-for="s in seccionesDisponiblesPorNivelYGrado(nuevaMateria.nivel, nuevaMateria.grado)" :key="s">
                         <option :value="s" x-text="s"></option>
                       </template>
                     </select>
@@ -2511,10 +2761,10 @@
 
                 <!-- Autocompletado de Docente -->
                 <div class="md:col-span-2">
-                  <label class="text-xs font-semibold text-gray-600 uppercase mb-1 block">Docente Asignado *</label>
+                  <label class="text-xs font-medium text-gray-600 block mb-1">Docente Asignado *</label>
                   <div class="relative" @click.away="mostrarDropdownDocenteMateria = false">
                     <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-3"></i>
-                    <input type="text" class="input-field pl-9" placeholder="Buscar maestro..." x-model="busquedaDocenteMateria" @input="buscarDocenteMateriaInput()" @focus="buscarDocenteMateriaInput()">
+                    <input type="text" class="input-modern pl-9" placeholder="Buscar maestro..." x-model="busquedaDocenteMateria" @input="buscarDocenteMateriaInput()" @focus="buscarDocenteMateriaInput()">
                     <div x-show="mostrarDropdownDocenteMateria && resultadosDocenteMateria.length > 0" class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
                       <template x-for="r in resultadosDocenteMateria" :key="r.id">
                         <div class="px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer" @click="busquedaDocenteMateria = r.nombre; nuevaMateria.docente = r.nombre; mostrarDropdownDocenteMateria = false" x-text="r.nombre"></div>
@@ -2525,33 +2775,32 @@
 
                 <!-- Horario: Días de la Semana -->
                 <div class="md:col-span-2">
-                  <label class="text-xs font-semibold text-gray-600 uppercase mb-2 block">Días de impartición</label>
+                  <label class="text-xs font-medium text-gray-600 block mb-1">Días de Impartición</label>
                   <div class="flex flex-wrap gap-2">
-                    <template x-for="dia in diasSemana" :key="dia">
-                      <label class="inline-flex items-center p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors" :class="nuevaMateria.dias.includes(dia) ? 'bg-blue-50 border-blue-200 text-blue-700' : 'text-gray-600'">
-                        <input type="checkbox" :value="dia" x-model="nuevaMateria.dias" class="hidden">
-                        <span class="text-sm font-medium select-none" x-text="dia"></span>
-                      </label>
+                    <template x-for="dia in ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab']" :key="dia">
+                      <button type="button" class="px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors"
+                        :class="nuevaMateria.dias.includes(dia) ? 'bg-navy-600 border-navy-600 text-white' : 'border-gray-200 text-gray-600 hover:border-navy-400 hover:text-navy-600'"
+                        @click="toggleDiaMateria(dia)" x-text="dia"></button>
                     </template>
                   </div>
                 </div>
 
                 <!-- Horario: Horas -->
                 <div>
-                  <label class="text-xs font-semibold text-gray-600 uppercase mb-1 block">Hora de Inicio</label>
-                  <input type="time" class="input-field" x-model="nuevaMateria.horaInicio">
+                  <label class="text-xs font-medium text-gray-600 block mb-1">Hora de Inicio</label>
+                  <input type="time" class="input-modern" x-model="nuevaMateria.horaInicio">
                 </div>
                 <div>
-                  <label class="text-xs font-semibold text-gray-600 uppercase mb-1 block">Hora de Fin</label>
-                  <input type="time" class="input-field" x-model="nuevaMateria.horaFin">
+                  <label class="text-xs font-medium text-gray-600 block mb-1">Hora de Fin</label>
+                  <input type="time" class="input-modern" x-model="nuevaMateria.horaFin">
                 </div>
 
                 <!-- Aula -->
                 <div class="md:col-span-2">
-                  <label class="text-xs font-semibold text-gray-600 uppercase mb-1 block">Aula Asignada</label>
+                  <label class="text-xs font-medium text-gray-600 block mb-1">Aula Asignada</label>
                   <div class="relative">
                     <i data-lucide="map-pin" class="w-4 h-4 text-gray-400 absolute left-3 top-3"></i>
-                    <input type="text" class="input-field pl-9" placeholder="Ej. Laboratorio 2, Salón 1A..." x-model="nuevaMateria.aula">
+                    <input type="text" class="input-modern pl-9" placeholder="Ej. Aula 101, Lab de Computo..." x-model="nuevaMateria.aula">
                   </div>
                 </div>
 
@@ -2561,6 +2810,72 @@
             <div class="p-5 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
               <button class="btn-outline" @click="modalMateria = false">Cancelar</button>
               <button class="btn-primary" @click="guardarMateriaModal()">Guardar Materia</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal de Asignación de Alumnos -->
+        <div x-show="modalAsignarAlumnos" class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm" x-cloak>
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]" @click.away="modalAsignarAlumnos = false">
+            <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <div>
+                <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  Inscribir Alumnos
+                  <span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs font-semibold" x-text="alumnosAsignacionFiltrados().length + ' alumnos'"></span>
+                </h3>
+                <p class="text-sm text-gray-500" x-text="'Materia: ' + (materiaActualAsignacion ? (materiaActualAsignacion.materia || materiaActualAsignacion.nombre) : '')"></p>
+              </div>
+              <button @click="modalAsignarAlumnos = false" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <div class="p-5 flex-1 overflow-y-auto">
+              <div class="mb-4">
+                <div class="relative">
+                  <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-3"></i>
+                  <input type="text" x-model="busquedaAsignacion" class="input-modern pl-9" placeholder="Buscar alumno por nombre o matrícula...">
+                </div>
+              </div>
+
+              <div class="border rounded-xl overflow-hidden bg-white">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="bg-gray-50/80 border-b border-gray-100 text-sm text-gray-500">
+                      <th class="p-3 w-10 text-center">Inscrito</th>
+                      <th class="p-3">Matrícula</th>
+                      <th class="p-3">Nombre del Alumno</th>
+                      <th class="p-3">Grado</th>
+                      <th class="p-3">Grupo</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-50">
+                    <template x-for="al in alumnosAsignacionFiltrados()" :key="al.id || al.alumnoId">
+                      <tr class="hover:bg-gray-50/50 cursor-pointer transition-colors" @click="toggleSeleccionAlumnoAsignacion(al.id || al.alumnoId)">
+                        <td class="p-3 text-center">
+                          <input type="checkbox" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                            :checked="alumnosAsignacionSeleccionados.includes(Number(al.id || al.alumnoId))"
+                            @click.stop="toggleSeleccionAlumnoAsignacion(al.id || al.alumnoId)">
+                        </td>
+                        <td class="p-3 text-sm text-gray-500 font-mono" x-text="al.matricula"></td>
+                        <td class="p-3 text-sm font-medium text-gray-800" x-text="al.nombre || al.nombreCompleto"></td>
+                        <td class="p-3 text-sm text-gray-600" x-text="al.grado ? al.grado + '°' : '-'"></td>
+                        <td class="p-3 text-sm text-gray-600" x-text="al.seccion || '-'"></td>
+                      </tr>
+                    </template>
+                    <tr x-show="alumnosAsignacionFiltrados().length === 0">
+                      <td colspan="5" class="p-8 text-center text-gray-400">
+                        No se encontraron alumnos disponibles.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            <div class="p-5 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 mt-auto">
+              <button class="btn-outline" @click="modalAsignarAlumnos = false">Cancelar</button>
+              <button class="btn-primary flex items-center gap-2" @click="guardarAsignacionAlumnos()">
+                <i data-lucide="save" class="w-4 h-4"></i> Guardar Inscripciones
+              </button>
             </div>
           </div>
         </div>
@@ -2755,9 +3070,19 @@
           </div>
         </div>
 
-        <div>
-          <label class="text-xs font-medium text-gray-600">Fecha</label>
-          <input type="date" class="input-modern" x-model="nuevoPago.fecha">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="text-xs font-medium text-gray-600">Fecha</label>
+            <input type="date" class="input-modern" x-model="nuevoPago.fecha">
+          </div>
+          <div>
+            <label class="text-xs font-medium text-gray-600">Método de pago</label>
+            <select class="input-modern" x-model="nuevoPago.metodoPago">
+              <option value="transferencia">Transferencia</option>
+              <option value="tarjeta_debito">Tarjeta de débito</option>
+              <option value="tarjeta_credito">Tarjeta de crédito</option>
+            </select>
+          </div>
         </div>
 
         <div>
@@ -3123,27 +3448,80 @@
           <label class="text-xs font-medium text-gray-600">Correo Electrónico</label>
           <input type="email" class="input-modern" x-model="nuevoTutorData.correoElectronico" placeholder="Opcional">
         </div>
-        <div class="col-span-2 mt-2">
-          <label class="font-bold text-navy-800 text-sm">Datos de Facturación (Opcional)</label>
-        </div>
-        <div>
-          <label class="text-xs font-medium text-gray-600">RFC</label>
-          <input class="input-modern uppercase" maxlength="13" x-model="nuevoTutorData.rfc">
-        </div>
-        <div>
-          <label class="text-xs font-medium text-gray-600">Régimen Fiscal</label>
-          <input class="input-modern" x-model="nuevoTutorData.regimenFiscal">
-        </div>
-        <div class="col-span-2">
-          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-            <input type="checkbox" x-model="nuevoTutorData.requiereFactura" class="rounded border-gray-300"> Requiere
-            factura
+        <div class="col-span-2 mt-2 border-t pt-4">
+          <label class="flex items-center gap-2 text-sm text-navy-800 font-bold cursor-pointer">
+            <input type="checkbox" x-model="nuevoTutorData.requiereFactura" class="rounded border-gray-300"> 
+            Requiere factura
           </label>
         </div>
+
+        <template x-if="nuevoTutorData.requiereFactura">
+          <div class="col-span-2 grid grid-cols-2 gap-4 mt-2 p-4 bg-gray-50 rounded-lg border">
+            <div>
+              <label class="text-xs font-medium text-gray-600">RFC *</label>
+              <input class="input-modern uppercase" maxlength="13" x-model="nuevoTutorData.rfc" required>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-gray-600">Régimen Fiscal *</label>
+              <input class="input-modern" x-model="nuevoTutorData.regimenFiscal" required>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-gray-600">Uso de CFDI *</label>
+              <input class="input-modern" x-model="nuevoTutorData.usoCfdi" required>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-gray-600">Código Postal Fiscal *</label>
+              <input class="input-modern" x-model="nuevoTutorData.codigoPostal" required>
+            </div>
+            <div class="col-span-2">
+              <label class="text-xs font-medium text-gray-600">Dirección Fiscal *</label>
+              <input class="input-modern" x-model="nuevoTutorData.direccionFiscal" required>
+            </div>
+            <div class="col-span-2">
+              <label class="text-xs font-medium text-gray-600">Correo Electrónico de CFDI *</label>
+              <input type="email" class="input-modern" x-model="nuevoTutorData.correoFacturacion" required>
+            </div>
+          </div>
+        </template>
       </div>
       <div class="flex justify-end gap-2 mt-6 border-t pt-4">
         <button class="btn-outline" @click="modalNuevoTutor=false">Cancelar</button>
         <button class="btn-primary" @click="guardarNuevoTutor()">Guardar Tutor</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Vincular Alumno a Tutor -->
+  <div x-show="modalVincularAlumno" x-cloak class="modal-mask" @click.self="modalVincularAlumno=false">
+    <div class="modal-container p-6">
+      <div class="font-bold text-lg text-navy-800 border-b pb-2 mb-4">Vincular Alumno a <span
+          x-text="tutorActualFicha?.nombreCompleto"></span></div>
+
+      <div>
+        <label class="text-sm font-medium text-gray-600">Buscar Alumno Existente</label>
+        <input type="text" class="input-modern mt-1" placeholder="Buscar por nombre o matrícula (Mínimo 3 letras)..."
+          x-model="busquedaVincularAlumno" @input="buscarAlumnoParaVincular()">
+      </div>
+
+      <div class="mt-4 space-y-2">
+        <template x-for="a in alumnosParaVincular" :key="a.id">
+          <div class="card-clean p-3 flex justify-between items-center hover:bg-gray-50 cursor-pointer"
+            @click="confirmarVinculacionAlumno(a)">
+            <div>
+              <div class="font-bold text-navy-700" x-text="a.nombre"></div>
+              <div class="text-xs text-gray-500" x-text="a.matricula"></div>
+            </div>
+            <button class="btn-primary text-xs py-1">Vincular</button>
+          </div>
+        </template>
+        <div x-show="busquedaVincularAlumno.length >= 3 && alumnosParaVincular.length === 0"
+          class="text-sm text-center text-gray-500 py-4">
+          No se encontró ningún alumno.
+        </div>
+      </div>
+
+      <div class="flex justify-end mt-6 border-t pt-4">
+        <button class="btn-outline" @click="modalVincularAlumno=false">Cerrar</button>
       </div>
     </div>
   </div>
@@ -3245,6 +3623,9 @@
         verInactivos: false,
         cargando: false,
 
+        notificaciones: [],
+        notificacionesNoLeidas: 0,
+
         // ── Rol del usuario ────────────────────────────────────────────────────
         rol: window.saeApi.getUsuario()?.rol || 'MAESTRA',
         permisos: window.saeApi.getUsuario()?.permisos || {},
@@ -3326,6 +3707,9 @@
         nuevoTutorData: { nombreCompleto: '', telefono: '', correoElectronico: '', rfc: '', regimenFiscal: '', correoFacturacion: '', requiereFactura: false },
 
         modalVincularTutor: false,
+        modalVincularAlumno: false,
+        busquedaVincularAlumno: '',
+        alumnosParaVincular: [],
         busquedaVincularTutor: '',
         tutoresParaVincular: [],
 
@@ -3350,12 +3734,28 @@
         nuevoAlumnoData: { nombre: '', matricula: '', curp: '', nivel: '', grado: '', grupoId: null, padre: '', telefono: '', tutorId: null },
         erroresNuevoAlumno: {},
 
+        // ── Historial Académico Completo (RF-64) ────────────────────────────────
+        busquedaHistorialQuery: '',
+        filtroHistorialNivel: '',
+        filtroHistorialGrado: '',
+        filtroHistorialGrupo: '',
+        resultadosBusquedaHistorial: [],
+        alumnoHistorialSeleccionado: null,
+        historialAcademicoCompleto: [],
+
         // ── Grupos y Materias (Reestructuración) ────────────────────────────────
         tabGruposMaterias: 'grupos',
         filtroGruposNivel: '',
         filtroGruposGrado: '',
         filtroGruposGrupo: '',
+        filtroMateriasTipo: '',
+        filtroGruposDocente: '',
         modalMateria: false,
+        modalAsignarAlumnos: false,
+        materiaActualAsignacion: null,
+        alumnosAsignacionDisponibles: [],
+        alumnosAsignacionSeleccionados: [],
+        busquedaAsignacion: '',
         materiaEditandoIndex: null,
         materiaEditandoGrupoId: null,
         diasSemana: ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'],
@@ -3363,6 +3763,27 @@
         busquedaDocenteMateria: '',
         resultadosDocenteMateria: [],
         mostrarDropdownDocenteMateria: false,
+
+        busquedaDocenteFiltro: '',
+        resultadosDocenteFiltro: [],
+        mostrarDropdownDocenteFiltro: false,
+        
+        async buscarDocenteFiltroInput() {
+          if (this.busquedaDocenteFiltro.length < 2) {
+            this.resultadosDocenteFiltro = [];
+            this.filtroGruposDocente = this.busquedaDocenteFiltro;
+            return;
+          }
+          this.resultadosDocenteFiltro = await this.buscarDocenteAutocomplete(this.busquedaDocenteFiltro);
+          this.mostrarDropdownDocenteFiltro = true;
+          this.filtroGruposDocente = this.busquedaDocenteFiltro;
+        },
+
+        seleccionarDocenteFiltro(docente) {
+          this.busquedaDocenteFiltro = docente.nombre;
+          this.filtroGruposDocente = docente.nombre;
+          this.mostrarDropdownDocenteFiltro = false;
+        },
         
         async buscarDocenteMateriaInput() {
           if (this.busquedaDocenteMateria.length < 2) {
@@ -3378,27 +3799,43 @@
             const mNivel = !this.filtroGruposNivel || g.nivel.toLowerCase() === this.filtroGruposNivel.toLowerCase();
             const mGrado = !this.filtroGruposGrado || g.grado.toString() === this.filtroGruposGrado.toString();
             const mGrupo = !this.filtroGruposGrupo || g.seccion.toLowerCase() === this.filtroGruposGrupo.toLowerCase();
-            return mNivel && mGrado && mGrupo;
+            const qDocente = this.filtroGruposDocente.toLowerCase();
+            const mDocente = !qDocente || (g.titular && g.titular.toLowerCase().includes(qDocente));
+            return mNivel && mGrado && mGrupo && mDocente;
           });
         },
         materiasFiltradasList() {
           const list = [];
-          this.gruposFiltradosList().forEach(g => {
-            if(g.materias) {
+          const qDocente = this.filtroGruposDocente.toLowerCase();
+          
+          this.gruposData.forEach(g => {
+            const mNivel = !this.filtroGruposNivel || g.nivel.toLowerCase() === this.filtroGruposNivel.toLowerCase();
+            const mGrado = !this.filtroGruposGrado || g.grado.toString() === this.filtroGruposGrado.toString();
+            const mGrupo = !this.filtroGruposGrupo || g.seccion.toLowerCase() === this.filtroGruposGrupo.toLowerCase();
+            
+            if (mNivel && mGrado && mGrupo && g.materias) {
               g.materias.forEach((m, index) => {
-                list.push({ ...m, grupoId: g.id, nivel: g.nivel, grado: g.grado, seccion: g.seccion, originalIndex: index });
+                const matTipo = m.tipo || 'curricular';
+                if (!this.filtroMateriasTipo || matTipo === this.filtroMateriasTipo) {
+                  if (qDocente) {
+                    if (!m.docente || !m.docente.toLowerCase().includes(qDocente)) return;
+                  }
+                  list.push({ ...m, grupoId: g.id, nivel: g.nivel, grado: g.grado, seccion: g.seccion, originalIndex: index });
+                }
               });
             }
           });
           return list;
         },
-        gradosDisponiblesFiltro(nivelSelect) {
-          const n = (nivelSelect || this.filtroGruposNivel || '').toUpperCase();
-          if (n === 'PREESCOLAR' || n === 'SECUNDARIA') return ['1', '2', '3'];
+        gradosDisponiblesPorNivel(nivelSelect) {
+          const n = (nivelSelect || '').toUpperCase();
+          if (n === 'PREESCOLAR') return ['1', '2', '3'];
           return ['1', '2', '3', '4', '5', '6'];
         },
-        seccionesDisponiblesFiltro() {
-          return ['A', 'B', 'C', 'D'];
+        seccionesDisponiblesPorNivelYGrado(nivelStr, gradoStr) {
+          if (!nivelStr || !gradoStr) return [];
+          const n = nivelStr.toUpperCase();
+          return [...new Set(this.gruposData.filter(g => g.nivel && g.nivel.toUpperCase() === n && String(g.grado) === String(gradoStr)).map(g => g.seccion))].filter(Boolean);
         },
         async buscarDocenteAutocomplete(query) {
           if (!query || query.trim().length < 2) return [];
@@ -3431,7 +3868,7 @@
         abrirModalNuevaMateria() {
           this.materiaEditandoIndex = null;
           this.materiaEditandoGrupoId = null;
-          this.nuevaMateria = { nombre: '', docente: '', horario: '', aula: '', grado: '', grupo: '', nivel: '', dias: [], horaInicio: '', horaFin: '' };
+          this.nuevaMateria = { nombre: '', docente: '', horario: '', aula: '', grado: '', grupo: '', nivel: '', dias: [], horaInicio: '', horaFin: '', tipo: 'curricular' };
           this.busquedaDocenteMateria = '';
           this.resultadosDocenteMateria = [];
           this.modalMateria = true;
@@ -3466,16 +3903,99 @@
             nivel: materia.nivel,
             dias: diasParsed,
             horaInicio: hInicio,
-            horaFin: hFin
+            horaFin: hFin,
+            tipo: materia.tipo || 'curricular'
           };
           this.busquedaDocenteMateria = materia.docente || '';
           this.resultadosDocenteMateria = [];
           this.modalMateria = true;
           this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
         },
+        toggleDiaMateria(dia) {
+          if (this.nuevaMateria.dias.includes(dia)) {
+            this.nuevaMateria.dias = this.nuevaMateria.dias.filter(d => d !== dia);
+          } else {
+            this.nuevaMateria.dias.push(dia);
+          }
+        },
+        async abrirModalAsignarAlumnos(materia) {
+          this.materiaActualAsignacion = materia;
+          this.busquedaAsignacion = '';
+          this.alumnosAsignacionDisponibles = [];
+          this.alumnosAsignacionSeleccionados = [];
+          this.modalAsignarAlumnos = true;
+          this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
+          
+          const params = { estado: 'Activo', nivel: materia.nivel, grado: materia.grado };
+          const resAlumnos = await window.saeApi.alumnos.listar(params);
+          if (resAlumnos.ok) {
+            const arr = Array.isArray(resAlumnos.data) ? resAlumnos.data : (resAlumnos.data?.data || []);
+            this.alumnosAsignacionDisponibles = arr.map(window.saeApi.mapAlumno);
+          }
+          
+          const resAsignados = await window.saeApi.fetchApi(`/grupos/materias/${materia.id}/alumnos`);
+          if (resAsignados.ok && resAsignados.data) {
+            this.alumnosAsignacionSeleccionados = resAsignados.data.map(a => Number(a.id || a.alumnoId));
+          }
+        },
+        toggleSeleccionAlumnoAsignacion(id) {
+          const numId = Number(id);
+          const index = this.alumnosAsignacionSeleccionados.indexOf(numId);
+          if (index > -1) {
+            this.alumnosAsignacionSeleccionados.splice(index, 1);
+          } else {
+            this.alumnosAsignacionSeleccionados.push(numId);
+          }
+        },
+        async guardarAsignacionAlumnos() {
+          const res = await window.saeApi.fetchApi(`/grupos/materias/${this.materiaActualAsignacion.id}/alumnos`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ alumnosIds: this.alumnosAsignacionSeleccionados })
+          });
+          if (res.ok) {
+            window.saeApi.toast('exito', 'Alumnos asignados correctamente.');
+            this.modalAsignarAlumnos = false;
+          } else {
+            window.saeApi.toast('error', res.message || 'Error al asignar alumnos.');
+          }
+        },
+        alumnosAsignacionFiltrados() {
+          const q = this.busquedaAsignacion.toLowerCase();
+          return this.alumnosAsignacionDisponibles.filter(a => 
+            !q || (a.nombre && a.nombre.toLowerCase().includes(q)) || (a.nombreCompleto && a.nombreCompleto.toLowerCase().includes(q)) || (a.matricula && a.matricula.toLowerCase().includes(q))
+          );
+        },
+        eliminarMateriaCRUD: async function(materia) {
+          const confirmar = confirm(`¿Estás seguro de que deseas eliminar la materia ${materia.materia || materia.nombre} asignada al docente ${materia.docente || 'sin asignar'}?`);
+          if (!confirmar) return;
+
+          const grupoTarget = this.gruposData.find(g => g.id === materia.grupoId);
+          if (!grupoTarget) return window.saeApi.toast('error', 'No se encontró el grupo al que pertenece esta materia.');
+
+          // Filter out the materia by its originalIndex
+          const materiasActuales = grupoTarget.materias.map(m => ({
+            nombre: m.materia || m.nombre,
+            docente: m.docente,
+            horario: m.horario,
+            aula: m.aula,
+            tipo: m.tipo || 'curricular'
+          })).filter((_, index) => index !== materia.originalIndex);
+
+          const res = await window.saeApi.grupos.actualizar(grupoTarget.id, { materias: materiasActuales });
+          if (res.ok) {
+            window.saeApi.toast('exito', 'Materia eliminada correctamente.');
+            this._cargarGruposAPI();
+          } else {
+            window.saeApi.toast('error', res.message || 'Error al eliminar materia.');
+          }
+        },
         async guardarMateriaModal() {
-          const { nombre, docente, aula, grado, grupo, nivel, dias, horaInicio, horaFin } = this.nuevaMateria;
-          if (!nombre || !docente || !grado || !grupo || !nivel) return window.saeApi.toast('advertencia', 'Nombre, Docente, Nivel, Grado y Grupo son obligatorios.');
+          const { nombre, docente, aula, grado, grupo, nivel, dias, horaInicio, horaFin, tipo } = this.nuevaMateria;
+          const esCurricular = tipo === 'curricular';
+          
+          if (!nombre || !docente || !grado || !nivel) return window.saeApi.toast('advertencia', 'Nombre, Docente, Nivel y Grado son obligatorios.');
+          if (esCurricular && !grupo) return window.saeApi.toast('advertencia', 'La Sección es obligatoria para materias curriculares.');
           
           const docentes = await this.buscarDocenteAutocomplete(docente);
           const existe = docentes.find(d => d.nombre.toLowerCase() === docente.trim().toLowerCase());
@@ -3489,49 +4009,64 @@
           }
 
           let grupoTarget;
-          if (this.materiaEditandoGrupoId) {
-             grupoTarget = this.gruposData.find(g => g.id === this.materiaEditandoGrupoId);
-          } else {
+          if (esCurricular) {
              grupoTarget = this.gruposData.find(g => 
                g.grado.toString() === grado.toString() && 
                g.seccion.toLowerCase() === grupo.toLowerCase() &&
                g.nivel.toLowerCase() === nivel.toLowerCase()
              );
+          } else {
+             grupoTarget = this.gruposData.find(g => 
+               g.grado.toString() === grado.toString() && 
+               g.nivel.toLowerCase() === nivel.toLowerCase()
+             );
           }
 
-          if (!grupoTarget) return window.saeApi.toast('error', 'No se encontró un grupo en el sistema con ese Nivel, Grado y Sección.');
+          if (!grupoTarget) return window.saeApi.toast('error', 'No se encontró un grupo en el sistema con ese Nivel, Grado y/o Sección.');
 
-          const materiasActuales = grupoTarget.materias.map(m => ({
-            nombre: m.materia || m.nombre,
-            docente: m.docente,
-            horario: m.horario,
-            aula: m.aula
-          }));
+          const materiaObjeto = {
+            nombre: nombre,
+            docente: existe.nombre,
+            horario: horarioString || this.nuevaMateria.horario,
+            aula: aula,
+            tipo: tipo || 'curricular'
+          };
 
           if (this.materiaEditandoIndex !== null) {
-            materiasActuales[this.materiaEditandoIndex] = {
-              nombre: nombre,
-              docente: existe.nombre,
-              horario: horarioString || this.nuevaMateria.horario,
-              aula: aula
-            };
+            if (this.materiaEditandoGrupoId === grupoTarget.id) {
+              const materiasActuales = grupoTarget.materias.map(m => ({
+                nombre: m.materia || m.nombre, docente: m.docente, horario: m.horario, aula: m.aula, tipo: m.tipo || 'curricular'
+              }));
+              materiasActuales[this.materiaEditandoIndex] = materiaObjeto;
+              const res = await window.saeApi.grupos.actualizar(grupoTarget.id, { materias: materiasActuales });
+              if (!res.ok) return window.saeApi.toast('error', res.message || 'Error al actualizar materia.');
+            } else {
+              const grupoViejo = this.gruposData.find(g => g.id === this.materiaEditandoGrupoId);
+              if (grupoViejo) {
+                const materiasViejas = grupoViejo.materias.map(m => ({
+                  nombre: m.materia || m.nombre, docente: m.docente, horario: m.horario, aula: m.aula, tipo: m.tipo || 'curricular'
+                })).filter((_, i) => i !== this.materiaEditandoIndex);
+                await window.saeApi.grupos.actualizar(grupoViejo.id, { materias: materiasViejas });
+              }
+              const materiasNuevas = grupoTarget.materias ? grupoTarget.materias.map(m => ({
+                nombre: m.materia || m.nombre, docente: m.docente, horario: m.horario, aula: m.aula, tipo: m.tipo || 'curricular'
+              })) : [];
+              materiasNuevas.push(materiaObjeto);
+              const res2 = await window.saeApi.grupos.actualizar(grupoTarget.id, { materias: materiasNuevas });
+              if (!res2.ok) return window.saeApi.toast('error', res2.message || 'Error al mover materia.');
+            }
           } else {
-            materiasActuales.push({
-              nombre: nombre,
-              docente: existe.nombre,
-              horario: horarioString || this.nuevaMateria.horario,
-              aula: aula
-            });
+            const materiasActuales = grupoTarget.materias ? grupoTarget.materias.map(m => ({
+              nombre: m.materia || m.nombre, docente: m.docente, horario: m.horario, aula: m.aula, tipo: m.tipo || 'curricular'
+            })) : [];
+            materiasActuales.push(materiaObjeto);
+            const res = await window.saeApi.grupos.actualizar(grupoTarget.id, { materias: materiasActuales });
+            if (!res.ok) return window.saeApi.toast('error', res.message || 'Error al guardar materia.');
           }
 
-          const res = await window.saeApi.grupos.actualizar(grupoTarget.id, { materias: materiasActuales });
-          if (res.ok) {
-            window.saeApi.toast('exito', `Materia ${this.materiaEditandoIndex !== null ? 'actualizada' : 'creada y vinculada'} correctamente.`);
-            this.modalMateria = false;
-            this._cargarGruposAPI();
-          } else {
-            window.saeApi.toast('error', res.message || 'Error al guardar materia');
-          }
+          window.saeApi.toast('exito', `Materia ${this.materiaEditandoIndex !== null ? 'actualizada' : 'creada y vinculada'} correctamente.`);
+          this.modalMateria = false;
+          this._cargarGruposAPI();
         },
         modalNuevoCiclo: false,
         nuevoCicloData: { nombre: '', activo: true },
@@ -3669,6 +4204,7 @@
         _dashboardCargado: false,
         dashSummary: { ingresosHoy: 0, alumnos: 0, deudores: 0, becasActivas: 0 },
         dashUltimosPagos: [],
+        dashDeudores: [],
 
         // ── Paginación alumnos ────────────────────────────────────────────────
         paginaAlumnos: 1, limitAlumnos: 20, totalAlumnos: 0, paginasAlumnos: 1,
@@ -3691,7 +4227,7 @@
             dashboard: 'Dashboard', pagos: 'Pagos', deudores: 'Deudores',
             alumnos: 'Alumnos', grupos: 'Grupos & Materias', calificaciones: 'Calificaciones',
             becas: 'Becas', cicloEscolar: 'Ciclo escolar', usuarios: 'Usuarios', reportes: 'Reportes',
-            bitacora: 'Bitácora del Sistema', permisos: 'Permisos Granulares'
+            bitacora: 'Bitácora del Sistema', permisos: 'Permisos Granulares', historialAcademico: 'Historial Académico'
           };
           return labels[this.view] || this.view;
         },
@@ -3701,21 +4237,28 @@
         get gradosDisponiblesFiltro() {
           if (!this.filtroNivel) return [];
           const nivel = this.filtroNivel.toUpperCase();
-          if (nivel === 'PREESCOLAR' || nivel === 'SECUNDARIA') return ['1', '2', '3'];
-          if (nivel === 'PRIMARIA' || nivel === 'BACHILLERATO') return ['1', '2', '3', '4', '5', '6'];
-          return ['1', '2', '3'];
+          if (nivel === 'PREESCOLAR') return ['1', '2', '3'];
+          return ['1', '2', '3', '4', '5', '6'];
         },
         get seccionesDisponiblesFiltro() {
           if (!this.filtroNivel || !this.filtroGrado) return [];
-          const nivel = this.filtroNivel.toUpperCase();
-          return [...new Set(this.gruposData.filter(g => g.nivel && g.nivel.toUpperCase() === nivel && String(g.grado) === String(this.filtroGrado)).map(g => g.seccion))].filter(Boolean);
+          return ['A', 'B', 'C', 'D', 'E', 'F'];
+        },
+        get gradosDisponiblesFiltroGrupos() {
+          if (!this.filtroGruposNivel) return [];
+          const nivel = this.filtroGruposNivel.toUpperCase();
+          if (nivel === 'PREESCOLAR') return ['1', '2', '3'];
+          return ['1', '2', '3', '4', '5', '6'];
+        },
+        get seccionesDisponiblesFiltroGrupos() {
+          if (!this.filtroGruposNivel || !this.filtroGruposGrado) return [];
+          return ['A', 'B', 'C', 'D', 'E', 'F'];
         },
         get gradosDisponiblesNuevo() {
           if (!this.nuevoAlumnoData.nivel) return [];
           const nivel = this.nuevoAlumnoData.nivel.toUpperCase();
-          if (nivel === 'PREESCOLAR' || nivel === 'SECUNDARIA') return ['1', '2', '3'];
-          if (nivel === 'PRIMARIA' || nivel === 'BACHILLERATO') return ['1', '2', '3', '4', '5', '6'];
-          return ['1', '2', '3'];
+          if (nivel === 'PREESCOLAR') return ['1', '2', '3'];
+          return ['1', '2', '3', '4', '5', '6'];
         },
         get gruposDisponiblesNuevo() {
           if (!this.nuevoAlumnoData.nivel || !this.nuevoAlumnoData.grado) return [];
@@ -3725,14 +4268,120 @@
         get gradosDisponiblesFicha() {
           if (!this.alumnoFichaEditable || !this.alumnoFichaEditable.nivel) return [];
           const nivel = this.alumnoFichaEditable.nivel.toUpperCase();
-          if (nivel === 'PREESCOLAR' || nivel === 'SECUNDARIA') return ['1', '2', '3'];
-          if (nivel === 'PRIMARIA' || nivel === 'BACHILLERATO') return ['1', '2', '3', '4', '5', '6'];
-          return ['1', '2', '3'];
+          if (nivel === 'PREESCOLAR') return ['1', '2', '3'];
+          return ['1', '2', '3', '4', '5', '6'];
         },
         get gruposDisponiblesFicha() {
           if (!this.alumnoFichaEditable || !this.alumnoFichaEditable.nivel || !this.alumnoFichaEditable.grado) return [];
           const nivel = this.alumnoFichaEditable.nivel.toUpperCase();
           return this.gruposData.filter(g => g.nivel && g.nivel.toUpperCase() === nivel && String(g.grado) === String(this.alumnoFichaEditable.grado));
+        },
+
+        // ── Historial Académico Completo (RF-64) ────────────────────────────────
+        filtrarAlumnosHistorial() {
+          let filtrados = this.listaAlumnos;
+
+          const q = this.busquedaHistorialQuery.trim().toLowerCase();
+          if (q) {
+            filtrados = filtrados.filter(al =>
+              al.nombre.toLowerCase().includes(q) ||
+              (al.matricula && al.matricula.toLowerCase().includes(q)) ||
+              (al.curp && al.curp.toLowerCase().includes(q))
+            );
+          }
+
+          if (this.filtroHistorialNivel) {
+            filtrados = filtrados.filter(a => a.nivel && a.nivel.toUpperCase() === this.filtroHistorialNivel.toUpperCase());
+          }
+          if (this.filtroHistorialGrado) {
+            filtrados = filtrados.filter(a => a.grado == this.filtroHistorialGrado);
+          }
+          if (this.filtroHistorialGrupo) {
+            filtrados = filtrados.filter(a => {
+              const gr = typeof a.grupo === 'object' ? a.grupo?.seccion : a.grupoActual;
+              return gr && gr.toUpperCase() === this.filtroHistorialGrupo.toUpperCase();
+            });
+          }
+
+          this.resultadosBusquedaHistorial = filtrados;
+        },
+        async seleccionarAlumnoHistorial(al) {
+          this.alumnoHistorialSeleccionado = al;
+          this.busquedaHistorialQuery = al.nombre;
+          this.resultadosBusquedaHistorial = [];
+          this.historialAcademicoCompleto = [];
+          
+          try {
+            const res = await window.saeApi.fetchApi(`/alumnos/${al.id}/historial-academico`);
+            
+            if (res && res.ok && res.data) {
+              const historialFormateado = res.data.historial.map(ciclo => {
+                const matMap = {};
+                if (ciclo.curriculares) {
+                  ciclo.curriculares.forEach(c => {
+                    if (!matMap[c.materia]) {
+                      matMap[c.materia] = {
+                        materia: c.materia,
+                        periodo: ciclo.ciclo.nombre,
+                        suma: 0,
+                        conteo: 0,
+                        valorCualitativo: c.valorCualitativo,
+                        tipoEvaluacion: c.tipoEvaluacion
+                      };
+                    }
+                    if (c.tipoEvaluacion === 'numerica' && c.valorNumerico !== null) {
+                      matMap[c.materia].suma += parseFloat(c.valorNumerico);
+                      matMap[c.materia].conteo += 1;
+                    }
+                  });
+                }
+                const curricularesPromedio = Object.values(matMap).map(m => {
+                  if (m.tipoEvaluacion === 'numerica') {
+                    m.promedio = m.conteo > 0 ? (m.suma / m.conteo).toFixed(1) : '-';
+                  } else {
+                    m.promedio = m.valorCualitativo || '-';
+                  }
+                  return m;
+                });
+
+                const talleresSet = {};
+                if (ciclo.talleres) {
+                  ciclo.talleres.forEach(t => {
+                    talleresSet[t.taller] = {
+                      taller: t.taller,
+                      periodo: ciclo.ciclo.nombre,
+                      valorCualitativo: t.valorCualitativo
+                    };
+                  });
+                }
+
+                const extraSet = {};
+                if (ciclo.extracurriculares) {
+                  ciclo.extracurriculares.forEach(ex => {
+                    extraSet[ex.club] = {
+                      club: ex.club,
+                      periodo: ciclo.ciclo.nombre,
+                      valorNumerico: ex.valorNumerico
+                    };
+                  });
+                }
+
+                return {
+                  ciclo: ciclo.ciclo,
+                  curriculares: curricularesPromedio,
+                  talleres: Object.values(talleresSet),
+                  extracurriculares: Object.values(extraSet)
+                };
+              });
+              
+              this.historialAcademicoCompleto = historialFormateado;
+            } else if (res && !res.ok) {
+              throw new Error(res.message || 'Error desconocido');
+            }
+          } catch (e) {
+            console.error(e);
+            window.saeApi.toast('error', `Error: ${e.message}`);
+          }
         },
 
         // ── Carga inicial de datos ───────────────────────────────────────────────
@@ -3810,23 +4459,49 @@
         },
 
         async _cargarDashboard() {
-          // Métricas desde datos ya en memoria
-          this.dashSummary.alumnos = this.listaAlumnos.length;
-          this.dashSummary.deudores = this.listaAlumnos.filter(a => (a.mesesAdeudo || 0) > 0).length;
-          // Ingresos del día actual (desde pagos filtrados por fecha)
-          const hoy = new Date().toISOString().slice(0, 10);
-          const resP = await window.saeApi.pagos.listar({ fechaDesde: hoy, fechaHasta: hoy });
-          if (resP.ok) {
-            const lista = Array.isArray(resP.data) ? resP.data : [];
-            const mapeados = lista.map(window.saeApi.mapPago);
-            this.dashSummary.ingresosHoy = mapeados.reduce((s, p) => s + (Number(p.monto) || 0), 0);
-            this.dashUltimosPagos = mapeados.slice(0, 5);
+          const newSummary = { ingresosHoy: 0, alumnos: 0, deudores: 0, becasActivas: 0 };
+          try {
+            // Total de alumnos activos
+            const resAlum = await window.saeApi.alumnos.listar({ estado: 'Activo', limit: 1, page: 1 });
+            if (resAlum && resAlum.ok && resAlum.pagination) {
+              newSummary.alumnos = resAlum.pagination.total;
+            } else if (resAlum && resAlum.ok && Array.isArray(resAlum.data)) {
+              newSummary.alumnos = resAlum.data.length;
+            }
+
+            // Deudores activos (usando el reporte oficial)
+            const resDeud = await window.saeApi.reportes.deudores();
+            if (resDeud && resDeud.ok && Array.isArray(resDeud.data)) {
+              this.dashDeudores = resDeud.data;
+              newSummary.deudores = resDeud.data.length;
+            } else {
+              this.dashDeudores = [];
+            }
+          } catch (error) {
+            console.error('Error cargando dashboard stats:', error);
           }
-          // Becas activas
-          const resB = await window.saeApi.becas.listar();
-          if (resB.ok && resB.data) {
-            this.dashSummary.becasActivas = resB.data.length;
+
+          try {
+            // Ingresos del día actual (desde pagos filtrados por fecha)
+            const hoy = new Date().toISOString().slice(0, 10);
+            const resP = await window.saeApi.pagos.listar({ fechaDesde: hoy, fechaHasta: hoy });
+            if (resP.ok) {
+              const lista = Array.isArray(resP.data) ? resP.data : [];
+              const mapeados = lista.map(window.saeApi.mapPago);
+              newSummary.ingresosHoy = mapeados.reduce((s, p) => s + (Number(p.monto) || 0), 0);
+              this.dashUltimosPagos = mapeados.slice(0, 5);
+            }
+
+            // Becas activas
+            const resB = await window.saeApi.becas.listar();
+            if (resB.ok && resB.data) {
+              newSummary.becasActivas = resB.data.length;
+            }
+          } catch (error) {
+            console.error('Error cargando ingresos/becas stats:', error);
           }
+
+          this.dashSummary = newSummary;
         },
 
         // ── Bitácora ─────────────────────────────────────────────────────────────
@@ -3847,6 +4522,372 @@
         exportarBitacoraPDF() {
           const url = window.saeApi.bitacora.exportarURL('pdf');
           window.open(url, '_blank');
+        },
+        exportarBoletaPDF(alumno) {
+          if (!alumno) return;
+          const { jsPDF } = window.jspdf;
+          const nivel = (alumno.nivel || this.alumnoFichaEditable?.nivel || '').toUpperCase();
+          const nombre = alumno.nombre || alumno.nombreCompleto || 'N/A';
+          const curp   = alumno.curp || 'N/A';
+          const matricula = alumno.matricula || 'N/A';
+          const grado  = this.alumnoFichaEditable?.grado || alumno.grupo?.grado || '';
+          const grupo  = alumno.grupo?.nombre || alumno.grupo?.codigo || '';
+          const turno  = alumno.turno || 'MATUTINO';
+          const ctt    = alumno.grupo?.cct || '30PPR3773B';
+          const hoy = new Date();
+          const dia  = String(hoy.getDate()).padStart(2,'0');
+          const mes  = String(hoy.getMonth()+1).padStart(2,'0');
+          const anio = hoy.getFullYear();
+          const materias = this.historialAcademico || [];
+          const promGeneral = this.promedioGeneralFicha || '-';
+
+          // Helpers
+          const fillCell = (doc, x, y, w, h, r, g, b) => { doc.setFillColor(r,g,b); doc.rect(x,y,w,h,'F'); doc.setFillColor(255,255,255); };
+          const drawCell = (doc, x, y, w, h, text, opts={}) => {
+            doc.rect(x,y,w,h);
+            doc.setFontSize(opts.fontSize||8); doc.setFont(undefined,opts.bold?'bold':'normal');
+            doc.setTextColor(...(opts.color||[0,0,0]));
+            doc.text(String(text||''), opts.align==='center'?x+w/2:x+1.5, y+h/2+0.5, {align:opts.align||'left',baseline:'middle'});
+            doc.setTextColor(0,0,0); doc.setFont(undefined,'normal');
+          };
+          const hdrBlue = (doc, x, y, w, h, text, fs=7) => {
+            fillCell(doc,x,y,w,h,30,85,160);
+            doc.setFontSize(fs); doc.setFont(undefined,'bold'); doc.setTextColor(255,255,255);
+            doc.text(text, x+w/2, y+h/2+0.5, {align:'center',baseline:'middle'});
+            doc.setTextColor(0,0,0); doc.setFont(undefined,'normal');
+          };
+
+          // ================================================================
+          //  BACHILLERATO
+          // ================================================================
+          if (nivel === 'BACHILLERATO') {
+            const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'letter'});
+            const PW=215.9,M=10; let y=M;
+            fillCell(doc,M,y,PW-2*M,7,200,30,30);
+            doc.setFontSize(10); doc.setFont(undefined,'bold'); doc.setTextColor(255,255,255);
+            doc.text('DATOS DEL EDUCANDO',PW/2,y+3.5,{align:'center',baseline:'middle'});
+            doc.setTextColor(0,0,0); y+=7;
+            const H1=6, cols1=[{l:'NOMBRE',w:55},{l:'CURP',w:38},{l:'SEMESTRE',w:25},{l:'GRUPO',w:20},{l:'PERIODO ESCOLAR',w:52}];
+            let cx=M;
+            cols1.forEach(c=>{fillCell(doc,cx,y,c.w,H1,200,210,230);doc.rect(cx,y,c.w,H1);doc.setFontSize(6.5);doc.setFont(undefined,'bold');doc.text(c.l,cx+c.w/2,y+H1/2+0.5,{align:'center',baseline:'middle'});cx+=c.w;});
+            y+=H1; cx=M;
+            [nombre,curp,grado||'V',grupo||'B',`${anio-1}-${anio}`].forEach((v,i)=>{
+              const ws=[55,38,25,20,52][i];
+              doc.rect(cx,y,ws,8); doc.setFontSize(8); doc.setFont(undefined,'bold'); doc.setTextColor(20,80,180);
+              doc.text(v,cx+ws/2,y+4,{align:'center',baseline:'middle'}); doc.setTextColor(0,0,0); cx+=ws;
+            }); y+=8;
+            const rH=5.5;
+            fillCell(doc,M,y,55,rH*2,200,210,230); doc.rect(M,y,55,rH*2);
+            doc.setFontSize(6); doc.setFont(undefined,'bold');
+            doc.text('UNIDADES DE APRENDIZAJE CURRICULAR (UAC)',M+27.5,y+rH/2+1,{align:'center',baseline:'middle'});
+            fillCell(doc,65,y,14,rH,200,210,230);doc.rect(65,y,14,rH);doc.text('CLASES\nIMPARTIDAS',72,y+2.5,{align:'center'});
+            fillCell(doc,79,y,14,rH,200,210,230);doc.rect(79,y,14,rH);doc.text('FALTAS DE\nASISTENCIA',86,y+2.5,{align:'center'});
+            fillCell(doc,93,y,54,rH,200,210,230);doc.rect(93,y,54,rH);doc.text('CALIFICACIONES PARCIALES',120,y+rH/2+0.5,{align:'center',baseline:'middle'});
+            fillCell(doc,147,y,35,rH,200,210,230);doc.rect(147,y,35,rH);doc.text('CALIFICACI\u00d3N FINAL',164.5,y+rH/2+0.5,{align:'center',baseline:'middle'});
+            fillCell(doc,182,y,24,rH*2,200,210,230);doc.rect(182,y,24,rH*2);doc.text('TIPO DE\nEXAMEN',194,y+rH/2+1,{align:'center'});
+            y+=rH;
+            ['I','II','III','PROMEDIO\nPOR UAC'].forEach((t,i)=>{
+              fillCell(doc,93+i*13.5,y,13.5,rH,200,210,230);doc.rect(93+i*13.5,y,13.5,rH);
+              doc.setFontSize(6);doc.text(t,93+i*13.5+6.75,y+rH/2+0.5,{align:'center',baseline:'middle'});
+            });
+            ['No.','LETRA'].forEach((t,i)=>{
+              fillCell(doc,147+i*17.5,y,17.5,rH,200,210,230);doc.rect(147+i*17.5,y,17.5,rH);
+              doc.text(t,147+i*17.5+8.75,y+rH/2+0.5,{align:'center',baseline:'middle'});
+            }); y+=rH;
+            const letras=['CERO','UNO','DOS','TRES','CUATRO','CINCO','SEIS','SIETE','OCHO','NUEVE','DIEZ'];
+            materias.forEach(mat=>{
+              const vs=[mat.T1.v,mat.T2.v,mat.T3.v].map(v=>v!==''?parseFloat(v):null);
+              const valid=vs.filter(v=>v!==null);
+              const prom=valid.length>0?(valid.reduce((a,b)=>a+b,0)/valid.length).toFixed(1):'-';
+              const pN=prom!=='-'?Math.round(parseFloat(prom)):null;
+              const letra=pN!==null&&pN>=0&&pN<=10?letras[pN]:'-';
+              drawCell(doc,M,y,55,rH,mat.nombre.toUpperCase(),{fontSize:6.5});
+              drawCell(doc,65,y,14,rH,'-',{align:'center',fontSize:7});
+              drawCell(doc,79,y,14,rH,'0',{align:'center',fontSize:7});
+              vs.forEach((v,i)=>drawCell(doc,93+i*13.5,y,13.5,rH,v!==null?v:'-',{align:'center',fontSize:7}));
+              drawCell(doc,93+3*13.5,y,13.5,rH,prom,{align:'center',fontSize:7,bold:true});
+              drawCell(doc,147,y,17.5,rH,prom,{align:'center',fontSize:7});
+              drawCell(doc,164.5,y,17.5,rH,letra,{align:'center',fontSize:7,bold:true});
+              drawCell(doc,182,y,24,rH,'P',{align:'center',fontSize:7}); y+=rH;
+            });
+            fillCell(doc,M,y,55,rH*2,200,210,230);doc.rect(M,y,55,rH*2);
+            doc.setFontSize(6);doc.setFont(undefined,'bold');
+            doc.text('COMP. DE FOR. FUN. EXTENDIDO',M+27.5,y+rH/2+0.5,{align:'center',baseline:'middle'});
+            doc.text('PROMEDIO POR',93+2*13.5,y+rH/2,{align:'center',baseline:'middle'});
+            doc.text('PARCIAL',93+2*13.5,y+rH,{align:'center',baseline:'middle'});
+            fillCell(doc,147,y,59,rH,200,210,230);doc.rect(147,y,59,rH);
+            doc.text('PROMEDIO GENERAL DEL SEMESTRE',176,y+rH/2+0.5,{align:'center',baseline:'middle'}); y+=rH;
+            fillCell(doc,147,y,17.5,rH,200,210,230);doc.rect(147,y,17.5,rH);doc.text('No.',155.75,y+rH/2+0.5,{align:'center',baseline:'middle'});
+            fillCell(doc,164.5,y,41.5,rH,200,210,230);doc.rect(164.5,y,41.5,rH);doc.text('LETRA',185.25,y+rH/2+0.5,{align:'center',baseline:'middle'}); y+=rH;
+            drawCell(doc,147,y,17.5,rH*1.5,promGeneral,{align:'center',fontSize:11,bold:true});
+            const pGL=promGeneral!=='-'&&!isNaN(parseFloat(promGeneral))?letras[Math.round(parseFloat(promGeneral))]||'-':'-';
+            drawCell(doc,164.5,y,41.5,rH*1.5,pGL,{align:'center',fontSize:11,bold:true}); y+=rH*2+10;
+            doc.line(M,y+12,90,y+12); doc.line(95,y+12,175,y+12);
+            doc.setFontSize(8); doc.setFont(undefined,'bold');
+            doc.text('MARIA ELENA PEREZ RODRIGUEZ',M+5,y+10); doc.text('NORMA MARIA IBARRA FONSECA',100,y+10);
+            doc.setFont(undefined,'normal');
+            doc.text('NOMBRE Y FIRMA DEL TITULAR DE LA SUBDIRECCI\u00d3N DEL PLANTEL',M,y+16);
+            doc.text('NOMBRE Y FIRMA DEL TITULAR DE LA DIRECCI\u00d3N DEL PLANTEL',95,y+16);
+            doc.rect(176,y-5,30,22);
+            fillCell(doc,176,y-5,30,6,200,210,230);doc.setFontSize(6.5);doc.setFont(undefined,'bold');
+            doc.text('FECHA DE EXPEDICI\u00d3N',191,y-2,{align:'center',baseline:'middle'});
+            ['D\u00cdA','MES','A\u00d1O'].forEach((t,i)=>{
+              doc.rect(176+i*10,y+1,10,6);fillCell(doc,176+i*10,y+1,10,6,220,220,220);
+              doc.setFontSize(6);doc.text(t,181+i*10,y+4,{align:'center'});
+              doc.rect(176+i*10,y+7,10,8);doc.setFontSize(8);doc.setFont(undefined,'normal');
+              doc.text(i===0?dia:i===1?mes:String(anio),181+i*10,y+11,{align:'center'});
+            });
+            doc.save(`Boleta_Bachillerato_${matricula}.pdf`);
+
+          // ================================================================
+          //  PREESCOLAR
+          // ================================================================
+          } else if (nivel === 'PREESCOLAR') {
+            const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'letter'});
+            const PW=215.9,M=10; let y=M;
+            doc.setFontSize(9);doc.setFont(undefined,'bold');
+            doc.text('"CENTRO DE INVESTIGACION EDUCATIVA"',PW/2,y,{align:'center'});y+=5;
+            doc.text('COLEGIO SAN DIEGO',PW/2,y,{align:'center'});y+=4;
+            doc.setFont(undefined,'normal');doc.setFontSize(7.5);
+            doc.text('Calle punta el campanario #183 Col. Bahia de San Mart\u00edn',PW/2,y,{align:'center'});y+=4;
+            doc.text('PREESCOLAR',PW/2,y,{align:'center'});y+=4;
+            doc.text(ctt,PW/2,y,{align:'center'});y+=8;
+            doc.setFontSize(10);doc.setFont(undefined,'bold');
+            doc.text('BOLETA DE EVALUACION',PW/2,y,{align:'center'});y+=7;
+            doc.setFontSize(9);doc.setFont(undefined,'normal');
+            doc.text(`${grado||'1'}    GRADO DE EDUCACION PREESCOLAR       CICLO ESCOLAR ${anio-1}-${String(anio).slice(-2)}`,M,y);y+=7;
+            doc.setFontSize(8);doc.setFont(undefined,'bold');doc.text('DATOS DEL ALUMNO (A):',M,y);y+=5;
+            doc.setFont(undefined,'normal');
+            const pts=nombre.split(' ');
+            doc.text(pts.slice(-2).join(' '),M+5,y);doc.text(pts[0]||'',M+70,y);doc.text(pts[1]||'',M+110,y);y+=4;
+            doc.setFontSize(7);doc.text('Nombre (s)',M+5,y);doc.text('Primer apellido',M+70,y);doc.text('Segundo apellido',M+110,y);y+=5;
+            doc.setFontSize(8);doc.text(curp,M+5,y);y+=4;
+            doc.setFontSize(7);doc.text('CURP',M+5,y);y+=6;
+            doc.setFontSize(8);doc.setFont(undefined,'bold');
+            doc.text('PERIODO DE EVALUACI\u00d3N: TRIMESTRE 1 / 2 / 3',M+5,y);y+=10;
+            const colW=(PW-2*M-5)/2;
+            doc.setFontSize(7.5);doc.setFont(undefined,'bold');
+            doc.text('OBSERVACIONES Y SUGERENCIAS SOBRE LOS AVANCES DE APRENDIZAJE',PW/2,y,{align:'center'});y+=4;
+            const drawObs=(doc,subs,x,sy,w)=>{
+              let cy=sy;
+              fillCell(doc,x,cy,w,6,200,210,230);doc.rect(x,cy,w,6);
+              doc.setFontSize(6.5);doc.setFont(undefined,'bold');
+              doc.text('OBSERVACIONES Y SUGERENCIAS',x+w/2,cy+3,{align:'center',baseline:'middle'});cy+=6;
+              subs.forEach(s=>{
+                doc.rect(x,cy,w*0.25,22);fillCell(doc,x,cy,w*0.25,22,220,225,240);
+                doc.setFontSize(6.5);doc.setFont(undefined,'bold');
+                doc.text(s,x+w*0.125,cy+11,{align:'center',baseline:'middle',maxWidth:w*0.22});
+                doc.rect(x+w*0.25,cy,w*0.75,22);
+                doc.setFont(undefined,'normal');doc.setFontSize(6);
+                doc.text('OBSERVACI\u00d3N: Sin datos registrados.',x+w*0.26,cy+5,{maxWidth:w*0.73});
+                doc.text('RECOMENDACI\u00d3N: Consultar con el docente titular del grupo.',x+w*0.26,cy+13,{maxWidth:w*0.73});cy+=22;
+              });return cy;
+            };
+            const eL=drawObs(doc,['LENGUAJES','SABERES Y PENSAMIENTO CIENT\u00cdFICO','\u00c9TICA, NATURALEZA Y SOCIEDADES','DE LO HUMANO Y LO COMUNITARIO'],M,y,colW);
+            const eR=drawObs(doc,['INGL\u00c9S','COMPUTACI\u00d3N','EDUCACI\u00d3N F\u00cdSICA'],M+colW+5,y,colW);
+            y=Math.max(eL,eR)+6;
+            doc.line(M,y+12,M+80,y+12);doc.line(M+90,y+12,M+170,y+12);
+            doc.setFontSize(7.5);doc.setFont(undefined,'normal');
+            doc.text(`TITULAR DE ${grado||'1'} GRADO`,M+15,y+15);doc.text('DIRECTORA',M+110,y+15);y+=20;
+            doc.setFontSize(8);doc.text(`${anio}     ${mes}     ${dia}`,PW/2,y,{align:'center'});
+            doc.setFontSize(6.5);doc.text('A\u00d1O                          MES                          D\u00cdA',PW/2,y+4,{align:'center'});
+            doc.save(`Boleta_Preescolar_${matricula}.pdf`);
+
+          // ================================================================
+          //  SECUNDARIA o PRIMARIA (shared template, different labels)
+          // ================================================================
+          } else {
+            const esSecundaria = nivel === 'SECUNDARIA';
+            const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'letter'});
+            const PW=215.9,M=10; let y=M;
+            doc.setFontSize(9);doc.setFont(undefined,'bold');
+            doc.text('CENTRO DE INVESTIGACI\u00d3N EDUCATIVA COLEGIO SAN DIEGO',PW/2,y,{align:'center'});y+=5;
+            doc.setFont(undefined,'normal');doc.setFontSize(7.5);
+            doc.text('Punta el Campanario #183 Col. Bah\u00eda de San Mart\u00edn',PW/2,y,{align:'center'});y+=4;
+            if(esSecundaria){
+              doc.text(`Nivel Secundaria ${ctt}`,PW/2,y,{align:'center'});y+=7;
+              doc.setFontSize(9);doc.setFont(undefined,'bold');
+              doc.text(`CICLO ESCOLAR ${anio-1}-${anio}`,PW/2,y,{align:'center'});y+=5;
+            } else {
+              doc.text('Nivel Primaria',PW/2,y,{align:'center'});y+=4;
+              doc.text(ctt,PW/2,y,{align:'center'});y+=5;
+            }
+            doc.setFontSize(9);doc.setFont(undefined,'bold');
+            doc.text('BOLETA INTERNA DE CALIFICACIONES',PW/2,y,{align:'center'});y+=9;
+            const fw=PW-2*M;
+            doc.rect(M,y,fw,8);
+            doc.setFontSize(7.5);doc.setFont(undefined,'normal');
+            doc.text('Nombre del (de la) alumno (a):',M+2,y+3);
+            const np=nombre.split(' ');
+            doc.setFont(undefined,'bold');
+            doc.text(np[0]||'',M+55,y+3);doc.text(np[1]||'',M+90,y+3);
+            doc.text(np.slice(2).join(' ')||'',M+125,y+3);
+            doc.text(`Grado y Grupo: ${grado}"${grupo||'A'}"`,M+160,y+3);y+=8;
+            doc.setFont(undefined,'normal');doc.setFontSize(6.5);
+            doc.text('PRIMER APELLIDO',M+55,y+2);doc.text('SEGUNDO APELLIDO',M+90,y+2);doc.text('NOMBRE(S)',M+125,y+2);y+=5;
+            doc.rect(M,y,fw,7);doc.setFontSize(7.5);
+            doc.text(`CURP  ${curp}`,M+2,y+4);doc.text(`Turno: ${turno}`,M+100,y+4);doc.text(`CTT  ${ctt}`,M+145,y+4);y+=11;
+            const aW=esSecundaria?50:55,trimW=esSecundaria?35:33,promW=esSecundaria?20:20,sigW=35;
+            const mainW=aW+3*trimW+promW;
+            hdrBlue(doc,M,y,aW,6,'ASIGNATURAS');
+            ['1er. Trimestre','2do. Trimestre','3er. Trimestre'].forEach((t,i)=>hdrBlue(doc,M+aW+i*trimW,y,trimW,6,t));
+            hdrBlue(doc,M+aW+3*trimW,y,promW,6,'Promedio Final');
+            fillCell(doc,M+mainW+2,y,sigW,22,30,85,160);
+            doc.setFontSize(6.5);doc.setFont(undefined,'bold');doc.setTextColor(255,255,255);
+            doc.text('FIRMA DEL PADRE DE\nFAMILIA O TUTOR',M+mainW+2+sigW/2,y+4,{align:'center',baseline:'middle'});
+            doc.setTextColor(0,0,0);y+=6;
+            doc.setFontSize(6);doc.setFont(undefined,'normal');
+            [aW,trimW,trimW,trimW,promW].forEach((w,i)=>{
+              const x=M+[0,aW,aW+trimW,aW+2*trimW,aW+3*trimW][i];
+              doc.rect(x,y,w,5);if(i>0)doc.text('Calificaci\u00f3n',x+w/2,y+2.5,{align:'center',baseline:'middle'});
+            });y+=5;
+            const rH=8;
+            materias.forEach(mat=>{
+              const t1=mat.T1.v!==''?mat.T1.v:'-',t2=mat.T2.v!==''?mat.T2.v:'-',t3=mat.T3.v!==''?mat.T3.v:'-';
+              const pr=mat.prom||'-',low=pr!=='-'&&pr!=='N/A'&&parseFloat(pr)<6;
+              doc.rect(M,y,aW,rH);doc.setFontSize(7);doc.setFont(undefined,'normal');
+              doc.text(mat.nombre.toUpperCase().substring(0,28),M+1.5,y+rH/2+0.5,{baseline:'middle'});
+              [t1,t2,t3].forEach((v,i)=>{
+                doc.rect(M+aW+i*trimW,y,trimW,rH);
+                doc.setFontSize(9);doc.setFont(undefined,'bold');
+                doc.setTextColor(v!=='-'?20:100,v!=='-'?80:100,v!=='-'?180:100);
+                doc.text(String(v),M+aW+i*trimW+trimW/2,y+rH/2+0.5,{align:'center',baseline:'middle'});
+              });
+              doc.setTextColor(low?200:0,low?30:0,low?30:0);
+              doc.rect(M+aW+3*trimW,y,promW,rH);
+              doc.setFontSize(9);doc.setFont(undefined,'bold');
+              doc.text(String(pr),M+aW+3*trimW+promW/2,y+rH/2+0.5,{align:'center',baseline:'middle'});
+              doc.setTextColor(0,0,0);y+=rH;
+            });
+            fillCell(doc,M+mainW+2,y,sigW,10,30,85,160);
+            doc.setFontSize(6.5);doc.setFont(undefined,'bold');doc.setTextColor(255,255,255);
+            doc.text('PROMEDIO FINAL DE\nGRADO',M+mainW+2+sigW/2,y+4,{align:'center',baseline:'middle'});
+            doc.setTextColor(0,0,0);doc.rect(M+mainW+2,y+10,sigW,8);
+            doc.setFontSize(10);doc.setFont(undefined,'bold');
+            doc.text(String(promGeneral),M+mainW+2+sigW/2,y+14,{align:'center',baseline:'middle'});y+=22;
+            doc.line(M+5,y+12,M+90,y+12);
+            doc.setFontSize(7);doc.setFont(undefined,'bold');
+            doc.text(esSecundaria?'NORMA MARIA IBARRA FONSECA':'MARIA J. GALINDO TOME',M+10,y+9);
+            doc.setFont(undefined,'normal');doc.setFontSize(6.5);
+            doc.text(esSecundaria?'NOMBRE Y FIRMA DEL DIRECTOR DEL PLANTEL':'NOMBRE Y FIRMA DEL DOCENTE',M+5,y+15);
+            doc.rect(PW-55,y,45,18);
+            doc.setFontSize(7);
+            doc.text(dia,PW-51,y+5);doc.text(mes,PW-39,y+5);doc.text(String(anio),PW-25,y+5);
+            doc.setFontSize(5.5);
+            doc.text('D\u00cdA',PW-51,y+9);doc.text('MES',PW-39,y+9);doc.text('A\u00d1O',PW-25,y+9);
+            y+=20;
+            doc.setFontSize(7);doc.setFont(undefined,'bold');doc.text('COATZACOALCOS, VERACRUZ',M,y+5);
+            doc.setFont(undefined,'normal');doc.setFontSize(6.5);doc.text('LUGAR DE EXPEDICI\u00d3N',M,y+9);
+            // ── SECCIÓN CLUBES EXTRACURRICULARES (solo Primaria) ──────────────
+            if (!esSecundaria) {
+              const clubs = this.historialExtraBoleta || [];
+              const taller = this.historialTallerBoleta || [];
+              const hayExtra = clubs.length > 0 || taller.length > 0;
+
+              if (hayExtra) {
+                doc.addPage();
+                let y2 = M;
+
+                // Mini-encabezado
+                doc.setFontSize(8); doc.setFont(undefined,'bold');
+                doc.text('CENTRO DE INVESTIGACI\u00d3N EDUCATIVA COLEGIO SAN DIEGO', PW/2, y2, {align:'center'}); y2+=5;
+                doc.setFont(undefined,'normal'); doc.setFontSize(7);
+                doc.text(`${nombre}  |  Grado y Grupo: ${grado}"${grupo||'A'}"  |  CURP: ${curp}`, PW/2, y2, {align:'center'}); y2+=8;
+
+                // ── CLUBES ──
+                if (clubs.length > 0) {
+                  doc.setFontSize(9); doc.setFont(undefined,'bold');
+                  doc.text('CLUBES EXTRACURRICULARES', PW/2, y2, {align:'center'}); y2+=6;
+
+                  const cW=55, ctW=33, cpW=20, csW=35, cmW=cW+3*ctW+cpW;
+                  hdrBlue(doc, M, y2, cW, 6, 'CLUB EXTRACURRICULAR');
+                  ['1er. Trimestre','2do. Trimestre','3er. Trimestre'].forEach((t,i)=>hdrBlue(doc,M+cW+i*ctW,y2,ctW,6,t));
+                  hdrBlue(doc, M+cW+3*ctW, y2, cpW, 6, 'Promedio');
+                  fillCell(doc, M+cmW+2, y2, csW, 14, 30, 85, 160);
+                  doc.setFontSize(6.5); doc.setFont(undefined,'bold'); doc.setTextColor(255,255,255);
+                  doc.text('FIRMA DEL PADRE DE\nFAMILIA O TUTOR', M+cmW+2+csW/2, y2+4, {align:'center',baseline:'middle'});
+                  doc.setTextColor(0,0,0); y2+=6;
+
+                  doc.setFontSize(6); doc.setFont(undefined,'normal');
+                  [cW,ctW,ctW,ctW,cpW].forEach((w,i)=>{
+                    const x=M+[0,cW,cW+ctW,cW+2*ctW,cW+3*ctW][i];
+                    doc.rect(x,y2,w,5); if(i>0) doc.text('Calificaci\u00f3n',x+w/2,y2+2.5,{align:'center',baseline:'middle'});
+                  }); y2+=5;
+
+                  const crH=8;
+                  clubs.forEach(club=>{
+                    const t1=club.T1.v!==''?club.T1.v:'-', t2=club.T2.v!==''?club.T2.v:'-', t3=club.T3.v!==''?club.T3.v:'-';
+                    const pr=club.prom||'-', low=pr!=='-'&&parseFloat(pr)<6;
+                    doc.rect(M,y2,cW,crH); doc.setFontSize(7); doc.setFont(undefined,'normal');
+                    doc.text(club.nombre.toUpperCase().substring(0,26), M+1.5, y2+crH/2+0.5,{baseline:'middle'});
+                    [t1,t2,t3].forEach((v,i)=>{
+                      doc.rect(M+cW+i*ctW,y2,ctW,crH);
+                      doc.setFontSize(9); doc.setFont(undefined,'bold');
+                      doc.setTextColor(v!=='-'?20:100,v!=='-'?80:100,v!=='-'?180:100);
+                      doc.text(String(v),M+cW+i*ctW+ctW/2,y2+crH/2+0.5,{align:'center',baseline:'middle'});
+                    });
+                    doc.setTextColor(low?200:0,low?30:0,low?30:0);
+                    doc.rect(M+cW+3*ctW,y2,cpW,crH); doc.setFontSize(9); doc.setFont(undefined,'bold');
+                    doc.text(String(pr),M+cW+3*ctW+cpW/2,y2+crH/2+0.5,{align:'center',baseline:'middle'});
+                    doc.setTextColor(0,0,0); y2+=crH;
+                  });
+                  y2+=8;
+                }
+
+                // ── TALLER ──
+                if (taller.length > 0) {
+                  doc.setFontSize(9); doc.setFont(undefined,'bold');
+                  doc.text('TALLER', PW/2, y2, {align:'center'}); y2+=6;
+
+                  const tW2=55, ttW=33, teW=35, tmW=tW2+3*ttW+teW;
+                  hdrBlue(doc, M, y2, tW2, 6, 'MATERIA TALLER');
+                  ['1er. Trimestre','2do. Trimestre','3er. Trimestre'].forEach((t,i)=>hdrBlue(doc,M+tW2+i*ttW,y2,ttW,6,t));
+                  hdrBlue(doc, M+tW2+3*ttW, y2, teW, 6, 'Evaluaci\u00f3n');
+                  doc.setTextColor(0,0,0); y2+=6;
+
+                  doc.setFontSize(6); doc.setFont(undefined,'normal');
+                  [tW2,ttW,ttW,ttW,teW].forEach((w,i)=>{
+                    const x=M+[0,tW2,tW2+ttW,tW2+2*ttW,tW2+3*ttW][i];
+                    doc.rect(x,y2,w,5); if(i>0) doc.text(i<4?'Calificaci\u00f3n':'Evaluaci\u00f3n',x+w/2,y2+2.5,{align:'center',baseline:'middle'});
+                  }); y2+=5;
+
+                  const trH=8;
+                  taller.forEach(tal=>{
+                    const t1=tal.T1.v!==''?tal.T1.v:'-', t2=tal.T2.v!==''?tal.T2.v:'-', t3=tal.T3.v!==''?tal.T3.v:'-';
+                    const ev=tal.eval||'-';
+                    const evColor=ev==='NA';
+                    doc.rect(M,y2,tW2,trH); doc.setFontSize(7); doc.setFont(undefined,'normal');
+                    doc.text(tal.nombre.toUpperCase().substring(0,26), M+1.5, y2+trH/2+0.5,{baseline:'middle'});
+                    [t1,t2,t3].forEach((v,i)=>{
+                      doc.rect(M+tW2+i*ttW,y2,ttW,trH);
+                      doc.setFontSize(9); doc.setFont(undefined,'bold');
+                      doc.setTextColor(v!=='-'?20:100,v!=='-'?80:100,v!=='-'?180:100);
+                      doc.text(String(v),M+tW2+i*ttW+ttW/2,y2+trH/2+0.5,{align:'center',baseline:'middle'});
+                    });
+                    doc.setTextColor(evColor?200:5,evColor?30:120,evColor?30:60);
+                    doc.rect(M+tW2+3*ttW,y2,teW,trH); doc.setFontSize(9); doc.setFont(undefined,'bold');
+                    doc.text(String(ev),M+tW2+3*ttW+teW/2,y2+trH/2+0.5,{align:'center',baseline:'middle'});
+                    doc.setTextColor(0,0,0); y2+=trH;
+                  });
+                  y2+=8;
+                }
+
+                // Pie de la segunda página
+                doc.line(M+5, y2+12, M+90, y2+12);
+                doc.setFontSize(7); doc.setFont(undefined,'bold');
+                doc.text('MARIA J. GALINDO TOME', M+10, y2+9);
+                doc.setFont(undefined,'normal'); doc.setFontSize(6.5);
+                doc.text('NOMBRE Y FIRMA DEL DOCENTE', M+5, y2+15);
+                doc.setFontSize(7);
+                doc.text(`${dia}        ${mes}        ${anio}`, PW-65, y2+5);
+                doc.setFontSize(5.5);
+                doc.text('D\u00cdA                  MES                  A\u00d1O', PW-65, y2+9);
+              }
+            }
+            doc.save(`Boleta_${esSecundaria?'Secundaria':'Primaria'}_${matricula}.pdf`);
+          }
+
+          window.saeApi.toast('exito', 'Boleta exportada en PDF.');
         },
 
         // ── Permisos ─────────────────────────────────────────────────────────────
@@ -3881,6 +4922,8 @@
               if (['alumnos', 'tutores', 'pagos', 'becas', 'calificaciones', 'configuracion', 'colegiaturas'].includes(m)) perms[m] = 'escritura';
               else if (m === 'reportes') perms[m] = 'lectura';
               else perms[m] = 'NINGUNO';
+            } else if (u.rol === 'Administrador' || u.rol === 'ADMIN') {
+              perms[m] = 'escritura';
             } else {
               perms[m] = 'NINGUNO';
             }
@@ -3901,10 +4944,30 @@
             this.permisosEditando = perms;
           }
         },
+        restaurarPermisosPorDefecto() {
+          if (!this.usuarioPermisosActivo) return;
+          const u = this.usuarioPermisosActivo;
+          const perms = {};
+          this.todosModulos.forEach(m => {
+            if (u.rol === 'Docente' || u.rol === 'MAESTRA') {
+              if (m === 'tutores') perms[m] = 'lectura';
+              else if (m === 'calificaciones') perms[m] = 'escritura';
+              else perms[m] = 'NINGUNO';
+            } else if (u.rol === 'Gestor' || u.rol === 'GESTOR') {
+              if (['alumnos', 'tutores', 'pagos', 'becas', 'calificaciones', 'configuracion', 'colegiaturas'].includes(m)) perms[m] = 'escritura';
+              else if (m === 'reportes') perms[m] = 'lectura';
+              else perms[m] = 'NINGUNO';
+            } else if (u.rol === 'Administrador' || u.rol === 'ADMIN') {
+              perms[m] = 'escritura';
+            } else {
+              perms[m] = 'NINGUNO';
+            }
+          });
+          this.permisosEditando = perms;
+        },
         async guardarPermisosUsuario(usuarioId) {
           // Convertir el objeto { modulo: "NIVEL" } a un array
           const permisos = Object.keys(this.permisosEditando)
-            .filter(mod => this.permisosEditando[mod] !== 'NINGUNO')
             .map(mod => ({ modulo: mod, nivel: this.permisosEditando[mod] }));
 
           const res = await window.saeApi.permisos.actualizar({ usuarioId, permisos });
@@ -3947,7 +5010,6 @@
               this.tutorActualFicha = res.data;
               this.tutorFichaEditable = { ...res.data };
               this.tutorSeleccionado = true;
-              this._cargarPagosTutor();
             }
           } catch (e) {
             window.saeApi.toast('error', 'Error al cargar perfil del tutor');
@@ -4076,6 +5138,56 @@
             this.seleccionarPagoAlumno(al);
           }, 50);
         },
+        abrirModalVincularAlumno() {
+          this.busquedaVincularAlumno = '';
+          this.alumnosParaVincular = [];
+          this.modalVincularAlumno = true;
+        },
+        async buscarAlumnoParaVincular() {
+          const q = this.busquedaVincularAlumno.toLowerCase();
+          if (q.length < 3) {
+            this.alumnosParaVincular = [];
+            return;
+          }
+          try {
+            const res = await window.saeApi.alumnos.listar({ q: q, limit: 5 });
+            if (res && res.ok && Array.isArray(res.data)) {
+              this.alumnosParaVincular = res.data;
+            }
+          } catch (e) {
+            console.error(e);
+            this.alumnosParaVincular = [];
+          }
+        },
+        async confirmarVinculacionAlumno(alumno) {
+          try {
+            const payload = { alumnoId: alumno.id, tipoRelacion: 'tutor', esResponsableFinanciero: false };
+            const res = await window.saeApi.tutores.vincular(this.tutorActualFicha.tutorId, payload);
+            if (res && res.ok) {
+              window.saeApi.toast('exito', 'Alumno vinculado correctamente');
+              this.modalVincularAlumno = false;
+              this.seleccionarTutorFicha(this.tutorActualFicha); // recargar ficha
+            } else {
+              window.saeApi.toast('error', res?.message || 'Error al vincular alumno');
+            }
+          } catch (e) {
+            window.saeApi.toast('error', 'Error de red al vincular');
+          }
+        },
+        async desvincularAlumno(alumnoId) {
+          if(!confirm('¿Estás seguro de desvincular este alumno de este tutor?')) return;
+          try {
+            const res = await window.saeApi.tutores.desvincular(this.tutorActualFicha.tutorId, alumnoId);
+            if (res && res.ok) {
+              window.saeApi.toast('exito', 'Alumno desvinculado');
+              this.seleccionarTutorFicha(this.tutorActualFicha);
+            } else {
+              window.saeApi.toast('error', res?.message || 'Error al desvincular');
+            }
+          } catch (e) {
+            window.saeApi.toast('error', 'Error de red');
+          }
+        },
         abrirModalVincularTutor() {
           this.busquedaVincularTutor = '';
           this.tutoresParaVincular = [];
@@ -4140,7 +5252,7 @@
           }
         },
         abrirModalPagoConsolidado() {
-          this.pagoConsolidadoTemp = { metodo: 'efectivo', comprobante: null, abonos: {} };
+          this.pagoConsolidadoTemp = { metodo: 'transferencia', comprobante: null, abonos: {} };
           // Por defecto asignamos abonos automáticos para liquidar todo o podemos dejar que el usuario asigne
           for (const item of this.estadoCuentaConsolidado) {
             this.pagoConsolidadoTemp.abonos[item.calendarioPagoId] = item.saldoPendiente;
@@ -4505,13 +5617,16 @@
             if (res && res.ok && res.data) {
               this.alumnoActualFicha = res.data;
               this.alumnoActualFicha.padresLista = res.data.padres || [];
+              let rawNivel = (res.data.nivel || res.data.grupo?.nivel || '');
+              let nivelFormateado = rawNivel ? rawNivel.charAt(0).toUpperCase() + rawNivel.slice(1).toLowerCase() : '';
+              
               this.alumnoFichaEditable = {
                 nombre: res.data.nombre,
                 curp: res.data.curp,
                 estado: res.data.estado || 'Activo',
                 autorizados: typeof res.data.personasAutorizadas === 'string' ? res.data.personasAutorizadas : (res.data.autorizados || ''),
                 fechaNacimiento: res.data.fechaNacimiento ? res.data.fechaNacimiento.split('T')[0] : '',
-                nivel: (res.data.nivel || res.data.grupo?.nivel || '').toUpperCase(),
+                nivel: nivelFormateado,
                 grado: res.data.grupo?.grado ? String(res.data.grupo.grado) : '',
                 grupoId: res.data.grupoId || ''
               };
@@ -4531,9 +5646,11 @@
                   const esPre = (grupoRes.data.nivel === 'PREESCOLAR' || (al.nivel && al.nivel.toUpperCase() === 'PREESCOLAR'));
                   let sumGral = 0, countGral = 0;
 
-                  const materiasArr = grupoRes.data.materias.map(m => ({
-                    id: m.id, nombre: m.materia, T1: { v: '', t: '' }, T2: { v: '', t: '' }, T3: { v: '', t: '' }, prom: null
-                  }));
+                  const materiasArr = grupoRes.data.materias
+                    .filter(m => m.tipo === 'curricular' || !m.tipo)
+                    .map(m => ({
+                      id: m.id, nombre: m.materia, tipo: m.tipo || 'curricular', T1: { v: '', t: '' }, T2: { v: '', t: '' }, T3: { v: '', t: '' }, prom: null
+                    }));
 
                   const calRes = await window.saeApi.calificaciones.porAlumno(al.id, undefined);
                   if (calRes.ok && calRes.data) {
@@ -4573,8 +5690,16 @@
               this.historialExtraBoleta = [];
               try {
                 const resExtra = await window.saeApi.calificacionesExtra.porAlumno(al.id);
+                const clubesMap = {};
+                
+                // Pre-cargar clubes a los que está inscrito (aunque no tengan calificación)
+                if (al.materiasExtra && al.materiasExtra.length > 0) {
+                  al.materiasExtra.filter(m => m.tipo === 'club').forEach(m => {
+                    clubesMap[m.materia] = { id: m.materia, nombre: m.materia, T1: { v: '' }, T2: { v: '' }, T3: { v: '' }, prom: '-' };
+                  });
+                }
+
                 if (resExtra && resExtra.data) {
-                  const clubesMap = {};
                   resExtra.data.forEach(c => {
                     if (!clubesMap[c.club]) {
                       clubesMap[c.club] = { id: c.club, nombre: c.club, T1: { v: '' }, T2: { v: '' }, T3: { v: '' }, prom: '-' };
@@ -4588,40 +5713,50 @@
                       clubesMap[c.club][key].v = c.valorNumerico;
                     }
                   });
-                  this.historialExtraBoleta = Object.values(clubesMap).map(club => {
-                    let s = 0, c = 0;
-                    if (club.T1.v !== '') { s += parseFloat(club.T1.v); c++; }
-                    if (club.T2.v !== '') { s += parseFloat(club.T2.v); c++; }
-                    if (club.T3.v !== '') { s += parseFloat(club.T3.v); c++; }
-                    if (c > 0) club.prom = (s / c).toFixed(1);
-                    return club;
-                  });
                 }
+                this.historialExtraBoleta = Object.values(clubesMap).map(club => {
+                  let s = 0, c = 0;
+                  if (club.T1.v !== '') { s += parseFloat(club.T1.v); c++; }
+                  if (club.T2.v !== '') { s += parseFloat(club.T2.v); c++; }
+                  if (club.T3.v !== '') { s += parseFloat(club.T3.v); c++; }
+                  if (c > 0) club.prom = (s / c).toFixed(1);
+                  return club;
+                });
               } catch (e) { console.error('Error al cargar extracurriculares:', e); }
 
               // Cargar taller
               this.historialTallerBoleta = [];
               try {
                 const resTaller = await window.saeApi.calificacionesTaller.porAlumno(al.id);
-                if (resTaller && resTaller.data) {
-                  const tallerObj = { id: 'taller', nombre: 'Taller', T1: { v: '' }, T2: { v: '' }, T3: { v: '' } };
-                  resTaller.data.forEach(c => {
-                    const num = c.periodo?.numero;
-                    let key = null;
-                    if (num === 1) key = 'T1';
-                    if (num === 2) key = 'T2';
-                    if (num === 3) key = 'T3';
-                    if (key) {
-                      tallerObj[key].v = c.valorCualitativo;
-                    }
-                  });
-                  if (tallerObj.T1.v || tallerObj.T2.v || tallerObj.T3.v) {
-                    const vals = [tallerObj.T1.v, tallerObj.T2.v, tallerObj.T3.v].filter(x => x === 'A' || x === 'NA');
-                    const countA = vals.filter(x => x === 'A').length;
-                    const countNA = vals.filter(x => x === 'NA').length;
-                    tallerObj.eval = vals.length > 0 ? (countA >= countNA ? 'A' : 'NA') : '-';
-                    this.historialTallerBoleta = [tallerObj];
+                
+                // Determinar el nombre del taller si está inscrito a alguno
+                let nombreTaller = 'Taller';
+                const tieneTallerAsignado = al.materiasExtra && al.materiasExtra.some(m => m.tipo === 'taller');
+                if (tieneTallerAsignado) {
+                  const tallerAsignado = al.materiasExtra.find(m => m.tipo === 'taller');
+                  nombreTaller = tallerAsignado.materia;
+                }
+
+                if ((resTaller && resTaller.data && resTaller.data.length > 0) || tieneTallerAsignado) {
+                  const tallerObj = { id: 'taller', nombre: nombreTaller, T1: { v: '' }, T2: { v: '' }, T3: { v: '' } };
+                  if (resTaller && resTaller.data) {
+                    resTaller.data.forEach(c => {
+                      const num = c.periodo?.numero;
+                      let key = null;
+                      if (num === 1) key = 'T1';
+                      if (num === 2) key = 'T2';
+                      if (num === 3) key = 'T3';
+                      if (key) {
+                        tallerObj[key].v = c.valorCualitativo;
+                      }
+                    });
                   }
+                  
+                  const vals = [tallerObj.T1.v, tallerObj.T2.v, tallerObj.T3.v].filter(x => x === 'A' || x === 'NA');
+                  const countA = vals.filter(x => x === 'A').length;
+                  const countNA = vals.filter(x => x === 'NA').length;
+                  tallerObj.eval = vals.length > 0 ? (countA >= countNA ? 'A' : 'NA') : '-';
+                  this.historialTallerBoleta = [tallerObj];
                 }
               } catch (e) { console.error('Error al cargar taller:', e); }
 
@@ -4774,12 +5909,19 @@
           this.alumnoActualCalif = al;
           this.alumnoSeleccionadoCalif = true;
           this.materiasAlumno = []; this.esPreescolar = false;
-          this.clubesAlumno = [
-            { id: 'inglés', nombre: 'Inglés', T1: { v: '', orig: null, califId: null }, T2: { v: '', orig: null, califId: null }, T3: { v: '', orig: null, califId: null }, prom: '-' },
-            { id: 'computación', nombre: 'Computación', T1: { v: '', orig: null, califId: null }, T2: { v: '', orig: null, califId: null }, T3: { v: '', orig: null, califId: null }, prom: '-' },
-            { id: 'danza', nombre: 'Danza', T1: { v: '', orig: null, califId: null }, T2: { v: '', orig: null, califId: null }, T3: { v: '', orig: null, califId: null }, prom: '-' }
-          ];
-          this.tallerAlumno = { T1: { v: '', orig: null, califId: null }, T2: { v: '', orig: null, califId: null }, T3: { v: '', orig: null, califId: null } };
+          
+          this.clubesAlumno = [];
+          if (al.materiasExtra && al.materiasExtra.length > 0) {
+            al.materiasExtra.filter(m => m.tipo === 'club').forEach(m => {
+              this.clubesAlumno.push({ id: m.materia, nombre: m.materia, T1: { v: '', orig: null, califId: null }, T2: { v: '', orig: null, califId: null }, T3: { v: '', orig: null, califId: null }, prom: '-' });
+            });
+          }
+          
+          this.tallerAlumno = { nombre: 'Taller', T1: { v: '', orig: null, califId: null }, T2: { v: '', orig: null, califId: null }, T3: { v: '', orig: null, califId: null } };
+          const tieneTaller = al.materiasExtra && al.materiasExtra.find(m => m.tipo === 'taller');
+          if (tieneTaller) {
+            this.tallerAlumno.nombre = tieneTaller.materia;
+          }
 
           this.busquedaCalif = '';
 
@@ -4791,9 +5933,11 @@
             const grupoRes = await window.saeApi.grupos.obtener(al.grupoId);
             if (grupoRes.ok && grupoRes.data && grupoRes.data.materias) {
               this.esPreescolar = (grupoRes.data.nivel === 'PREESCOLAR' || (al.nivel && al.nivel.toUpperCase() === 'PREESCOLAR'));
-              grupoRes.data.materias.forEach(m => {
-                this.materiasAlumno.push({ id: m.id, nombre: m.materia, T1: { v: '', t: '' }, T2: { v: '', t: '' }, T3: { v: '', t: '' }, prom: null });
-              });
+              grupoRes.data.materias
+                .filter(m => m.tipo === 'curricular' || !m.tipo)
+                .forEach(m => {
+                  this.materiasAlumno.push({ id: m.id, nombre: m.materia, tipo: m.tipo || 'curricular', T1: { v: '', t: '', califId: null }, T2: { v: '', t: '', califId: null }, T3: { v: '', t: '', califId: null }, prom: null });
+                });
             }
 
             const calRes = await window.saeApi.calificaciones.porAlumno(al.id, undefined);
@@ -4999,7 +6143,8 @@
           try {
             const res = await window.saeApi.calificacionesTaller.porAlumno(this.alumnoActualCalif.id);
             if (res && res.data) {
-              this.tallerAlumno = { T1: { v: '', orig: null, califId: null }, T2: { v: '', orig: null, califId: null }, T3: { v: '', orig: null, califId: null } };
+              const currentNombre = this.tallerAlumno.nombre || 'Taller';
+              this.tallerAlumno = { nombre: currentNombre, T1: { v: '', orig: null, califId: null }, T2: { v: '', orig: null, califId: null }, T3: { v: '', orig: null, califId: null } };
               
               res.data.forEach(c => {
                 const num = c.periodo?.numero;
@@ -5188,6 +6333,7 @@
           };
 
           const res = await window.saeApi.becas.asignar(payload);
+
           if (res.ok) {
             this.modalBecaActiva = false;
             this.cargarBecasAsignadas(); // Refresh list
@@ -5232,9 +6378,9 @@
           this.busquedaPagoAlumno = '';
           this.pagoCoincidencias = [];
           this.mostrarSugerenciasPago = false;
-          this.nuevoPago = { alumno: '', alumnoId: null, concepto: 'Colegiatura', monto: '', fecha: new Date().toISOString().slice(0, 10), becaInfo: null, tipoPago: 'normal', mesesAdelantar: 1 };
+          this.nuevoPago = { alumno: '', alumnoId: null, concepto: 'Colegiatura', monto: '', fecha: new Date().toISOString().slice(0, 10), becaInfo: null, tipoPago: 'normal', mesesAdelantar: 1, metodoPago: 'transferencia' };
         },
-        filtrarPagoAlumnos() {
+        async filtrarPagoAlumnos() {
           const q = this.busquedaPagoAlumno.trim().toLowerCase();
           if (!q) {
             this.pagoCoincidencias = [];
@@ -5243,9 +6389,17 @@
             this.nuevoPago.alumnoId = null;
             return;
           }
-          this.pagoCoincidencias = this.listaAlumnos
-            .filter(a => a.nombre.toLowerCase().includes(q) || a.matricula.toLowerCase().includes(q))
-            .slice(0, 8);
+          try {
+            const res = await window.saeApi.alumnos.listar({ q: q, limit: 10 });
+            if (res.ok) {
+              const data = res.pagination ? res.data : (Array.isArray(res.data) ? res.data : []);
+              this.pagoCoincidencias = data.map(window.saeApi.mapAlumno);
+            } else {
+              this.pagoCoincidencias = [];
+            }
+          } catch (e) {
+            this.pagoCoincidencias = [];
+          }
           this.mostrarSugerenciasPago = true;
           if (this.nuevoPago.alumno && this.busquedaPagoAlumno !== this.nuevoPago.alumno) {
             this.nuevoPago.alumno = '';
@@ -5325,12 +6479,13 @@
           if (!this.nuevoPago.alumnoId) return;
           const numMeses = parseInt(this.nuevoPago.mesesAdelantar) || 1;
 
+          const colegiaturas = this.pagoAdeudos.filter(a => a.concepto.toLowerCase() === 'colegiatura');
+          
           let montoMensual = 0;
-          if (this.alumnoPagoInfo?.planPago?.montoMensual) {
-            montoMensual = Number(this.alumnoPagoInfo.planPago.montoMensual);
+          if (colegiaturas.length > 0) {
+            montoMensual = Number(colegiaturas[0].montoOriginal);
           }
 
-          const colegiaturas = this.pagoAdeudos.filter(a => a.concepto.toLowerCase() === 'colegiatura');
           const aAdelantar = colegiaturas.slice(0, numMeses);
           let total = 0;
 
@@ -5455,7 +6610,7 @@
             res = await window.saeApi.pagos.adelantado({
               alumnoId: this.nuevoPago.alumnoId,
               meses: parseInt(this.nuevoPago.mesesAdelantar),
-              metodoPago: 'efectivo',
+              metodoPago: this.nuevoPago.metodoPago,
               fecha: this.nuevoPago.fecha,
               monto: parseFloat(this.nuevoPago.monto)
             });
@@ -5466,6 +6621,7 @@
               concepto,
               monto: parseFloat(this.nuevoPago.monto),
               fecha: this.nuevoPago.fecha,
+              metodoPago: this.nuevoPago.metodoPago,
             });
           }
           if (res.ok) {
@@ -5604,7 +6760,7 @@
             if (res.ok && res.data) {
               this.configTarifas.conceptos = { colegiatura: '', inscripcion: '', arancel: '', material: '' };
               res.data.forEach(t => {
-                if (t.concepto === 'colegiatura') this.configTarifas.conceptos.colegiatura = t.monto;
+                if (t.concepto === 'colegiatura') this.configTarifas.conceptos.colegiatura = Number(t.monto) * 10;
                 if (t.concepto === 'inscripcion') this.configTarifas.conceptos.inscripcion = t.monto;
                 if (t.concepto === 'arancel') this.configTarifas.conceptos.arancel = t.monto;
                 if (t.concepto === 'material') this.configTarifas.conceptos.material = t.monto;
@@ -5626,7 +6782,11 @@
               window.saeApi.toast('error', `El monto para ${key} es inválido. Debe ser mayor a 0.`);
               return;
             }
-            conceptosArray.push({ concepto: key, monto: Number(val) });
+            let montoToSave = Number(val);
+            if (key === 'colegiatura') {
+              montoToSave = montoToSave / 10;
+            }
+            conceptosArray.push({ concepto: key, monto: montoToSave });
           }
 
           this.cargando = true;
@@ -5751,7 +6911,11 @@
             cargasIniciales.push(this._cargarAlumnosAPI());
           }
 
+          cargasIniciales.push(this.cargarNotificaciones());
+
           await Promise.all(cargasIniciales);
+
+          setInterval(() => this.cargarNotificaciones(), 60000);
 
           // Cargar datos del dashboard si tiene algún permiso financiero/admin
           if (this.tienePermiso('pagos', 'lectura') || this.esGestor()) {
@@ -5768,6 +6932,30 @@
 
           this.$watch('grupoExpandido', () => this.$nextTick(safeIcons));
           this.$nextTick(safeIcons);
+        },
+
+        async cargarNotificaciones() {
+          if (!window.saeApi || !window.saeApi.auth.getToken()) return;
+          try {
+            const res = await fetch('/api/v1/notificaciones', {
+              headers: { 'Authorization': 'Bearer ' + window.saeApi.auth.getToken() }
+            });
+            const data = await res.json();
+            if (res.ok && data.data) {
+              this.notificaciones = data.data.notificaciones || [];
+              this.notificacionesNoLeidas = data.data.noLeidas || 0;
+            }
+          } catch (err) { console.error(err); }
+        },
+
+        async marcarNotificacionLeida(id) {
+          try {
+            await fetch('/api/v1/notificaciones/' + id + '/leida', {
+              method: 'PATCH',
+              headers: { 'Authorization': 'Bearer ' + window.saeApi.auth.getToken() }
+            });
+            await this.cargarNotificaciones();
+          } catch (err) { console.error(err); }
         },
       }));
     });

@@ -52,12 +52,33 @@ function authorizePermiso(modulo, nivel) {
     }
 
     const rolUsuario = req.usuario.rol;
-    // ADMIN y GESTOR tienen acceso a todos los módulos operativos por defecto
-    if (rolUsuario === 'ADMIN' || rolUsuario === 'GESTOR') {
+    // ADMIN tiene acceso a todos los módulos operativos por defecto
+    if (rolUsuario === 'ADMIN') {
       return next();
     }
 
     const permisos = req.usuario.permisos || {};
+    const { PERMISOS_POR_DEFECTO } = require('../utils/constants');
+
+    // Si es GESTOR o MAESTRA y nunca se le han configurado permisos (objeto vacío),
+    // mantiene su acceso por defecto usando PERMISOS_POR_DEFECTO.
+    if ((rolUsuario === 'GESTOR' || rolUsuario === 'MAESTRA') && Object.keys(permisos).length === 0) {
+      const defaultPerm = PERMISOS_POR_DEFECTO[rolUsuario]?.[modulo] || 'NINGUNO';
+      if (defaultPerm === 'NINGUNO') {
+        return res.status(403).json({
+          ok: false,
+          message: `Acceso denegado. No tienes permisos para el módulo ${modulo}.`,
+        });
+      }
+      if (nivel === 'escritura' && defaultPerm !== 'escritura') {
+         return res.status(403).json({
+          ok: false,
+          message: `Acceso denegado. Necesitas permisos de escritura para el módulo ${modulo}.`,
+        });
+      }
+      return next();
+    }
+    
     const permisoUsuario = permisos[modulo];
 
     if (!permisoUsuario || permisoUsuario === 'NINGUNO') {

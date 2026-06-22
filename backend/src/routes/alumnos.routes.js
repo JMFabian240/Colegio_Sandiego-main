@@ -23,10 +23,26 @@ router.post('/cierre-ciclo',
   cierreController.cerrarCiclo
 );
 
-// GET /api/v1/alumnos — Listar (requiere permiso de lectura)
+// GET /api/v1/alumnos — Listar (requiere permiso de lectura, pagos o calificaciones)
 router.get('/', buscarAlumnoValidators, validate,
-  authorizePermiso('alumnos', 'lectura'),
+  (req, res, next) => {
+    const rol = req.usuario?.rol;
+    if (rol === 'ADMIN') return next();
+    const p = req.usuario?.permisos || {};
+    if ((p.alumnos && p.alumnos !== 'NINGUNO') || 
+        (p.pagos && p.pagos !== 'NINGUNO') || 
+        (p.calificaciones && p.calificaciones !== 'NINGUNO')) {
+      return next();
+    }
+    return res.status(403).json({ ok: false, message: 'Se requiere permiso de alumnos, pagos o calificaciones.' });
+  },
   alumnosController.listar
+);
+
+// GET /api/v1/alumnos/:id/historial-academico
+router.get('/:id/historial-academico',
+  authorizePermiso('alumnos', 'lectura'),
+  alumnosController.obtenerHistorialAcademico
 );
 
 // GET /api/v1/alumnos/:id

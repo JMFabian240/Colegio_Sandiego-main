@@ -9,6 +9,8 @@ const becasRepository   = require('../../repositories/becas/becas.repository');
 const alumnosRepository = require('../../repositories/alumnos/alumnos.repository');
 const calendarioPagoService = require('../pagos/calendarioPago.service');
 const { PORCENTAJES_BECA } = require('../../utils/constants');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 async function listarBecasActivas() {
   return becasRepository.findBecasActivas();
@@ -61,13 +63,14 @@ async function solicitarBeca(datos, solicitadoPorId, auditCtx = {}) {
     throw Object.assign(new Error('Alumno no encontrado.'), { statusCode: 404 });
   }
 
-  return becasRepository.createSolicitud({
+  const solicitud = await becasRepository.createSolicitud({
     alumnoId:        Number(datos.alumnoId),
     becaId:          Number(datos.becaId),
-    tipoSolicitud:   datos.tipoSolicitud || 'asignacion',
     motivo:          datos.motivo,
     solicitadoPorId,
   }, auditCtx);
+
+  return solicitud;
 }
 
 async function asignarBecaDirecta(datos, asignadoPorId, auditCtx = {}) {

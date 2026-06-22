@@ -3,10 +3,10 @@
 const { Router } = require('express');
 const reportesController = require('../controllers/reportes/reportes.controller');
 const { authenticate }   = require('../middleware/auth.middleware');
-const { authorize }      = require('../middleware/rbac.middleware');
+const { authorize, authorizePermiso } = require('../middleware/rbac.middleware');
 
 const router = Router();
-router.use(authenticate, authorize('ADMIN', 'GESTOR'));
+router.use(authenticate, authorizePermiso('reportes', 'lectura'));
 
 router.get('/corte-caja',         reportesController.corteCaja);
 router.get('/ingresos-mensuales', reportesController.ingresosMensuales);

@@ -82,10 +82,10 @@ async function asignar(req, res, next) {
           message: `Módulo inválido: "${p.modulo}".`,
         });
       }
-      if (!['lectura', 'escritura'].includes(p.nivel)) {
+      if (!['lectura', 'escritura', 'NINGUNO'].includes(p.nivel)) {
         return res.status(400).json({
           ok: false,
-          message: `Nivel inválido: "${p.nivel}". Usa "lectura" o "escritura".`,
+          message: `Nivel inválido: "${p.nivel}". Usa "lectura", "escritura" o "NINGUNO".`,
         });
       }
     }

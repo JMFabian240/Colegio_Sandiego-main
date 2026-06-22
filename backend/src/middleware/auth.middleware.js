@@ -62,7 +62,7 @@ async function authenticate(req, res, next) {
   }
 
   // Inyectar datos del usuario en la request
-  req.usuario = payload;
+req.usuario = payload; console.log('AUTHMIDDLEWARE USER:', payload);
   next();
 }
 

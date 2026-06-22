@@ -62,7 +62,7 @@ async function previsualizarPlan(alumnoId, meses) {
   if (meses === 10) {
     indicesMeses = [8, 9, 10, 11, 0, 1, 2, 3, 4, 5];
   } else {
-    indicesMeses = [8, 9, 10, 11, 0, 1, 2, 3, 4, 5, 6, 7];
+    indicesMeses = [8, 9, 10, 11, 1, 2, 3, 4, 5, 6, 7];
   }
 
   const calendario = [];
@@ -86,10 +86,15 @@ async function previsualizarPlan(alumnoId, meses) {
     // Vencimiento el día 10 del mes
     const fechaVenc = new Date(Date.UTC(year, m, 10));
     
-    // Si es diciembre y son 12 meses, colegiatura doble
+    // Calcular monto equivalente para que el total anual sea igual (10 * tarifa)
     let monto = tarifas.colegiatura;
-    if (m === 11 && meses === 12) {
-      monto = monto * 2;
+    if (meses === 12) {
+      // Repartir el costo de 10 meses entre los 12 meses
+      monto = Number(((tarifas.colegiatura * 10) / 12).toFixed(2));
+      // Diciembre (mes 11) se cobra doble porque incluye Enero
+      if (m === 11) {
+        monto = monto * 2;
+      }
     }
 
     calendario.push({

@@ -6,8 +6,8 @@
 
 const gruposRepository = require('../../repositories/grupos/grupos.repository');
 
-async function listar(filtros) {
-  return gruposRepository.findAll(filtros);
+async function listar(filtros, usuario = null) {
+  return gruposRepository.findAll(filtros, usuario);
 }
 
 async function obtenerPorId(id) {
@@ -32,4 +32,12 @@ async function eliminar(id, auditCtx = {}) {
   return gruposRepository.softDelete(id, auditCtx);
 }
 
-module.exports = { listar, obtenerPorId, crear, actualizar, eliminar };
+async function obtenerAlumnosMateria(grupoMateriaId) {
+  return gruposRepository.obtenerAlumnosMateria(grupoMateriaId);
+}
+
+async function actualizarAlumnosMateria(grupoMateriaId, alumnosIds, auditCtx = {}) {
+  return gruposRepository.actualizarAlumnosMateria(grupoMateriaId, alumnosIds, auditCtx);
+}
+
+module.exports = { listar, obtenerPorId, crear, actualizar, eliminar, obtenerAlumnosMateria, actualizarAlumnosMateria };

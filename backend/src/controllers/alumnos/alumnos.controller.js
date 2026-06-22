@@ -10,7 +10,7 @@ const { success, created }    = require('../../utils/response.utils');
 async function listar(req, res, next) {
   try {
     const { q, grupoId, nivel, grado, seccion, estado, page, limit } = req.query;
-    const resultado = await alumnosService.listar({ q, grupoId, nivel, grado, seccion, estado, page, limit });
+    const resultado = await alumnosService.listar({ q, grupoId, nivel, grado, seccion, estado, page, limit }, req.usuario);
 
     // Con paginación: resultado = { data, pagination }
     if (resultado && resultado.pagination) {
@@ -59,4 +59,14 @@ async function eliminar(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { listar, obtener, crear, actualizar, eliminar };
+async function obtenerHistorialAcademico(req, res, next) {
+  try {
+    const historial = await alumnosService.obtenerHistorialAcademico(req.params.id);
+    return success(res, historial);
+  } catch (err) {
+    require('fs').appendFileSync('debug.log', new Date().toISOString() + ' ERROR: ' + err.stack + '\n');
+    next(err); 
+  }
+}
+
+module.exports = { listar, obtener, crear, actualizar, eliminar, obtenerHistorialAcademico };

@@ -1,0 +1,28 @@
+{
+  "name": "sae-colegio-sandiego",
+  "productName": "SAE Colegio San Diego",
+  "version": "1.0.0",
+  "description": "Cliente de Escritorio para el Sistema Administrativo Escolar",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder -w"
+  },
+  "author": "Antigravity",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.colegiosandiego.sae",
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
+  }
+}

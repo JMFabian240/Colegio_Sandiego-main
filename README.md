@@ -78,12 +78,14 @@ El servidor estará disponible en: `http://localhost:3000`
 | MAESTRA | mario.sanchez    | sandiego2026 |
 
 ---
+nuevos usuarios (por si no funcionan los de arriba)
+
 maria.dolores
 laura.rios
 mario.sanchez
 patricia.nunez
 elizabeth.mendoza
-
+contraseña:
 sandiego2026
 ## Uso en red LAN
 

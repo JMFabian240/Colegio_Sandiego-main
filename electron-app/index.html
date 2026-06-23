@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Conexión a SAE Colegio San Diego</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f3f4f6;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .container {
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+    }
+    h1 {
+      color: #1f2937;
+      margin-bottom: 10px;
+      font-size: 24px;
+    }
+    p {
+      color: #6b7280;
+      margin-bottom: 30px;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 20px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      box-sizing: border-box;
+      font-size: 16px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background-color: #1d4ed8;
+    }
+    .error {
+      color: #ef4444;
+      margin-top: 15px;
+      font-size: 14px;
+      display: none;
+    }
+    .spinner {
+      display: none;
+      margin: 20px auto;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #2563eb;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>SAE Colegio San Diego</h1>
+  <p>Ingresa la IP de la computadora servidor o la URL del túnel para conectarte al sistema.</p>
+  
+  <input type="text" id="serverInput" placeholder="Ej: 192.168.1.100 o localhost" value="localhost">
+  
+  <button id="connectBtn" onclick="conectar()">Conectar al Sistema</button>
+
+  <div class="spinner" id="spinner"></div>
+  <div class="error" id="errorMsg">No se pudo conectar al servidor. Verifica la IP o que el servidor esté encendido.</div>
+</div>
+
+<script>
+  // Intentar cargar IP guardada de sesiones anteriores
+  const savedIp = localStorage.getItem('sae_server_ip');
+  if (savedIp) {
+    document.getElementById('serverInput').value = savedIp;
+  }
+
+  function conectar() {
+    let host = document.getElementById('serverInput').value.trim();
+    if (!host) return;
+
+    // Limpieza de inputs comunes
+    if (host.startsWith('http://')) host = host.substring(7);
+    if (host.startsWith('https://')) host = host.substring(8);
+    if (host.endsWith('/')) host = host.substring(0, host.length - 1);
+
+    // Asumir puerto 3000 si es IP o localhost
+    if (!host.includes(':') && !host.includes('trycloudflare.com')) {
+      host += ':3000';
+    }
+
+    const protocol = host.includes('trycloudflare.com') ? 'https://' : 'http://';
+    const finalUrl = protocol + host + '/auth/login.html';
+
+    const btn = document.getElementById('connectBtn');
+    const spinner = document.getElementById('spinner');
+    const errorMsg = document.getElementById('errorMsg');
+
+    btn.style.display = 'none';
+    spinner.style.display = 'block';
+    errorMsg.style.display = 'none';
+
+    // Probar conexión rápida (health check)
+    fetch(protocol + host + '/health')
+      .then(res => {
+        if (res.ok) {
+          // Guardar IP para la próxima vez
+          localStorage.setItem('sae_server_ip', document.getElementById('serverInput').value.trim());
+          // Navegar al login
+          window.location.href = finalUrl;
+        } else {
+          throw new Error('El servidor respondió con error');
+        }
+      })
+      .catch(err => {
+        btn.style.display = 'block';
+        spinner.style.display = 'none';
+        errorMsg.style.display = 'block';
+      });
+  }
+  
+  // Enter para enviar
+  document.getElementById('serverInput').addEventListener('keypress', function (e) {
+    if (e.key === 'Enter') conectar();
+  });
+</script>
+
+</body>
+</html>

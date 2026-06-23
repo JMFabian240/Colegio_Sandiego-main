@@ -12,3 +12,5 @@ backend/dist/
 .cerebro/
 .agents/
 .codex/
+
+electron-app/dist/

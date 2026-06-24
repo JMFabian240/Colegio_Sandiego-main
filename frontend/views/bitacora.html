@@ -1,0 +1,58 @@
+<div class="w-full h-full" x-data>
+<div>
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-bold text-navy-800">Bitácora Transaccional (Auditoría)</h2>
+          <div class="flex gap-2">
+            <button class="btn-outline text-xs" @click="cargarBitacora()"><i data-lucide="refresh-cw"
+                class="w-4 h-4 mr-1"></i>Actualizar</button>
+            <button class="btn-primary" @click="exportarBitacoraPDF()"><i data-lucide="download"
+                class="w-4 h-4 mr-1"></i> Exportar a PDF</button>
+          </div>
+        </div>
+        <div class="card-clean overflow-hidden">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-gray-100 text-gray-600">
+              <tr>
+                <th class="p-3 w-16">ID</th>
+                <th class="p-3 w-32">Fecha y Hora</th>
+                <th class="p-3">Usuario</th>
+                <th class="p-3 w-32">Rol</th>
+                <th class="p-3 w-32">Acción</th>
+                <th class="p-3 w-64">Módulo / Entidad afectada</th>
+                <th class="p-3">Detalle (antes → después)</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <template x-for="log in bitacoraLogs" :key="log.logId">
+                <tr class="hover:bg-gray-50 transition">
+                  <td class="p-3 text-gray-400 font-mono" x-text="'#'+log.logId"></td>
+                  <td class="p-3 whitespace-nowrap" x-text="new Date(log.fechaHora).toLocaleString('es-MX')"></td>
+                  <td class="p-3 font-medium text-navy-700" x-text="log.usuario"></td>
+                  <td class="p-3 text-gray-500" x-text="log.rol"></td>
+                  <td class="p-3 font-bold"
+                    :class="{'text-emerald-600': log.tipoAccion==='Creación', 'text-amber-600': log.tipoAccion==='Modificación', 'text-crimson-600': log.tipoAccion==='Eliminación', 'text-navy-600': !['Creación','Modificación','Eliminación'].includes(log.tipoAccion)}"
+                    x-text="log.tipoAccion"></td>
+                  <td class="p-3 text-gray-700 font-medium" x-text="log.entidad"></td>
+                  <td class="p-3 text-gray-500 text-xs" x-text="log.detalle"></td>
+                </tr>
+              </template>
+              <tr x-show="bitacoraLogs.length===0">
+                <td colspan="5" class="p-8 text-center text-gray-400 text-sm">No hay registros de auditoría disponibles.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="flex items-center justify-between p-3 border-t bg-gray-50" x-show="bitacoraPaginas > 1">
+            <span class="text-xs text-gray-500"
+              x-text="`Página ${bitacoraPagina} de ${bitacoraPaginas} · ${bitacoraTotal} registros`"></span>
+            <div class="flex gap-2">
+              <button class="btn-outline text-xs py-1 px-3" :disabled="bitacoraPagina<=1"
+                @click="cargarBitacora(bitacoraPagina-1)">← Anterior</button>
+              <button class="btn-outline text-xs py-1 px-3" :disabled="bitacoraPagina>=bitacoraPaginas"
+                @click="cargarBitacora(bitacoraPagina+1)">Siguiente →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+</div>

@@ -15,7 +15,17 @@ async function startServer() {
   try {
     // Verificar conexión a la DB antes de levantar el servidor
     await prisma.$connect();
-    console.log('[DB] Conexión a PostgreSQL establecida correctamente.');
+    
+    // Auto-seeding in standalone packaged backend
+    try {
+      const userCount = await prisma.usuario.count();
+      if (userCount === 0) {
+        console.log('[DB] Base de datos vacía detectada. Ejecutando semilla inicial...');
+        require('../../prisma/seed.js');
+      }
+    } catch (e) {
+      console.error('Error al ejecutar seed/verificar db:', e);
+    }
 
     const server = app.listen(config.port, config.host, () => {
       console.log('');

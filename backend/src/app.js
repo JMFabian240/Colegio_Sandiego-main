@@ -71,7 +71,7 @@ const corsOptions = (req, callback) => {
         allow = true;
       } else if (esOrigenLAN(origin)) {
         allow = true;
-      } else if (url.hostname.endsWith('.loca.lt') || url.hostname.endsWith('.ngrok-free.app')) {
+      } else if (url.hostname.endsWith('.loca.lt') || url.hostname.endsWith('.ngrok-free.app') || url.hostname.endsWith('.trycloudflare.com')) {
         allow = true;
       }
     } catch {
@@ -168,7 +168,7 @@ console.log('[SAE] Servidor:', '${host}');`
 //   ../../frontend = .../colegio-sandiego/frontend   ← correcto
 //
 // Usamos path.resolve para evitar diferencias Windows/WSL con separadores.
-const frontendPath = path.resolve(__dirname, '..', '..', 'frontend');
+const frontendPath = process.pkg ? path.join(path.dirname(process.execPath), 'frontend') : path.resolve(__dirname, '..', '..', 'frontend');
 
 app.use(
   express.static(frontendPath, {

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -15,6 +15,8 @@
 <script defer src="/vendor/alpine.min.js"></script>
 <link href="/vendor/fonts.css" rel="stylesheet" />
 <script src="/vendor/lucide.min.js"></script>
+<!-- Panel modular CSS -->
+<link rel="stylesheet" href="/shared/panel.css" />
 
 <script>
   tailwind.config = {
@@ -94,259 +96,33 @@
       <span class="text-sm text-gray-400" x-text="fechaActual"></span>
     </header>
     <main class="flex-1 overflow-y-auto p-6 space-y-6">
-
-      <!-- DASHBOARD (versión docente: sin métricas financieras) -->
-      <template x-if="view==='dashboard'">
-        <div class="space-y-5">
-          <div class="grid grid-cols-2 gap-5">
-            <div class="card-clean p-5"><div class="text-xs text-gray-400">Mis grupos</div><div class="text-2xl font-bold text-navy-700" x-text="gruposData.length"></div></div>
-            <div class="card-clean p-5"><div class="text-xs text-gray-400">Alumnos a cargo</div><div class="text-2xl font-bold text-navy-700" x-text="gruposData.reduce((s,g)=>s+g.alumnos,0)"></div></div>
-          </div>
-          <div class="card-clean p-5">
-            <h3 class="font-semibold mb-3">Próximas tareas</h3>
-            <ul class="text-sm space-y-2">
-              <li class="flex justify-between border-b py-2"><span>Capturar calificaciones · Trimestre 1</span><span class="text-amber-600">Vence 15/05</span></li>
-              <li class="flex justify-between py-2"><span>Junta de academia</span><span class="text-gray-500">Vie 09:00</span></li>
-            </ul>
-          </div>
-        </div>
-      </template>
-
-      <!-- CALIFICACIONES -->
-      <template x-if="view==='calificaciones'"><div><h2 class="text-xl font-bold text-navy-800 mb-3">Calificaciones · Buscador inteligente</h2><div class="grid md:grid-cols-2 gap-4 mb-5"><div><label class="text-xs font-medium text-gray-600">Alumno (más de 100 registros)</label><input type="text" class="input-modern" placeholder="Escribe nombre o matrícula..." x-model="busquedaCalif" @input="buscarAlumnoCalif"></div><div><label class="text-xs font-medium text-gray-600">Periodo</label><select class="input-modern" x-model="periodoCalif"><option>Trimestre 1</option><option>Trimestre 2</option><option>Trimestre 3</option></select></div></div><div class="card-clean p-5" x-show="alumnoSeleccionadoCalif"><div class="font-bold text-lg text-navy-700" x-text="alumnoActualCalif?.nombre"></div><div class="text-sm text-gray-500 mb-3" x-text="alumnoActualCalif?.grupo"></div><div class="space-y-3"><div class="flex justify-between items-center border-b py-2"><span class="font-medium">Matemáticas</span><input class="w-28 input-modern text-center" x-model="calificacionesTemp.matematicas" type="number" step="0.1"></div><div class="flex justify-between items-center border-b py-2"><span class="font-medium">Español</span><input class="w-28 input-modern text-center" x-model="calificacionesTemp.espanol"></div><div class="flex justify-between items-center border-b py-2"><span class="font-medium">Ciencias</span><input class="w-28 input-modern text-center" x-model="calificacionesTemp.ciencias"></div></div><div class="flex justify-end gap-3 mt-5"><button class="btn-outline" @click="alumnoSeleccionadoCalif=false">Cancelar</button><button class="btn-primary" @click="guardarCalificacion()">Guardar</button></div></div><div class="text-gray-400 text-sm text-center py-6" x-show="!alumnoSeleccionadoCalif && busquedaCalif.length>2 && alumnosCoincidencias.length===0">No se encontraron alumnos</div><div class="grid gap-2 mt-3" x-show="!alumnoSeleccionadoCalif && busquedaCalif.length>1"><template x-for="al in alumnosCoincidencias.slice(0,6)"><div class="card-clean p-3 flex justify-between items-center cursor-pointer hover:bg-navy-50 transition" @click="seleccionarAlumnoCalif(al)"><div><span class="font-medium text-navy-700" x-text="al.nombre"></span><div class="text-xs text-gray-400"><span x-text="al.matricula"></span><span x-show="al.nivel" class="ml-2 px-2 py-0.5 bg-gray-100 rounded text-gray-600 font-medium"><span x-text="al.nivel"></span><span x-show="al.grado" x-text="' - ' + al.grado + '° ' + (al.seccion || '')"></span></span></div></div><button class="btn-primary text-xs">Seleccionar</button></div></template></div></div></template>
-
-      <!-- ============================================================
-           GRUPOS & MATERIAS – Vista jerárquica con expansión
-           ============================================================ -->
-      <template x-if="view==='grupos'">
-        <div>
-          <div class="flex justify-between items-center mb-4">
-            <div>
-              <h2 class="text-xl font-bold text-navy-800">Grupos y materias</h2>
-              <p class="text-sm text-gray-500 mt-1">Haz clic en un grupo para ver sus materias, docentes, horarios y aulas.</p>
-            </div>
-          </div>
-
-          <div class="space-y-3">
-            <template x-for="grupo in gruposData" :key="grupo.id">
-              <div class="card-clean overflow-hidden">
-                <!-- Encabezado del grupo (clickable) -->
-                <div class="group-row p-4 flex justify-between items-center cursor-pointer"
-                     @click="grupoExpandido = (grupoExpandido === grupo.id ? null : grupo.id)">
-                  <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-navy-50 flex items-center justify-center flex-shrink-0">
-                      <i data-lucide="book-open" class="w-5 h-5 text-navy-600"></i>
-                    </div>
-                    <div>
-                      <div class="font-bold text-navy-700" x-text="grupo.nombre"></div>
-                      <div class="text-xs text-gray-500 mt-0.5">
-                        Titular: <span class="text-gray-700" x-text="grupo.titular"></span>
-                        · <span x-text="grupo.alumnos"></span> alumnos
-                        · <span x-text="grupo.materias.length"></span> materias asignadas
-                      </div>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-3">
-                    <span class="badge-navy" x-text="grupo.nivel"></span>
-                    <i data-lucide="chevron-down" class="w-5 h-5 text-gray-400 chevron-icon"
-                       :class="grupoExpandido === grupo.id ? 'open' : ''"></i>
-                  </div>
-                </div>
-
-                <!-- Detalle expandido (tabla de materias) -->
-                <div x-show="grupoExpandido === grupo.id" x-cloak
-                     x-transition:enter="transition ease-out duration-200"
-                     x-transition:enter-start="opacity-0"
-                     x-transition:enter-end="opacity-100"
-                     class="border-t border-gray-100 bg-gray-50/60">
-                  <div class="p-4">
-                    <div class="text-sm font-semibold text-gray-700 mb-3">
-                      Materias asignadas (<span x-text="grupo.materias.length"></span>)
-                    </div>
-                    <div class="bg-white rounded-xl overflow-hidden border border-gray-200">
-                      <table class="w-full text-sm">
-                        <thead class="bg-gray-50 border-b border-gray-200">
-                          <tr>
-                            <th class="p-3 text-left font-semibold text-gray-600">Materia</th>
-                            <th class="p-3 text-left font-semibold text-gray-600">Docente Titular</th>
-                            <th class="p-3 text-left font-semibold text-gray-600">Horario</th>
-                            <th class="p-3 text-left font-semibold text-gray-600">Aula</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <template x-for="(m, idx) in grupo.materias" :key="idx">
-                            <tr class="border-b last:border-b-0 hover:bg-gray-50">
-                              <td class="p-3 font-medium text-navy-700" x-text="m.materia"></td>
-                              <td class="p-3 text-gray-700" x-text="m.docente"></td>
-                              <td class="p-3 text-gray-500 text-xs" x-text="m.horario"></td>
-                              <td class="p-3"><span class="badge-navy" x-text="m.aula"></span></td>
-                            </tr>
-                          </template>
-                          <tr x-show="grupo.materias.length === 0">
-                            <td colspan="4" class="p-6 text-center text-sm text-gray-400">Sin materias asignadas</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </template>
-          </div>
-        </div>
-      </template>
-
+      <div id="view-container"></div>
     </main>
   </div>
 </div>
 
-<script>
-  document.addEventListener('alpine:init', () => {
-    Alpine.data('app', () => ({
+  <!-- ── Módulos JS (refactorización modular) ─────────────────────────── -->
+  <script src="/modules/core.js"></script>
+  <script src="/modules/dashboard.js"></script>
+  <script src="/modules/alumnos.js"></script>
+  <script src="/modules/tutores.js"></script>
+  <script src="/modules/pagos.js"></script>
+  <script src="/modules/becas.js"></script>
+  <script src="/modules/calificaciones.js"></script>
+  <script src="/modules/boleta.js"></script>
+  <script src="/modules/grupos.js"></script>
+  <script src="/modules/usuarios.js"></script>
+  <script src="/modules/ciclo.js"></script>
+  <script src="/modules/reportes.js"></script>
+  <script src="/modules/bitacora.js"></script>
+  <script src="/modules/historial.js"></script>
+  <script src="/modules/app.js"></script>
+  <script>
+    // ── Módulos cargados — Alpine se inicia automáticamente ──────────────
+    // El bootstrap está en /modules/app.js que registra Alpine.data('app', ...)
+    // con Object.assign de todos los mixins.
+    void 0; // placeholder para que el bloque no quede vacío
 
-      // ── Estado de UI ────────────────────────────────────────────────────────
-      view: 'dashboard',
-
-      // ── Calificaciones ──────────────────────────────────────────────────────
-      busquedaCalif: '',
-      periodoCalif: 'Trimestre 1',
-      alumnoSeleccionadoCalif: false,
-      alumnoActualCalif: null,
-      calificacionesTemp: { matematicas: '', espanol: '', ciencias: '' },
-      _materiasIds: { matematicas: null, espanol: null, ciencias: null },
-
-      // ── Grupos ──────────────────────────────────────────────────────────────
-      grupoExpandido: null,
-
-      // ── Datos (cargados desde API) ──────────────────────────────────────────
-      listaAlumnos:         [],
-      alumnosCoincidencias: [],
-      gruposData:           [],
-
-      // ── Paginación alumnos ────────────────────────────────────────────────
-      paginaAlumnos: 1, limitAlumnos: 20, totalAlumnos: 0, paginasAlumnos: 1,
-
-      // ── Computed ────────────────────────────────────────────────────────────
-      get fechaActual() {
-        return new Date().toLocaleDateString('es-MX', {
-          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-        }).replace(/^\w/, c => c.toUpperCase());
-      },
-      get viewLabel() {
-        const labels = { dashboard: 'Dashboard', grupos: 'Grupos & Materias', calificaciones: 'Calificaciones' };
-        return labels[this.view] || this.view;
-      },
-
-      // ── Carga de datos ────────────────────────────────────────────────────────
-      async _cargarAlumnosAPI(pagina) {
-        const p   = pagina || this.paginaAlumnos;
-        const res = await window.saeApi.alumnos.listar({ page: p, limit: this.limitAlumnos });
-        if (res.ok) {
-          const lista = res.pagination ? res.data : (Array.isArray(res.data) ? res.data : []);
-          this.listaAlumnos = lista.map(window.saeApi.mapAlumno);
-          if (res.pagination) {
-            this.paginaAlumnos  = res.pagination.page;
-            this.totalAlumnos   = res.pagination.total;
-            this.paginasAlumnos = res.pagination.pages;
-          }
-        }
-      },
-      async _irPaginaAlumnos(p) {
-        if (p < 1 || p > this.paginasAlumnos) return;
-        await this._cargarAlumnosAPI(p);
-      },
-      async _cargarGruposAPI() {
-        const res = await window.saeApi.grupos.listar();
-        if (res.ok && res.data) {
-          this.gruposData = res.data.map(window.saeApi.mapGrupo);
-        }
-      },
-
-      // ── Calificaciones ────────────────────────────────────────────────────────
-      buscarAlumnoCalif() {
-        if (this.busquedaCalif.length > 1) {
-          const q = this.busquedaCalif.toLowerCase();
-          this.alumnosCoincidencias = this.listaAlumnos.filter(a =>
-            a.nombre.toLowerCase().includes(q) || a.matricula.toLowerCase().includes(q)
-          );
-        } else {
-          this.alumnosCoincidencias = [];
-        }
-      },
-      async seleccionarAlumnoCalif(al) {
-        this.alumnoActualCalif       = al;
-        this.alumnoSeleccionadoCalif = true;
-        this.calificacionesTemp      = { matematicas: '', espanol: '', ciencias: '' };
-        this._materiasIds            = { matematicas: null, espanol: null, ciencias: null };
-        this.busquedaCalif           = '';
-
-        if (al.grupoId) {
-          const grupoRes = await window.saeApi.grupos.obtener(al.grupoId);
-          if (grupoRes.ok && grupoRes.data && grupoRes.data.materias) {
-            grupoRes.data.materias.forEach(m => {
-              const n = m.materia.toLowerCase();
-              if      (n.includes('matem'))                         this._materiasIds.matematicas = m.id;
-              else if (n.includes('espa') || n.includes('español')) this._materiasIds.espanol     = m.id;
-              else if (n.includes('cien'))                          this._materiasIds.ciencias    = m.id;
-            });
-          }
-        }
-
-        if (al.id) {
-          const periodo = window.saeApi.PERIODO_MAP[this.periodoCalif];
-          const calRes  = await window.saeApi.calificaciones.porAlumno(al.id, periodo);
-          if (calRes.ok && calRes.data) {
-            calRes.data.forEach(c => {
-              if (c.grupoMateriaId === this._materiasIds.matematicas) this.calificacionesTemp.matematicas = c.valor;
-              if (c.grupoMateriaId === this._materiasIds.espanol)     this.calificacionesTemp.espanol     = c.valor;
-              if (c.grupoMateriaId === this._materiasIds.ciencias)    this.calificacionesTemp.ciencias    = c.valor;
-            });
-          }
-        }
-      },
-      async guardarCalificacion() {
-        if (!this.alumnoActualCalif || !this.alumnoActualCalif.id) return;
-        const periodo  = window.saeApi.PERIODO_MAP[this.periodoCalif] || 'TRIMESTRE_1';
-        const alumnoId = this.alumnoActualCalif.id;
-        const lote     = [];
-        const agregar  = (campo, idMateria) => {
-          const val = parseFloat(this.calificacionesTemp[campo]);
-          if (idMateria && !isNaN(val) && val >= 0 && val <= 10) {
-            lote.push({ alumnoId, grupoMateriaId: idMateria, periodo, valor: val });
-          }
-        };
-        agregar('matematicas', this._materiasIds.matematicas);
-        agregar('espanol',     this._materiasIds.espanol);
-        agregar('ciencias',    this._materiasIds.ciencias);
-
-        if (lote.length === 0) {
-          window.saeApi.toast('advertencia', 'No hay calificaciones válidas. Verifica que el alumno tenga materias asignadas en su grupo.');
-          return;
-        }
-        const res = await window.saeApi.calificaciones.guardarLote(lote);
-        if (res.ok) {
-          this.alumnoSeleccionadoCalif = false;
-          window.saeApi.toast('exito', `Calificaciones guardadas para ${this.alumnoActualCalif.nombre}.`);
-        } else {
-          window.saeApi.toast('error', res.message || 'Error al guardar calificaciones.');
-        }
-      },
-
-      // ── Init ──────────────────────────────────────────────────────────────────
-      async init() {
-        const safeIcons = () => { if (typeof lucide !== 'undefined') lucide.createIcons(); };
-
-        await Promise.all([
-          this._cargarAlumnosAPI(),
-          this._cargarGruposAPI(),
-        ]);
-
-        this.$watch('view',           () => this.$nextTick(safeIcons));
-        this.$watch('grupoExpandido', () => this.$nextTick(safeIcons));
-        this.$nextTick(safeIcons);
-      },
-    }));
-  });
-</script>
+  </script>
 </body>
 </html>

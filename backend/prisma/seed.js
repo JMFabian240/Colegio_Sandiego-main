@@ -100,11 +100,11 @@ async function main() {
   console.log('[SEED] [4/7] Usuarios y roles...');
 
   const usuariosData = [
-    { nombreUsuario: 'elizabeth.admin',  nombreCompleto: 'Elizabeth Mendoza',      correo: 'elizabeth.mendoza@colegiosandiego.edu.mx', roles: ['administrador'] },
-    { nombreUsuario: 'maria.directora',  nombreCompleto: 'María Dolores Vega',     correo: 'maria.dolores@colegiosandiego.edu.mx',     roles: ['directora']     },
-    { nombreUsuario: 'gestor.admin',     nombreCompleto: 'Gestor Administrativo',  correo: null,                                       roles: ['empleado']      },
-    { nombreUsuario: 'laura.rios',       nombreCompleto: 'Laura Ríos',             correo: 'laura.rios@colegiosandiego.edu.mx',        roles: ['empleado', 'docente'] },
-    { nombreUsuario: 'mario.sanchez',    nombreCompleto: 'Mario Sánchez',          correo: 'mario.sanchez@colegiosandiego.edu.mx',     roles: ['docente']       },
+    { nombreUsuario: 'elizabeth.mendoza', nombreCompleto: 'Elizabeth Mendoza',      correo: 'elizabeth.mendoza@colegiosandiego.edu.mx', roles: ['administrador'] },
+    { nombreUsuario: 'maria.dolores',     nombreCompleto: 'María Dolores Vega',     correo: 'maria.dolores@colegiosandiego.edu.mx',     roles: ['directora']     },
+    { nombreUsuario: 'patricia.nunez',    nombreCompleto: 'Patricia Núñez',         correo: null,                                       roles: ['empleado']      },
+    { nombreUsuario: 'laura.rios',        nombreCompleto: 'Laura Ríos',             correo: 'laura.rios@colegiosandiego.edu.mx',        roles: ['empleado', 'docente'] },
+    { nombreUsuario: 'mario.sanchez',     nombreCompleto: 'Mario Sánchez',          correo: 'mario.sanchez@colegiosandiego.edu.mx',     roles: ['docente']       },
   ];
 
   const usuarioMap = {};

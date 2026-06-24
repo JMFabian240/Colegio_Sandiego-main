@@ -1,0 +1,90 @@
+<div class="w-full h-full" x-data>
+<div class="card-clean p-6">
+        <div class="flex justify-between items-center">
+          <h2 class="font-bold text-xl text-navy-800">Configuración Financiera del Ciclo Escolar</h2>
+          <button class="btn-outline" @click="modalNuevoCiclo = true">
+            <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Ciclo
+          </button>
+        </div>
+        <div class="mt-4 space-y-5" x-init="if (ciclosDisponibles.length === 0) cargarCiclosYTarifas()">
+
+          <div class="grid md:grid-cols-2 gap-5">
+            <div>
+              <label class="text-sm font-medium text-gray-700">Seleccionar Ciclo Escolar</label>
+              <select class="input-modern mt-1" x-model="configTarifas.cicloId" @change="cargarTarifas()">
+                <option value="" disabled>Seleccione un ciclo</option>
+                <template x-for="c in ciclosDisponibles" :key="c.cicloId">
+                  <option :value="c.cicloId" x-text="c.nombre + (c.activo ? ' (Activo)' : ' (Cerrado/Histórico)')">
+                  </option>
+                </template>
+              </select>
+
+              <label class="text-sm font-medium text-gray-700 mt-3 block">Seleccionar Nivel Educativo</label>
+              <select class="input-modern mt-1" x-model="configTarifas.nivelId" @change="cargarTarifas()">
+                <option value="" disabled>Seleccione un nivel</option>
+                <template x-for="n in nivelesDisponiblesAPI" :key="n.nivelId">
+                  <option :value="n.nivelId" x-text="n.nombre"></option>
+                </template>
+              </select>
+            </div>
+
+            <div class="bg-gray-50 p-4 rounded-xl" x-show="configTarifas.cicloId && !configTarifas.cicloActivo">
+              <div class="font-semibold text-amber-700">🔒 Ciclo Escolar Cerrado</div>
+              <p class="text-sm text-gray-600 mt-1">Este ciclo escolar ya no está activo. Las tarifas son de solo
+                lectura y no pueden modificarse para no alterar los registros históricos.</p>
+            </div>
+          </div>
+
+          <div class="border-t pt-4" x-show="configTarifas.cicloId && configTarifas.nivelId">
+            <h3 class="font-semibold text-gray-800 mb-3">Montos Configurables</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <label class="text-xs font-medium text-gray-600">Colegiatura Anual Total</label>
+                <input type="number" class="input-modern mt-1" x-model="configTarifas.conceptos.colegiatura"
+                  :disabled="!configTarifas.cicloActivo">
+                <div x-show="configTarifas.conceptos.colegiatura > 0" class="mt-2 text-[10px] text-gray-500 bg-gray-50 p-2 rounded-lg border border-gray-100">
+                  <div class="flex justify-between mb-1">
+                    <span>A 10 meses:</span> 
+                    <span class="font-semibold text-gray-700" x-text="'$' + (Number(configTarifas.conceptos.colegiatura) / 10).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})"></span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span>A 12 meses:</span> 
+                    <span class="font-semibold text-gray-700" x-text="'$' + (Number(configTarifas.conceptos.colegiatura) / 12).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})"></span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label class="text-xs font-medium text-gray-600">Inscripción Anual</label>
+                <input type="number" class="input-modern mt-1" x-model="configTarifas.conceptos.inscripcion"
+                  :disabled="!configTarifas.cicloActivo">
+              </div>
+              <div>
+                <label class="text-xs font-medium text-gray-600">Aranceles</label>
+                <input type="number" class="input-modern mt-1" x-model="configTarifas.conceptos.arancel"
+                  :disabled="!configTarifas.cicloActivo">
+              </div>
+              <div>
+                <label class="text-xs font-medium text-gray-600">Materiales</label>
+                <input type="number" class="input-modern mt-1" x-model="configTarifas.conceptos.material"
+                  :disabled="!configTarifas.cicloActivo">
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-3 mt-5"
+            x-show="configTarifas.cicloId && configTarifas.nivelId && configTarifas.cicloActivo">
+            <button class="btn-primary" @click="guardarTarifas()" :disabled="cargando">Guardar configuración</button>
+          </div>
+
+        </div>
+
+        <!-- Cierre de Ciclo Escolar -->
+        <div class="border-t pt-5 mt-5" x-show="esAdmin()">
+          <h3 class="font-semibold text-crimson-700 mb-2">Operaciones Críticas: Cierre de Ciclo Escolar</h3>
+          <p class="text-sm text-gray-600 mb-4">Esta acción promoverá masivamente a los alumnos regulares y retendrá a
+            los alumnos con adeudos. El ciclo escolar actual se cerrará irrevocablemente.</p>
+          <button class="btn-outline text-crimson-600 border-crimson-200" @click="ejecutarCierreCiclo()">⚠️ Ejecutar
+            Cierre de Ciclo</button>
+        </div>
+      </div>
+</div>

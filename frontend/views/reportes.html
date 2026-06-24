@@ -1,0 +1,187 @@
+<div class="w-full h-full" x-data>
+<div>
+        <h2 class="text-xl font-bold text-navy-800 mb-4">Reportes Financieros</h2>
+
+        <!-- Sub-navegación de reportes -->
+        <div class="flex gap-2 mb-5">
+          <button class="btn-outline text-sm"
+            :class="reporteActivo==='corte' ? 'bg-navy-700 text-white border-navy-700' : ''"
+            @click="reporteActivo='corte'; cargarReporteCorte()">Corte de Caja</button>
+          <button class="btn-outline text-sm"
+            :class="reporteActivo==='ingresos' ? 'bg-navy-700 text-white border-navy-700' : ''"
+            @click="reporteActivo='ingresos'; cargarReporteIngresos()">Ingresos Mensuales</button>
+          <button class="btn-outline text-sm"
+            :class="reporteActivo==='deudores' ? 'bg-navy-700 text-white border-navy-700' : ''"
+            @click="reporteActivo='deudores'; cargarReporteDeudores()">Lista de Deudores</button>
+          <button class="btn-outline text-sm"
+            :class="reporteActivo==='facturables' ? 'bg-navy-700 text-white border-navy-700' : ''"
+            @click="reporteActivo='facturables'; cargarReporteFacturables()">Padres Facturables</button>
+          <button class="btn-outline text-sm"
+            :class="reporteActivo==='examen' ? 'bg-navy-700 text-white border-navy-700' : ''"
+            @click="reporteActivo='examen'; cargarReporteExamenRestringido()">Exámenes Restringidos</button>
+        </div>
+
+        <!-- Corte de Caja -->
+        <div x-show="reporteActivo==='corte'" class="card-clean p-5 print-area">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-semibold text-navy-800">Corte de Caja del Día — <span
+                x-text="reporteCorte?.fecha || ''"></span></h3>
+            <button class="btn-outline text-sm no-print" @click="exportarCorteCSV()">⬇️ Exportar CSV</button>
+          </div>
+          <div class="grid grid-cols-3 gap-4 mb-5">
+            <div class="bg-navy-50 p-4 rounded-xl text-center">
+              <div class="text-xs text-gray-500">Total del día</div>
+              <div class="text-2xl font-bold text-navy-700"
+                x-text="'$' + (reporteCorte?.resumen?.total || 0).toLocaleString('es-MX')"></div>
+            </div>
+            <div class="bg-emerald-50 p-4 rounded-xl text-center">
+              <div class="text-xs text-gray-500">Pagos registrados</div>
+              <div class="text-2xl font-bold text-emerald-700" x-text="reporteCorte?.cantidadPagos || 0"></div>
+            </div>
+            <div class="bg-indigo-50 p-4 rounded-xl text-center">
+              <div class="text-xs text-gray-500">Transferencia</div>
+              <div class="text-2xl font-bold text-indigo-700"
+                x-text="'$' + (reporteCorte?.resumen?.porMetodo?.transferencia || 0).toLocaleString('es-MX')"></div>
+            </div>
+          </div>
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="p-2 text-left">Alumno</th>
+                <th class="p-2 text-left">Matrícula</th>
+                <th class="p-2 text-left">Método</th>
+                <th class="p-2 text-left">Registrado por</th>
+                <th class="p-2 text-right">Monto</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="p in (reporteCorte?.pagos || [])" :key="p.pagoId">
+                <tr class="border-b">
+                  <td class="p-2 font-medium" x-text="p.alumno"></td>
+                  <td class="p-2 text-gray-500" x-text="p.matricula"></td>
+                  <td class="p-2" x-text="p.metodoPago"></td>
+                  <td class="p-2 text-gray-500" x-text="p.registradoPor"></td>
+                  <td class="p-2 text-right font-mono font-bold" x-text="'$'+p.monto.toLocaleString('es-MX')"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <div x-show="!reporteCorte?.pagos?.length" class="text-center text-gray-400 py-6">Sin pagos registrados hoy.
+          </div>
+        </div>
+
+        <!-- Ingresos Mensuales -->
+        <div x-show="reporteActivo==='ingresos'" class="card-clean p-5 print-area">
+          <div class="flex justify-between items-center mb-4">
+            <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+              <h3 class="font-semibold text-navy-800">Ingresos Mensuales — <span
+                  x-text="reporteIngresos?.anio || ''"></span></h3>
+              <select class="input-modern py-1 px-2 text-sm max-w-xs bg-gray-50 border-gray-200"
+                x-model="cicloSeleccionadoIngresos" @change="cargarReporteIngresos()"
+                x-init="if(typeof cargarCiclosYTarifas === 'function' && ciclosDisponibles && ciclosDisponibles.length === 0) cargarCiclosYTarifas()">
+                <option value="">Año Actual (Global)</option>
+                <template x-for="c in (typeof ciclosDisponibles !== 'undefined' ? ciclosDisponibles : [])"
+                  :key="c.cicloId">
+                  <option :value="c.cicloId" x-text="c.nombre"></option>
+                </template>
+              </select>
+            </div>
+            <div class="flex items-center gap-4">
+              <div class="text-lg font-bold text-emerald-700"
+                x-text="'Total anual: $' + (reporteIngresos?.totalAnual || 0).toLocaleString('es-MX')"></div>
+              <button class="btn-outline text-sm no-print" @click="exportarIngresosCSV()">⬇️ Exportar CSV</button>
+            </div>
+          </div>
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="p-2 text-left">Mes</th>
+                <th class="p-2 text-right">Ingresos Totales</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="(monto, mes) in (reporteIngresos?.meses || {})" :key="mes">
+                <tr class="border-b hover:bg-gray-50">
+                  <td class="p-2 font-medium capitalize" x-text="mes"></td>
+                  <td class="p-2 text-right font-mono font-bold text-emerald-600"
+                    x-text="monto > 0 ? '$' + monto.toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2}) : '$0.00'">
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Lista de Deudores -->
+        <div x-show="reporteActivo==='deudores'" class="card-clean p-5 print-area">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-semibold text-navy-800">Lista de Deudores</h3>
+            <button class="btn-outline text-sm no-print" @click="exportarDeudoresCSV()">⬇️ Exportar CSV</button>
+          </div>
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="p-2 text-left">Alumno</th>
+                <th class="p-2 text-left">Matrícula</th>
+                <th class="p-2 text-left">Nivel</th>
+                <th class="p-2 text-center">Meses</th>
+                <th class="p-2 text-right">Monto Total</th>
+                <th class="p-2 text-left">Sanción</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="d in (reporteDeudores || [])" :key="d.alumnoId">
+                <tr class="border-b" :class="{'bg-crimson-50': d.mesesAdeudo>=3, 'bg-amber-50': d.mesesAdeudo===2}">
+                  <td class="p-2 font-medium" x-text="d.nombre"></td>
+                  <td class="p-2 text-gray-500" x-text="d.matricula"></td>
+                  <td class="p-2" x-text="d.nivel"></td>
+                  <td class="p-2 text-center font-bold"
+                    :class="{'text-crimson-600': d.mesesAdeudo>=3, 'text-amber-600': d.mesesAdeudo===2}"
+                    x-text="d.mesesAdeudo"></td>
+                  <td class="p-2 text-right font-mono font-bold text-crimson-600"
+                    x-text="'$'+d.montoTotal.toLocaleString('es-MX', {minimumFractionDigits:2})"></td>
+                  <td class="p-2"><span class="text-xs font-bold px-2 py-0.5 rounded-full"
+                      :class="{'bg-crimson-100 text-crimson-700': d.sancion==='Baja temporal', 'bg-amber-100 text-amber-700': d.sancion==='Examen restringido', 'bg-gray-100 text-gray-700': d.sancion==='Aviso preventivo'}"
+                      x-text="d.sancion"></span></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <div x-show="!reporteDeudores?.length" class="text-center text-gray-400 py-6">No hay deudores registrados.
+          </div>
+        </div>
+
+        <!-- Padres Facturables -->
+        <div x-show="reporteActivo==='facturables'" class="card-clean p-5 print-area">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-semibold text-navy-800">Directorio de Padres Facturables</h3>
+            <button class="btn-outline text-sm no-print" @click="exportarFacturablesCSV()">⬇️ Exportar CSV</button>
+          </div>
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="p-2 text-left">Nombre</th>
+                <th class="p-2 text-left">RFC</th>
+                <th class="p-2 text-left">Régimen</th>
+                <th class="p-2 text-left">Correo Facturación</th>
+                <th class="p-2 text-left">Hijos</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="t in (reporteFacturables || [])" :key="t.tutorId">
+                <tr class="border-b hover:bg-gray-50">
+                  <td class="p-2 font-medium" x-text="t.nombreCompleto"></td>
+                  <td class="p-2 font-mono text-gray-600" x-text="t.rfc || 'Sin RFC'"></td>
+                  <td class="p-2" x-text="t.regimenFiscal || '—'"></td>
+                  <td class="p-2 text-gray-600" x-text="t.correoFacturacion || t.correoElectronico || '—'"></td>
+                  <td class="p-2"><template x-for="h in t.hijos"><span class="badge-emerald text-[10px] mr-1"
+                        x-text="h.nombre"></span></template></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <div x-show="!reporteFacturables?.length" class="text-center text-gray-400 py-6">No hay tutores marcados como
+            facturables.</div>
+        </div>
+      </div>
+</div>

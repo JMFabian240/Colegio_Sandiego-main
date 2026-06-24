@@ -23,11 +23,11 @@ router.post('/cierre-ciclo',
   cierreController.cerrarCiclo
 );
 
-// GET /api/v1/alumnos — Listar (requiere permiso de lectura, pagos o calificaciones)
+// GET /api/v1/alumnos — Listar (requiere permiso de lectura, pagos o calificaciones, o ser MAESTRA para ver sus propios)
 router.get('/', buscarAlumnoValidators, validate,
   (req, res, next) => {
     const rol = req.usuario?.rol;
-    if (rol === 'ADMIN') return next();
+    if (rol === 'ADMIN' || rol === 'MAESTRA') return next();
     const p = req.usuario?.permisos || {};
     if ((p.alumnos && p.alumnos !== 'NINGUNO') || 
         (p.pagos && p.pagos !== 'NINGUNO') || 

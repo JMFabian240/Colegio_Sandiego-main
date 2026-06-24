@@ -1,0 +1,144 @@
+<div class="w-full h-full" x-data>
+<div>
+        <!-- Maestro: Tabla de Usuarios -->
+        <div x-show="!usuarioPermisosActivo">
+          <div class="flex justify-between mb-4">
+            <h2 class="text-xl font-bold text-navy-800">Usuarios del sistema</h2>
+            <div class="flex gap-4 items-center">
+              <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                <input type="checkbox" x-model="verInactivos" @change="_cargarUsuariosAPI()"
+                  class="rounded border-gray-300 text-navy-600 focus:ring-navy-600">
+                Mostrar inactivos
+              </label>
+              <button class="btn-primary" @click="modalUsuario=true; nuevoUsuario={nombre:'',rol:'Docente'}">+ Nuevo
+                usuario</button>
+            </div>
+          </div>
+
+          <div class="mb-4 flex flex-wrap gap-3">
+            <input type="text" class="input-modern max-w-sm" placeholder="Buscar por nombre o usuario..."
+              x-model="busquedaUsuario">
+
+            <select class="input-modern w-48" x-model="filtroRolUsuario">
+              <option value="">Todos los roles</option>
+              <option value="ADMIN">Administrador</option>
+              <option value="GESTOR">Gestor</option>
+              <option value="MAESTRA">Docente</option>
+            </select>
+          </div>
+
+          <div class="card-clean overflow-hidden">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="p-3 text-left">Usuario</th>
+                  <th class="p-3 text-left">Rol</th>
+                  <th class="p-3 text-left">Estado</th>
+                  <th class="p-3 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="(user,idx) in getUsuariosFiltrados()" :key="user.id">
+                  <tr class="border-b hover:bg-gray-50" :class="!user.activo ? 'bg-gray-50' : ''">
+                    <td class="p-3">
+                      <div class="font-medium text-gray-800" x-text="user.nombre"></div>
+                      <div class="text-xs text-gray-500" x-text="'@' + user.username"></div>
+                    </td>
+                    <td class="p-3 text-gray-600" x-text="user.rol === 'MAESTRA' ? 'DOCENTE' : user.rol"></td>
+                    <td class="p-3">
+                      <span x-show="user.activo" class="badge-emerald">Activo</span>
+                      <span x-show="!user.activo" class="badge-gray">Inactivo</span>
+                    </td>
+                    <td class="p-3 text-right">
+                      <button class="btn-outline text-xs py-1" @click="seleccionarUsuarioPermisos(user)">Gestionar
+                        Ficha</button>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Detalle: Ficha y Permisos -->
+        <div x-show="usuarioPermisosActivo" class="grid gap-6"
+          :class="usuarioPermisosActivo?.rol === 'Administrador' ? 'max-w-sm mx-auto grid-cols-1' : 'grid-cols-3'">
+          <!-- Columna 1: Info básica y acciones -->
+          <div class="card-clean col-span-1">
+            <div class="p-5 text-center">
+              <div
+                class="w-16 h-16 mx-auto bg-gradient-to-br from-navy-500 to-navy-700 rounded-full flex items-center justify-center text-white text-2xl font-bold"
+                x-text="usuarioPermisosActivo?.nombre?.charAt(0)"></div>
+              <h2 class="font-bold mt-3 text-navy-800" x-text="usuarioPermisosActivo?.nombre"></h2>
+              <p class="text-xs text-gray-500 font-medium mt-1" x-text="usuarioPermisosActivo?.rol"></p>
+              <div class="mt-3">
+                <span x-show="usuarioPermisosActivo?.activo" class="badge-emerald text-[10px]">Cuenta Activa</span>
+                <span x-show="!usuarioPermisosActivo?.activo" class="badge-gray text-[10px]">Cuenta Inactiva</span>
+              </div>
+
+              <div class="mt-6 space-y-3 text-left border-t pt-4">
+                <template x-if="usuarioPermisosActivo?.activo">
+                  <div class="space-y-3">
+                    <button class="btn-outline w-full justify-center text-navy-600 border-navy-200"
+                      @click="abrirResetPassword(usuarioPermisosActivo)">Restablecer Contraseña</button>
+                    <button class="btn-outline w-full justify-center text-crimson-600 border-crimson-200"
+                      @click="eliminarUsuario(listaUsuarios.findIndex(u=>u.id===usuarioPermisosActivo.id)); usuarioPermisosActivo = null">Desactivar
+                      / Eliminar</button>
+                  </div>
+                </template>
+                <template x-if="!usuarioPermisosActivo?.activo">
+                  <button class="btn-outline w-full justify-center text-emerald-600 border-emerald-200"
+                    @click="reactivarUsuario(usuarioPermisosActivo?.id); usuarioPermisosActivo.activo = true">Reactivar
+                    Cuenta</button>
+                </template>
+                <button class="btn-primary w-full justify-center mt-2" @click="usuarioPermisosActivo = null">← Volver al
+                  listado</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Columna 2: Permisos -->
+          <div class="col-span-2 card-clean flex flex-col" x-show="usuarioPermisosActivo?.rol !== 'Administrador'">
+            <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+              <h3 class="font-bold text-navy-800">Permisos de Acceso a Módulos</h3>
+              <div class="flex gap-2">
+                <button class="btn-outline text-xs py-1 px-3" @click="restaurarPermisosPorDefecto()"
+                  :disabled="!usuarioPermisosActivo?.activo"
+                  :class="!usuarioPermisosActivo?.activo ? 'opacity-50 cursor-not-allowed' : ''">Default</button>
+                <button class="btn-primary text-xs py-1 px-3" @click="guardarPermisosUsuario(usuarioPermisosActivo.id)"
+                  :disabled="!usuarioPermisosActivo?.activo"
+                  :class="!usuarioPermisosActivo?.activo ? 'opacity-50 cursor-not-allowed' : ''">Guardar cambios</button>
+              </div>
+            </div>
+            <div class="p-5 flex-1">
+              <div x-show="!usuarioPermisosActivo?.activo"
+                class="p-3 mb-4 bg-amber-50 border-l-4 border-amber-500 text-amber-800 text-sm flex justify-between items-center">
+                <span><strong>Cuenta inactiva.</strong> Debes reactivar al usuario para modificar sus accesos.</span>
+              </div>
+
+              <div class="space-y-4" :class="!usuarioPermisosActivo?.activo ? 'opacity-50 pointer-events-none' : ''">
+                <template x-for="mod in todosModulos" :key="mod">
+                  <div class="flex items-center justify-between py-2 border-b border-gray-50">
+                    <div class="font-medium text-sm text-gray-700 capitalize" x-text="mod"></div>
+                    <div class="flex gap-4">
+                      <label class="flex items-center gap-1 text-sm text-gray-600 cursor-pointer hover:text-navy-600">
+                        <input type="radio" :name="'permiso_'+mod" value="NINGUNO" x-model="permisosEditando[mod]"
+                          :disabled="!usuarioPermisosActivo?.activo" class="text-navy-600"> Ninguno
+                      </label>
+                      <label class="flex items-center gap-1 text-sm text-gray-600 cursor-pointer hover:text-navy-600">
+                        <input type="radio" :name="'permiso_'+mod" value="lectura" x-model="permisosEditando[mod]"
+                          :disabled="!usuarioPermisosActivo?.activo" class="text-navy-600"> Lectura
+                      </label>
+                      <label class="flex items-center gap-1 text-sm text-gray-600 cursor-pointer hover:text-navy-600">
+                        <input type="radio" :name="'permiso_'+mod" value="escritura" x-model="permisosEditando[mod]"
+                          :disabled="!usuarioPermisosActivo?.activo" class="text-navy-600"> Lectura y Edición
+                      </label>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+</div>

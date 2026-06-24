@@ -69,24 +69,13 @@ El servidor estará disponible en: `http://localhost:3000`
 
 ## Credenciales de prueba
 
-| Rol     | Usuario          | Contraseña   |
-|---------|-----------------|---------------|
-| ADMIN   | elizabeth.admin  | sandiego2026 |
-| ADMIN   | maria.directora  | sandiego2026 |
-| GESTOR  | gestor.admin     | sandiego2026 |
-| MAESTRA | laura.rios       | sandiego2026 |
-| MAESTRA | mario.sanchez    | sandiego2026 |
-
----
-nuevos usuarios (por si no funcionan los de arriba)
-
-maria.dolores
-laura.rios
-mario.sanchez
-patricia.nunez
-elizabeth.mendoza
-contraseña:
-sandiego2026
+| Rol     | Usuario            | Contraseña   |
+|---------|-------------------|---------------|
+| ADMIN   | elizabeth.mendoza | sandiego2026 |
+| ADMIN   | maria.dolores     | sandiego2026 |
+| GESTOR  | laura.rios        | sandiego2026 |
+| MAESTRA | mario.sanchez     | sandiego2026 |
+| MAESTRA | patricia.nunez    | sandiego2026 |
 ## Uso en red LAN
 
 Para acceder desde otras computadoras de la red:
@@ -101,6 +90,17 @@ Para acceder desde otras computadoras de la red:
 # El endpoint /health devuelve información del servidor
 curl http://localhost:3000/health
 ```
+
+## Acceso desde Internet (Túnel Cloudflare)
+
+Para exponer el sistema temporalmente a internet de forma segura sin configurar puertos en el router:
+
+```bash
+cd backend
+npm run tunnel
+```
+
+Esto generará una URL pública temporal (ej: `https://xxxx.trycloudflare.com`) que podrás compartir. El sistema detectará automáticamente que está corriendo bajo Cloudflare y ajustará el CORS y las rutas de la API de forma transparente.
 
 ---
 

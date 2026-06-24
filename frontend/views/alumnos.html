@@ -6,6 +6,8 @@
               <div class="flex gap-2">
                 <button class="btn-outline" @click="openNuevoTutor()"><i data-lucide="user-plus"
                     class="w-4 h-4 mr-1"></i>+ Alta Tutor</button>
+                <button class="btn-outline" @click="document.getElementById('csvAlumnosInput').click()"><i data-lucide="upload" class="w-4 h-4 mr-1"></i>Importar CSV</button>
+                <input type="file" id="csvAlumnosInput" style="display: none;" accept=".csv" @change="procesarCSVAlumnos">
                 <button class="btn-primary" @click="openNuevoAlumno()">+ Nuevo alumno</button>
               </div>
             </div>

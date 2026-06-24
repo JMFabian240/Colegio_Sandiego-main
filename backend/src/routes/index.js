@@ -23,6 +23,7 @@ const tarifasRoutes       = require('./tarifas.routes');
 const planesRoutes        = require('./v1/planes.routes');
 const calificacionesExtraRoutes = require('./v1/calificaciones-extra.routes');
 const calificacionesTallerRoutes = require('./v1/calificaciones-taller.routes');
+const importacionRoutes   = require('./importacion.routes');
 
 const router = Router();
 
@@ -42,6 +43,7 @@ router.use('/permisos',      permisosRoutes);
 router.use('/configuracion', configuracionRoutes);
 router.use('/reportes',      reportesRoutes);
 router.use('/tarifas',       tarifasRoutes);
+router.use('/importacion',   importacionRoutes);
 
 module.exports = router;
 

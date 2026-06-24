@@ -13,11 +13,21 @@ function gruposMixin() {
     filtroGruposGrupo: '',
     filtroMateriasTipo: '',
     filtroGruposDocente: '',
+    todosLosGruposClonacion: [],
+    
+    // ── Promocion ────────────────────────────────────────────────────────────
+    modalPromover: false,
+    grupoOrigenPromocion: null,
+    promocionDestinoId: '',
+    alumnosPromocionList: [],
+    alumnosSeleccionadosPromocion: [],
+    seleccionarTodosPromocion: true,
+    gruposDestinoDisponibles: [],
 
     // ── Modal Grupo ──────────────────────────────────────────────────────────
     modalGrupo: false,
     grupoEditando: false,
-    grupoTemp: { id: null, nivel: '', grado: '', seccion: '', titular: '', materias: [] },
+    grupoTemp: { id: null, nivel: '', grado: '', seccion: '', titular: '', materias: [], clonarDesdeGrupoId: '' },
     busquedaTitularModal: '',
     resultadosTitularModal: [],
     mostrarDropdownTitularModal: false,
@@ -144,10 +154,17 @@ function gruposMixin() {
     },
 
     // ── Grupos CRUD ──────────────────────────────────────────────────────────
-    abrirModalNuevoGrupo() {
+    async abrirModalNuevoGrupo() {
       this.grupoEditando = false;
-      this.grupoTemp = { id: null, nivel: '', grado: '', seccion: '', titular: '', materias: [] };
+      this.grupoTemp = { id: null, nivel: '', grado: '', seccion: '', titular: '', materias: [], clonarDesdeGrupoId: '' };
       this.busquedaTitularModal = ''; this.resultadosTitularModal = [];
+      
+      // Cargar grupos para clonar (todos los ciclos)
+      const res = await window.saeApi.grupos.listar({ todos: true });
+      if (res.ok && res.data) {
+        this.todosLosGruposClonacion = res.data;
+      }
+      
       this.modalGrupo = true;
       this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
     },
@@ -189,6 +206,92 @@ function gruposMixin() {
       const res = await window.saeApi.grupos.eliminar(id);
       if (res.ok) { window.saeApi.toast('exito', 'Grupo eliminado'); this._cargarGruposAPI(); }
       else { window.saeApi.toast('error', res.message || 'Error al eliminar grupo'); }
+    },
+    
+    // ── Clonación y Promoción ───────────────────────────────────────────────
+    async cargarMateriasParaClonar() {
+      const gId = this.grupoTemp.clonarDesdeGrupoId;
+      if (!gId) return;
+      const grupo = this.todosLosGruposClonacion.find(g => g.id == gId);
+      if (!grupo) return;
+      
+      const res = await window.saeApi.grupos.obtener(gId);
+      if (res.ok && res.data) {
+        this.grupoTemp.materias = res.data.materias.map(m => ({
+          nombre: m.materia || m.nombre,
+          docente: '', // Limpiar docente
+          horario: m.horario, // O limpiar horario también? Dejémoslo.
+          aula: m.aula
+        }));
+        window.saeApi.toast('exito', `Se cargaron ${this.grupoTemp.materias.length} materias plantilla.`);
+      }
+    },
+    
+    async abrirModalPromover(grupo) {
+      this.grupoOrigenPromocion = grupo;
+      this.promocionDestinoId = '';
+      this.alumnosSeleccionadosPromocion = [];
+      
+      // Obtener alumnos del grupo origen
+      const token = localStorage.getItem('sae_token');
+      const resAlumnos = await fetch(`/api/v1/alumnos?grupoId=${grupo.id}&limit=1000`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const dataAlumnos = await resAlumnos.json();
+      if (dataAlumnos.ok) {
+        this.alumnosPromocionList = dataAlumnos.data;
+        this.alumnosSeleccionadosPromocion = this.alumnosPromocionList.map(a => a.id);
+        this.seleccionarTodosPromocion = true;
+      }
+      
+      // Obtener grupos destino (del ciclo activo)
+      const resGrupos = await window.saeApi.grupos.listar({});
+      if (resGrupos.ok) {
+        this.gruposDestinoDisponibles = resGrupos.data.filter(g => g.id !== grupo.id);
+      }
+      
+      this.modalPromover = true;
+    },
+    
+    toggleTodosPromocion() {
+      if (this.seleccionarTodosPromocion) {
+        this.alumnosSeleccionadosPromocion = this.alumnosPromocionList.map(a => a.id);
+      } else {
+        this.alumnosSeleccionadosPromocion = [];
+      }
+    },
+    
+    async ejecutarPromocion() {
+      if (!this.promocionDestinoId) {
+        return window.saeApi.toast('advertencia', 'Debes seleccionar un grupo destino.');
+      }
+      if (this.alumnosSeleccionadosPromocion.length === 0) {
+        return window.saeApi.toast('advertencia', 'Debes seleccionar al menos un alumno.');
+      }
+      
+      const token = localStorage.getItem('sae_token');
+      try {
+        const res = await fetch(`/api/v1/grupos/${this.grupoOrigenPromocion.id}/promover`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({
+            destinoGrupoId: this.promocionDestinoId,
+            alumnosIds: this.alumnosSeleccionadosPromocion
+          })
+        });
+        const data = await res.json();
+        
+        if (res.ok && data.success) {
+          window.saeApi.toast('exito', data.message || 'Alumnos promovidos correctamente.');
+          this.modalPromover = false;
+          this._cargarGruposAPI();
+        } else {
+          window.saeApi.toast('error', data.message || 'Error al promover alumnos.');
+        }
+      } catch (err) {
+        console.error(err);
+        window.saeApi.toast('error', 'Ocurrió un error en la solicitud.');
+      }
     },
     async vincularTitularGrupo(grupo, queryInput) {
       let nombreDocente = null;

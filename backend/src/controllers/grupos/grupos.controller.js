@@ -9,8 +9,8 @@ const { success, created } = require('../../utils/response.utils');
 
 async function listar(req, res, next) {
   try {
-    const { nivel } = req.query;
-    const grupos = await gruposService.listar({ nivel }, req.usuario);
+    const { nivel, cicloId, todos } = req.query;
+    const grupos = await gruposService.listar({ nivel, cicloId, todos: todos === 'true' }, req.usuario);
     return success(res, grupos, `${grupos.length} grupos encontrados.`);
   } catch (err) { next(err); }
 }
@@ -61,4 +61,13 @@ async function actualizarAlumnosMateria(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { listar, obtener, crear, actualizar, eliminar, obtenerAlumnosMateria, actualizarAlumnosMateria };
+async function promover(req, res, next) {
+  try {
+    const auditCtx = { usuarioId: req.usuario?.id, ip: req.ip };
+    const { destinoGrupoId, alumnosIds } = req.body;
+    await gruposService.promover(req.params.id, destinoGrupoId, alumnosIds, auditCtx);
+    return success(res, null, 'Alumnos promovidos exitosamente.');
+  } catch (err) { next(err); }
+}
+
+module.exports = { listar, obtener, crear, actualizar, eliminar, obtenerAlumnosMateria, actualizarAlumnosMateria, promover };

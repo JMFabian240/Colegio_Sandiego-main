@@ -35,7 +35,7 @@ function alumnosMixin() {
 
     // ── Nuevo alumno ─────────────────────────────────────────────────────────
     modalNuevoAlumno: false,
-    nuevoAlumnoData: { nombre: '', matricula: '', curp: '', grupoId: null, padre: '', telefono: '', tutorId: null, fechaNacimiento: '', personasAutorizadas: '' },
+    nuevoAlumnoData: { nombre: '', matricula: '', curp: '', grupoId: null, padre: '', telefono: '', tutorId: null, fechaNacimiento: '', personasAutorizadas: '', nivel: '', grado: '' },
     erroresNuevoAlumno: {},
     sugerenciasTutor: [],
 
@@ -138,6 +138,7 @@ function alumnosMixin() {
         return;
       }
       const encabezados = ['Matrícula', 'Nombre Completo', 'Nivel', 'Grupo', 'Estado', 'Tutor Principal', 'Teléfono Tutor'];
+      
       const filas = this.alumnosFiltrados.map(a => [
         a.matricula || '',
         `"${a.nombre || ''}"`,
@@ -157,6 +158,59 @@ function alumnosMixin() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+    },
+    
+    procesarCSVAlumnos(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      window.saeApi.toast('info', 'Procesando archivo CSV...');
+      
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: async (results) => {
+          try {
+            const alumnos = results.data.map(row => ({
+              nombre: row['Nombre Completo'] || row['Nombre'] || '',
+              matricula: row['Matrícula'] || row['Matricula'] || '',
+              curp: row['CURP'] || '',
+              padre: row['Tutor Principal'] || row['Padre'] || '',
+              telefono: row['Teléfono Tutor'] || row['Teléfono'] || '',
+              nivel: row['Nivel'] || '',
+            })).filter(a => a.nombre && a.matricula);
+
+            if (alumnos.length === 0) {
+              window.saeApi.toast('error', 'No se encontraron alumnos válidos en el CSV');
+              return;
+            }
+
+            const token = localStorage.getItem('sae_token');
+            const res = await fetch('/api/v1/importacion/alumnos', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify({ alumnos })
+            });
+            const data = await res.json();
+            
+            if (res.ok && data.success) {
+              window.saeApi.toast('exito', `Se importaron ${data.data.exitosos} alumnos correctamente.`);
+              this._cargarAlumnosAPI(1);
+            } else {
+              window.saeApi.toast('error', data.message || 'Error al importar alumnos');
+            }
+          } catch (error) {
+            console.error('Error importando:', error);
+            window.saeApi.toast('error', 'Error al procesar el archivo CSV.');
+          } finally {
+            event.target.value = '';
+          }
+        },
+        error: (err) => {
+          window.saeApi.toast('error', 'No se pudo leer el archivo CSV');
+          event.target.value = '';
+        }
+      });
     },
 
     // ── Ficha alumno ─────────────────────────────────────────────────────────

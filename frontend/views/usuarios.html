@@ -10,6 +10,8 @@
                   class="rounded border-gray-300 text-navy-600 focus:ring-navy-600">
                 Mostrar inactivos
               </label>
+              <button class="btn-outline" @click="document.getElementById('csvDocentesInput').click()"><i data-lucide="upload" class="w-4 h-4 mr-1"></i>Importar CSV</button>
+              <input type="file" id="csvDocentesInput" style="display: none;" accept=".csv" @change="procesarCSVDocentes">
               <button class="btn-primary" @click="modalUsuario=true; nuevoUsuario={nombre:'',rol:'Docente'}">+ Nuevo
                 usuario</button>
             </div>

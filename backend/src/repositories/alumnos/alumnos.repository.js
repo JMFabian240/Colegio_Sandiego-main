@@ -383,6 +383,21 @@ async function create(datos, auditCtx = {}) { return withAudit(auditCtx.usuarioI
           estadoFinanciero: 'al_corriente',
         },
       });
+      
+      // Inscribir automáticamente a las materias del grupo
+      const grupoObj = await tx.grupo.findUnique({
+        where: { grupoId: Number(grupoId) },
+        include: { gruposMaterias: { where: { eliminadoEn: null } } }
+      });
+      if (grupoObj && grupoObj.gruposMaterias) {
+        for (const gm of grupoObj.gruposMaterias) {
+          await tx.inscripcionMateria.upsert({
+            where: { alumnoId_grupoMateriaId: { alumnoId: alumno.alumnoId, grupoMateriaId: gm.grupoMateriaId } },
+            create: { alumnoId: alumno.alumnoId, grupoMateriaId: gm.grupoMateriaId },
+            update: {}
+          });
+        }
+      }
     }
   }
 
@@ -446,6 +461,21 @@ async function update(id, datos, auditCtx = {}) { return withAudit(auditCtx.usua
           mesesAdeudo: 0,
         }
       });
+      
+      // Inscribir automáticamente a las materias del nuevo grupo
+      const grupoObj = await tx.grupo.findUnique({
+        where: { grupoId: Number(grupoId) },
+        include: { gruposMaterias: { where: { eliminadoEn: null } } }
+      });
+      if (grupoObj && grupoObj.gruposMaterias) {
+        for (const gm of grupoObj.gruposMaterias) {
+          await tx.inscripcionMateria.upsert({
+            where: { alumnoId_grupoMateriaId: { alumnoId: Number(id), grupoMateriaId: gm.grupoMateriaId } },
+            create: { alumnoId: Number(id), grupoMateriaId: gm.grupoMateriaId },
+            update: {}
+          });
+        }
+      }
     }
   }
 

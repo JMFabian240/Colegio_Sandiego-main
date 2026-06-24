@@ -95,7 +95,7 @@ async function findAll({ nivel, cicloId } = {}, usuario = null) {
 
   if (cicloId) {
     where.cicloId = Number(cicloId);
-  } else {
+  } else if (!filtros.todos) {
     const cicloActivo = await prisma.cicloEscolar.findFirst({ where: { activo: true } });
     if (cicloActivo) where.cicloId = cicloActivo.cicloId;
   }
@@ -412,4 +412,56 @@ async function actualizarAlumnosMateria(grupoMateriaId, alumnosIds, auditCtx = {
   });
 }
 
-module.exports = { findAll, findById, create, update, softDelete, obtenerAlumnosMateria, actualizarAlumnosMateria };
+async function promover(origenGrupoId, destinoGrupoId, alumnosIds, auditCtx = {}) {
+  return withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
+    const destino = await tx.grupo.findUnique({
+      where: { grupoId: Number(destinoGrupoId) },
+      include: { gruposMaterias: { where: { eliminadoEn: null } } }
+    });
+    
+    if (!destino) {
+      throw Object.assign(new Error('Grupo destino no encontrado.'), { statusCode: 404 });
+    }
+    
+    for (const alumnoIdStr of alumnosIds) {
+      const alumnoId = Number(alumnoIdStr);
+      
+      // Actualizar o crear inscripción al ciclo
+      const inscripcion = await tx.inscripcionCiclo.findUnique({
+        where: { alumnoId_cicloId: { alumnoId, cicloId: destino.cicloId } }
+      });
+      
+      if (inscripcion) {
+        await tx.inscripcionCiclo.update({
+          where: { inscripcionId: inscripcion.inscripcionId },
+          data: { grupoId: destino.grupoId }
+        });
+      } else {
+        await tx.inscripcionCiclo.create({
+          data: {
+            alumnoId,
+            cicloId: destino.cicloId,
+            grupoId: destino.grupoId
+          }
+        });
+      }
+      
+      // Inscribir a las materias del nuevo grupo
+      for (const gm of destino.gruposMaterias) {
+        await tx.inscripcionMateria.upsert({
+          where: { alumnoId_grupoMateriaId: { alumnoId, grupoMateriaId: gm.grupoMateriaId } },
+          create: { alumnoId, grupoMateriaId: gm.grupoMateriaId },
+          update: {}
+        });
+      }
+      
+      // Actualizar nivel del alumno para que concuerde con el grupo destino
+      await tx.alumno.update({
+        where: { alumnoId },
+        data: { nivelId: destino.nivelId }
+      });
+    }
+  });
+}
+
+module.exports = { findAll, findById, create, update, softDelete, obtenerAlumnosMateria, actualizarAlumnosMateria, promover };

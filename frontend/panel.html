@@ -15,6 +15,7 @@
   <!-- Librerías vendorizadas (sin CDN externo — modo offline) -->
   <script src="/vendor/tailwind.cdn.js"></script>
   <script defer src="/vendor/alpine.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <link href="/vendor/fonts.css" rel="stylesheet" />
   <script src="/vendor/lucide.min.js"></script>
   <script src="/vendor/jspdf.min.js"></script>
@@ -788,6 +789,18 @@
               x-model="grupoTemp.seccion" oninput="this.value = this.value.toUpperCase()" :disabled="grupoEditando" :class="grupoEditando ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''">
           </div>
         </div>
+        <div class="mb-4" x-show="!grupoEditando">
+          <label class="text-xs font-medium text-gray-600 block mb-1">Clonar materias de un grupo existente (Plantilla)</label>
+          <div class="flex gap-2">
+            <select class="input-modern flex-1" x-model="grupoTemp.clonarDesdeGrupoId">
+              <option value="">- No clonar, crear materias manualmente -</option>
+              <template x-for="g in todosLosGruposClonacion" :key="g.id">
+                <option :value="g.id" x-text="`${g.cicloNombre} - ${g.nombre}`"></option>
+              </template>
+            </select>
+            <button class="btn-outline whitespace-nowrap" type="button" @click="cargarMateriasParaClonar()">Cargar materias</button>
+          </div>
+        </div>
         <div class="mb-6">
           <label class="text-xs font-medium text-gray-600 block mb-1">Docente Titular (Opcional)</label>
           <div class="relative" @click.away="mostrarDropdownTitularModal = false">
@@ -883,6 +896,54 @@
       <div class="flex justify-end gap-2 mt-5">
         <button class="btn-outline" @click="modalNuevoAlumno=false">Cancelar</button>
         <button class="btn-primary" @click="guardarNuevoAlumno()">Registrar alumno</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PROMOVER ALUMNOS -->
+  <div x-show="modalPromover" x-cloak class="modal-mask" @click.self="modalPromover=false">
+    <div class="modal-container p-6" style="max-width: 600px;">
+      <div class="font-bold text-lg text-navy-800">Promover Alumnos</div>
+      <p class="text-sm text-gray-500 mb-4">Promover alumnos del grupo <strong x-text="grupoOrigenPromocion?.nombre"></strong> a un nuevo grupo en el ciclo activo.</p>
+      
+      <div class="mb-4">
+        <label class="text-xs font-medium text-gray-600 block mb-1">Grupo Destino *</label>
+        <select class="input-modern w-full" x-model="promocionDestinoId">
+          <option value="">- Selecciona el Grupo Destino -</option>
+          <template x-for="g in gruposDestinoDisponibles" :key="g.id">
+            <option :value="g.id" x-text="g.nombre"></option>
+          </template>
+        </select>
+      </div>
+
+      <div class="mb-2 flex justify-between items-center">
+        <label class="text-xs font-medium text-gray-600">Alumnos a Promover</label>
+        <label class="text-xs text-blue-600 cursor-pointer hover:underline">
+          <input type="checkbox" x-model="seleccionarTodosPromocion" @change="toggleTodosPromocion()" class="mr-1">
+          Seleccionar Todos
+        </label>
+      </div>
+      
+      <div class="max-h-60 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-gray-50">
+        <template x-for="alumno in alumnosPromocionList" :key="alumno.id">
+          <label class="flex items-center p-2 hover:bg-white rounded cursor-pointer transition-colors border-b border-gray-100 last:border-0">
+            <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-3" :value="alumno.id" x-model="alumnosSeleccionadosPromocion">
+            <div class="flex flex-col">
+              <span class="text-sm font-medium text-navy-800" x-text="alumno.nombre"></span>
+              <span class="text-xs text-gray-500" x-text="alumno.matricula"></span>
+            </div>
+          </label>
+        </template>
+        <div x-show="alumnosPromocionList.length === 0" class="p-4 text-center text-sm text-gray-500">
+          No hay alumnos en este grupo o no se han cargado.
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 mt-5">
+        <button class="btn-outline" @click="modalPromover=false">Cancelar</button>
+        <button class="btn-primary" @click="ejecutarPromocion()" :disabled="!promocionDestinoId || alumnosSeleccionadosPromocion.length === 0">
+          Promover (<span x-text="alumnosSeleccionadosPromocion.length"></span>)
+        </button>
       </div>
     </div>
   </div>

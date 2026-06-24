@@ -40,4 +40,20 @@ async function actualizarAlumnosMateria(grupoMateriaId, alumnosIds, auditCtx = {
   return gruposRepository.actualizarAlumnosMateria(grupoMateriaId, alumnosIds, auditCtx);
 }
 
-module.exports = { listar, obtenerPorId, crear, actualizar, eliminar, obtenerAlumnosMateria, actualizarAlumnosMateria };
+async function promover(origenGrupoId, destinoGrupoId, alumnosIds, auditCtx = {}) {
+  if (!destinoGrupoId || !alumnosIds || !alumnosIds.length) {
+    throw Object.assign(new Error('Faltan datos para la promoción.'), { statusCode: 400 });
+  }
+  return gruposRepository.promover(origenGrupoId, destinoGrupoId, alumnosIds, auditCtx);
+}
+
+module.exports = {
+  listar,
+  obtenerPorId,
+  crear,
+  actualizar,
+  eliminar,
+  obtenerAlumnosMateria,
+  actualizarAlumnosMateria,
+  promover
+};

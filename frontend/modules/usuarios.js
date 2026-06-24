@@ -58,6 +58,56 @@ function usuariosMixin() {
       this._usuarioAEliminar = { idx, id: u.id, nombre: u.nombre };
       this.modalConfirmEliminar = true;
     },
+    
+    procesarCSVDocentes(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      window.saeApi.toast('info', 'Procesando archivo CSV...');
+      
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: async (results) => {
+          try {
+            const docentes = results.data.map(row => ({
+              nombre: row['Nombre Completo'] || row['Nombre'] || '',
+              username: row['Usuario'] || row['Username'] || '',
+              password: row['Contraseña'] || row['Password'] || 'Docente123!',
+            })).filter(d => d.nombre && d.username);
+
+            if (docentes.length === 0) {
+              window.saeApi.toast('error', 'No se encontraron docentes válidos en el CSV');
+              return;
+            }
+
+            const token = localStorage.getItem('sae_token');
+            const res = await fetch('/api/v1/importacion/docentes', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify({ docentes })
+            });
+            const data = await res.json();
+            
+            if (res.ok && data.success) {
+              window.saeApi.toast('exito', `Se importaron ${data.data.exitosos} docentes correctamente.`);
+              this._cargarUsuariosAPI();
+            } else {
+              window.saeApi.toast('error', data.message || 'Error al importar docentes');
+            }
+          } catch (error) {
+            console.error('Error importando:', error);
+            window.saeApi.toast('error', 'Error al procesar el archivo CSV.');
+          } finally {
+            event.target.value = '';
+          }
+        },
+        error: (err) => {
+          window.saeApi.toast('error', 'No se pudo leer el archivo CSV');
+          event.target.value = '';
+        }
+      });
+    },
     async confirmarEliminarUsuario() {
       const { idx, id, nombre } = this._usuarioAEliminar;
       this.modalConfirmEliminar = false;

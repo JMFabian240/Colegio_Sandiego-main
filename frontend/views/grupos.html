@@ -120,8 +120,9 @@
               
               <!-- Acciones CRUD grupo -->
               <div class="flex gap-2 ml-4 border-l border-gray-100 pl-4">
-                <button class="btn-icon bg-gray-50 hover:bg-gray-100 text-blue-600 rounded" @click="abrirModalEditarGrupo(grupo)"><i data-lucide="edit" class="w-4 h-4"></i></button>
-                <button class="btn-icon bg-gray-50 hover:bg-gray-100 text-red-600 rounded" @click="eliminarGrupoCRUD(grupo.id)"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                <button class="btn-icon bg-gray-50 hover:bg-gray-100 text-green-600 rounded" title="Promover alumnos" @click="abrirModalPromover(grupo)"><i data-lucide="arrow-up-circle" class="w-4 h-4"></i></button>
+                <button class="btn-icon bg-gray-50 hover:bg-gray-100 text-blue-600 rounded" title="Editar grupo" @click="abrirModalEditarGrupo(grupo)"><i data-lucide="edit" class="w-4 h-4"></i></button>
+                <button class="btn-icon bg-gray-50 hover:bg-gray-100 text-red-600 rounded" title="Eliminar grupo" @click="eliminarGrupoCRUD(grupo.id)"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
               </div>
             </div>
           </template>
@@ -185,7 +186,7 @@
                     <td class="p-4 text-gray-500" x-text="m.horario || '-'"></td>
                     <td class="p-4 text-gray-500" x-text="m.aula || '-'"></td>
                     <td class="p-4 text-center flex justify-center gap-2">
-                      <button class="btn-icon text-indigo-600 hover:bg-indigo-50 rounded" @click="abrirModalAsignarAlumnos(m)" x-show="(m.tipo === 'taller' || m.tipo === 'club') && tienePermiso('grupos', 'escritura')" title="Asignar Alumnos">
+                      <button class="btn-icon text-indigo-600 hover:bg-indigo-50 rounded" @click="abrirModalAsignarAlumnos(m)" x-show="tienePermiso('grupos', 'escritura')" title="Asignar Alumnos">
                         <i data-lucide="users" class="w-4 h-4"></i>
                       </button>
                       <button class="btn-icon text-blue-600 hover:bg-blue-50 rounded" @click="abrirModalEditarMateria(m)" x-show="tienePermiso('grupos', 'escritura')">

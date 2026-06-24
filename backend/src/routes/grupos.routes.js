@@ -17,6 +17,7 @@ router.get('/:id', authorize('ADMIN', 'GESTOR', 'MAESTRA'), gruposController.obt
 // Modificaciones — solo ADMIN y GESTOR
 router.post('/',   authorize('ADMIN', 'GESTOR'), gruposController.crear);
 router.put('/materias/:id/alumnos', authorize('ADMIN', 'GESTOR'), gruposController.actualizarAlumnosMateria);
+router.post('/:id/promover', authorize('ADMIN', 'GESTOR'), gruposController.promover);
 router.put('/:id', authorize('ADMIN', 'GESTOR'), gruposController.actualizar);
 router.delete('/:id', authorize('ADMIN', 'GESTOR'), gruposController.eliminar);
 

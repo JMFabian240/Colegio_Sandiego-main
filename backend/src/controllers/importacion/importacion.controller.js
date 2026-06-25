@@ -3,6 +3,7 @@
 const alumnosService = require('../../services/alumnos/alumnos.service');
 const usuariosService = require('../../services/usuarios/usuarios.service');
 const { success } = require('../../utils/response.utils');
+const prisma = require('../../config/database');
 
 async function importarAlumnos(req, res, next) {
   try {
@@ -13,13 +14,35 @@ async function importarAlumnos(req, res, next) {
       throw Object.assign(new Error('Debe proporcionar un arreglo de alumnos.'), { statusCode: 400 });
     }
 
+    const cicloActivo = await prisma.cicloEscolar.findFirst({ where: { activo: true } });
+    let gruposActivos = [];
+    if (cicloActivo) {
+      gruposActivos = await prisma.grupo.findMany({ 
+        where: { cicloId: cicloActivo.cicloId, eliminadoEn: null },
+        include: { nivel: true }
+      });
+    }
+
     const resultados = { exitosos: 0, fallidos: 0, errores: [] };
 
     for (const alumno of alumnos) {
       try {
+        let resolvedGrupoId = grupoId || alumno.grupoId;
+        
+        if (!resolvedGrupoId && alumno.grado && alumno.seccion) {
+           const matchingGroup = gruposActivos.find(g => 
+             g.grado === alumno.grado.toString() &&
+             g.seccion.toLowerCase() === alumno.seccion.toLowerCase() &&
+             (!alumno.nivel || (g.nivel && g.nivel.codigo.toLowerCase() === alumno.nivel.toLowerCase()))
+           );
+           if (matchingGroup) {
+             resolvedGrupoId = matchingGroup.grupoId;
+           }
+        }
+
         await alumnosService.crear({
           ...alumno,
-          grupoId: grupoId || alumno.grupoId
+          grupoId: resolvedGrupoId
         }, auditCtx);
         resultados.exitosos++;
       } catch (err) {

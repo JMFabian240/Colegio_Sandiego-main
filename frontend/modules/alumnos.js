@@ -175,9 +175,13 @@ function alumnosMixin() {
               nombre: row['Nombre Completo'] || row['Nombre'] || '',
               matricula: row['Matrícula'] || row['Matricula'] || '',
               curp: row['CURP'] || '',
-              padre: row['Tutor Principal'] || row['Padre'] || '',
-              telefono: row['Teléfono Tutor'] || row['Teléfono'] || '',
+              padres: [{
+                nombre: row['Tutor Principal'] || row['Padre'] || '',
+                telefono: row['Teléfono Tutor'] || row['Teléfono'] || ''
+              }],
               nivel: row['Nivel'] || '',
+              grado: row['Grado'] || '',
+              seccion: row['Grupo'] || row['Sección'] || row['Seccion'] || ''
             })).filter(a => a.nombre && a.matricula);
 
             if (alumnos.length === 0) {

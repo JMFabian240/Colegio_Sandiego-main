@@ -86,7 +86,7 @@ function parsarGradoSeccion(nombre) {
 
 // ── Queries ───────────────────────────────────────────────────
 
-async function findAll({ nivel, cicloId } = {}, usuario = null) {
+async function findAll({ nivel, cicloId, todos } = {}, usuario = null) {
   const where = { eliminadoEn: null };
 
   if (nivel) {
@@ -95,7 +95,7 @@ async function findAll({ nivel, cicloId } = {}, usuario = null) {
 
   if (cicloId) {
     where.cicloId = Number(cicloId);
-  } else if (!filtros.todos) {
+  } else if (!todos) {
     const cicloActivo = await prisma.cicloEscolar.findFirst({ where: { activo: true } });
     if (cicloActivo) where.cicloId = cicloActivo.cicloId;
   }

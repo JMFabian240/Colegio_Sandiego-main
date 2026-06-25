@@ -185,13 +185,12 @@ function alumnosMixin() {
               return;
             }
 
-            const token = localStorage.getItem('sae_token');
-            const res = await fetch('/api/v1/importacion/alumnos', {
+            const res = await window.saeApi.fetchApi('/importacion/alumnos', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ alumnos })
             });
-            const data = await res.json();
+            const data = res; // saeApi.fetchApi already returns parsed json if successful
             
             if (res.ok && data.success) {
               window.saeApi.toast('exito', `Se importaron ${data.data.exitosos} alumnos correctamente.`);

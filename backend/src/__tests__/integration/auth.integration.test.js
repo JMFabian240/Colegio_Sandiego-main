@@ -68,7 +68,7 @@ describe('Integration — POST /api/v1/auth/login', () => {
     vi.spyOn(authService, 'login').mockResolvedValue({
       token:      'mock.access.token',
       usuario:    usuarioAdminMock,
-      redirectTo: '/admin_panel.html',
+      redirectTo: '/panel.html',
     });
 
     const res = await request(app)

@@ -24,6 +24,29 @@ function gruposMixin() {
     seleccionarTodosPromocion: true,
     gruposDestinoDisponibles: [],
 
+    // ── Alumnos por Grupo ──────────────────────────────────────────────────
+    modalAlumnosGrupo: false,
+    alumnosDelGrupo: [],
+    grupoViendoAlumnos: null,
+    
+    async verAlumnosGrupo(grupo) {
+      this.grupoViendoAlumnos = grupo;
+      this.alumnosDelGrupo = [];
+      this.modalAlumnosGrupo = true;
+      try {
+        const res = await window.saeApi.alumnos.listar({ grupoId: grupo.id, limit: 1000 });
+        if (res.ok) {
+          const lista = res.pagination ? res.data : (Array.isArray(res.data) ? res.data : []);
+          this.alumnosDelGrupo = lista.map(window.saeApi.mapAlumno);
+        } else {
+          window.saeApi.toast('error', res.message || 'Error al cargar alumnos del grupo');
+        }
+      } catch (e) {
+        console.error(e);
+        window.saeApi.toast('error', 'Error al consultar alumnos');
+      }
+    },
+
     // ── Modal Grupo ──────────────────────────────────────────────────────────
     modalGrupo: false,
     grupoEditando: false,
@@ -63,7 +86,7 @@ function gruposMixin() {
     },
     get seccionesDisponiblesFiltroGrupos() {
       if (!this.filtroGruposNivel || !this.filtroGruposGrado) return [];
-      return ['A', 'B', 'C', 'D', 'E', 'F'];
+      return ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'S'];
     },
 
     // ── API ──────────────────────────────────────────────────────────────────

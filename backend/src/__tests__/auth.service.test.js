@@ -73,28 +73,28 @@ describe('auth.service — login()', () => {
     expect(result.usuario).not.toHaveProperty('intentosFallidos');
   });
 
-  test('login exitoso ADMIN → redirectTo /admin_panel.html', async () => {
+  test('login exitoso ADMIN → redirectTo /panel.html', async () => {
     vi.spyOn(authRepo, 'findByUsername').mockResolvedValue({ ...usuarioMock, rol: 'ADMIN' });
     vi.spyOn(hashUtils, 'comparePassword').mockResolvedValue(true);
 
     const result = await authService.login('admin.test', 'Contraseña123');
-    expect(result.redirectTo).toBe('/admin_panel.html');
+    expect(result.redirectTo).toBe('/panel.html');
   });
 
-  test('login exitoso GESTOR → redirectTo /gestor_panel.html', async () => {
+  test('login exitoso GESTOR → redirectTo /panel.html', async () => {
     vi.spyOn(authRepo, 'findByUsername').mockResolvedValue({ ...usuarioMock, rol: 'GESTOR' });
     vi.spyOn(hashUtils, 'comparePassword').mockResolvedValue(true);
 
     const result = await authService.login('gestor.test', 'Contraseña123');
-    expect(result.redirectTo).toBe('/gestor_panel.html');
+    expect(result.redirectTo).toBe('/panel.html');
   });
 
-  test('login exitoso MAESTRA → redirectTo /maestra_panel.html', async () => {
+  test('login exitoso MAESTRA → redirectTo /panel.html', async () => {
     vi.spyOn(authRepo, 'findByUsername').mockResolvedValue({ ...usuarioMock, rol: 'MAESTRA' });
     vi.spyOn(hashUtils, 'comparePassword').mockResolvedValue(true);
 
     const result = await authService.login('maestra.test', 'Contraseña123');
-    expect(result.redirectTo).toBe('/maestra_panel.html');
+    expect(result.redirectTo).toBe('/panel.html');
   });
 
   test('login exitoso llama limpiarFallos', async () => {

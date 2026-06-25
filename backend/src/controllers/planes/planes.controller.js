@@ -43,7 +43,21 @@ async function assignPlan(req, res) {
   }
 }
 
+async function listarActivos(req, res) {
+  try {
+    const planes = await require('../../config/database').planPago.findMany({
+      where: { activo: true, ciclo: { activo: true } },
+      select: { planPagoId: true, nombre: true, meses: true, montoMensual: true }
+    });
+    return success(res, planes, 'Planes activos obtenidos.');
+  } catch(err) {
+    console.error('[PlanesController.listarActivos] Error:', err);
+    return serverError(res, err.message || 'Error al obtener planes activos.');
+  }
+}
+
 module.exports = {
   previewPlan,
-  assignPlan
+  assignPlan,
+  listarActivos
 };

@@ -120,6 +120,7 @@
               
               <!-- Acciones CRUD grupo -->
               <div class="flex gap-2 ml-4 border-l border-gray-100 pl-4">
+                <button class="btn-icon bg-gray-50 hover:bg-gray-100 text-purple-600 rounded" title="Ver alumnos del grupo" @click="verAlumnosGrupo(grupo)"><i data-lucide="users" class="w-4 h-4"></i></button>
                 <button class="btn-icon bg-gray-50 hover:bg-gray-100 text-green-600 rounded" title="Promover alumnos" @click="abrirModalPromover(grupo)"><i data-lucide="arrow-up-circle" class="w-4 h-4"></i></button>
                 <button class="btn-icon bg-gray-50 hover:bg-gray-100 text-blue-600 rounded" title="Editar grupo" @click="abrirModalEditarGrupo(grupo)"><i data-lucide="edit" class="w-4 h-4"></i></button>
                 <button class="btn-icon bg-gray-50 hover:bg-gray-100 text-red-600 rounded" title="Eliminar grupo" @click="eliminarGrupoCRUD(grupo.id)"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
@@ -390,6 +391,45 @@
               <button class="btn-primary flex items-center gap-2" @click="guardarAsignacionAlumnos()">
                 <i data-lucide="save" class="w-4 h-4"></i> Guardar Inscripciones
               </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Ver Alumnos -->
+        <div x-show="modalAlumnosGrupo" class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm" x-cloak>
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col" @click.away="modalAlumnosGrupo = false">
+            <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <h3 class="text-xl font-bold text-navy-800">Alumnos en <span x-text="grupoViendoAlumnos?.grado + '° ' + (grupoViendoAlumnos?.seccion || '') + ' ' + (grupoViendoAlumnos?.nivel || '')"></span></h3>
+              <button @click="modalAlumnosGrupo = false" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1">
+              <div class="mb-4">
+                <span class="bg-navy-50 text-navy-700 px-3 py-1.5 rounded-full text-sm font-medium">Total: <span x-text="alumnosDelGrupo.length"></span> alumnos</span>
+              </div>
+              <table class="w-full text-sm text-left border">
+                <thead class="bg-gray-50 border-b">
+                  <tr>
+                    <th class="p-3">Matrícula</th>
+                    <th class="p-3">Nombre</th>
+                    <th class="p-3">Estado</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y">
+                  <template x-for="al in alumnosDelGrupo" :key="al.id">
+                    <tr class="hover:bg-gray-50">
+                      <td class="p-3 font-mono text-gray-500" x-text="al.matricula"></td>
+                      <td class="p-3 font-bold text-navy-800" x-text="al.nombre"></td>
+                      <td class="p-3"><span class="px-2 py-1 text-xs rounded-full" :class="al.estado==='Activo'?'bg-emerald-100 text-emerald-800':'bg-red-100 text-red-800'" x-text="al.estado || 'Activo'"></span></td>
+                    </tr>
+                  </template>
+                  <tr x-show="alumnosDelGrupo.length === 0">
+                    <td colspan="3" class="p-6 text-center text-gray-400">No hay alumnos asignados a este grupo.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="p-4 border-t flex justify-end">
+              <button class="btn-outline" @click="modalAlumnosGrupo = false">Cerrar</button>
             </div>
           </div>
         </div>

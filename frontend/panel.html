@@ -8,7 +8,7 @@
   <!-- SAE: config dinámica (IP del servidor) + guard de sesión + cliente API -->
   <script src="/config.js"></script>
   <script src="/shared/auth-guard.js"></script>
-  <script src="/shared/api.js?v=3"></script>
+  <script src="/shared/api.js?v=4"></script>
   <!-- Indicador de conectividad LAN (chip rojo discreto cuando el servidor no responde) -->
   <script src="/shared/offline-indicator.js"></script>
   <!-- Librerías visuales -->
@@ -345,8 +345,9 @@
     <!-- SIDEBAR -->
     <aside class="sidebar-modern flex-shrink-0 flex flex-col">
       <div class="px-5 pt-6 pb-4 flex items-center gap-3 border-b border-white/10">
-        <div class="w-8 h-8 bg-white/10 rounded-xl flex items-center justify-center"><span
-            class="text-white font-bold text-sm">SD</span></div>
+        <div class="w-10 h-10 flex items-center justify-center">
+          <img src="/shared/escudo.png" alt="Escudo Colegio San Diego" class="w-full h-full object-contain" />
+        </div>
         <div>
           <div class="text-white font-semibold text-sm">Colegio San Diego</div>
           <div class="text-white/40 text-[11px]"
@@ -429,8 +430,7 @@
           
 
 
-          <button x-show="tienePermiso('pagos', 'escritura') && (view === 'dashboard' || view === 'pagos')"
-            class="btn-primary text-sm" @click="abrirModalPago()">+ Pago rápido</button>
+          <button x-show="view === 'dashboard'" class="btn-primary text-sm" @click="abrirModalPago()">+ Pago rápido</button>
         </div>
       </header>
       <main class="flex-1 overflow-y-auto p-6 space-y-6">
@@ -552,6 +552,9 @@
         <div>
           <label class="text-xs font-medium text-gray-600">Monto</label>
           <input type="number" class="input-modern" placeholder="0.00" x-model="nuevoPago.monto">
+          <div class="text-[10px] text-gray-400 mt-1" x-show="nuevoPago.tipoPago === 'adelantado'">
+            <i data-lucide="info" class="w-3 h-3 inline"></i> El monto puede modificarse manualmente
+          </div>
           <div class="text-[10px] text-emerald-600 font-medium mt-1"
             x-show="nuevoPago.becaInfo && nuevoPago.concepto === 'Colegiatura'">
             ✅ Beca aplicada: <span x-text="nuevoPago.becaInfo.nombre"></span> (<span
@@ -864,6 +867,13 @@
               <option value="">- Selecciona Grupo -</option>
               <template x-for="g in gruposDisponiblesNuevo" :key="g.id">
                 <option :value="g.id" x-text="g.seccion"></option>
+              </template>
+            </select>
+            <label class="text-xs font-medium text-gray-600 block mb-1 mt-3">Plan de pago (Por defecto)</label>
+            <select class="input-modern" x-model="nuevoAlumnoData.planPagoId">
+              <option value="">- Selecciona Plan (Opcional) -</option>
+              <template x-for="p in planesPagoDisponibles" :key="p.planPagoId">
+                <option :value="p.planPagoId" x-text="p.nombre + ' (' + p.meses + ' meses)'"></option>
               </template>
             </select>
           </div>

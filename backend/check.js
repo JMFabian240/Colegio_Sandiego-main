@@ -1,16 +1,9 @@
-const p = require('./src/config/database');
-p.calendarioPago.findFirst({
-  include: {
-    alumno: {
-      include: {
-        asignacionesBeca: {
-          include: { beca: true }
-        }
-      }
-    }
-  }
-}).then(c => {
-  console.log(JSON.stringify(c, null, 2));
-}).finally(() => {
-  p.$disconnect();
-});
+const prisma = require('./src/config/database');
+async function check() {
+  const planes = await prisma.planPago.findMany({
+    where: { activo: true, ciclo: { activo: true } }
+  });
+  console.log("Planes activos en ciclo activo:", planes);
+  process.exit(0);
+}
+check();

@@ -32,10 +32,11 @@ function alumnosMixin() {
     tutoresAlumnoFicha: [],
     previewPlanCalendario: [],
     previewPlanMeses: null,
+    planesPagoDisponibles: [],
 
     // ── Nuevo alumno ─────────────────────────────────────────────────────────
     modalNuevoAlumno: false,
-    nuevoAlumnoData: { nombre: '', matricula: '', curp: '', grupoId: null, padre: '', telefono: '', tutorId: null, fechaNacimiento: '', personasAutorizadas: '', nivel: '', grado: '' },
+    nuevoAlumnoData: { nombre: '', matricula: '', curp: '', grupoId: null, padre: '', telefono: '', tutorId: null, fechaNacimiento: '', personasAutorizadas: '', nivel: '', grado: '', planPagoId: '' },
     erroresNuevoAlumno: {},
     sugerenciasTutor: [],
 
@@ -53,7 +54,7 @@ function alumnosMixin() {
     },
     get seccionesDisponiblesFiltro() {
       if (!this.filtroNivel || !this.filtroGrado) return [];
-      return ['A', 'B', 'C', 'D', 'E', 'F'];
+      return ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'S'];
     },
     get gradosDisponiblesNuevo() {
       if (!this.nuevoAlumnoData.nivel) return [];
@@ -125,10 +126,10 @@ function alumnosMixin() {
       const seccion = this.filtroSeccion;
 
       this.alumnosFiltrados = this.listaAlumnos.filter(a => {
-        const matchBusqueda = a.nombre.toLowerCase().includes(q) || a.matricula.includes(this.busquedaAlumno);
+        const matchBusqueda = a.nombre.toLowerCase().includes(q) || (a.matricula || '').includes(this.busquedaAlumno);
         const matchNivel = !nivel || (a.nivel && a.nivel.toUpperCase() === nivel.toUpperCase());
-        const matchGrado = !grado || a.grado === grado;
-        const matchSeccion = !seccion || a.seccion === seccion;
+        const matchGrado = !grado || String(a.grado) === String(grado);
+        const matchSeccion = !seccion || String(a.seccion) === String(seccion);
         return matchBusqueda && matchNivel && matchGrado && matchSeccion;
       });
     },
@@ -454,10 +455,21 @@ function alumnosMixin() {
       } finally { event.target.value = ''; }
     },
 
-    openNuevoAlumno() { this.modalNuevoAlumno = true; },
+    async openNuevoAlumno() {
+      this.initNuevoAlumno();
+      if (this.planesPagoDisponibles.length === 0 && window.saeApi.planes) {
+        try {
+          const res = await window.saeApi.planes.listarActivos();
+          if (res.ok && res.data) {
+            this.planesPagoDisponibles = res.data;
+          }
+        } catch (e) { console.error(e); }
+      }
+      this.modalNuevoAlumno = true;
+    },
 
     initNuevoAlumno() {
-      this.nuevoAlumnoData = { nombre: '', matricula: '', curp: '', grupoId: null, padre: '', telefono: '', tutorId: null, fechaNacimiento: '', personasAutorizadas: '' };
+      this.nuevoAlumnoData = { nombre: '', matricula: '', curp: '', grupoId: null, padre: '', telefono: '', tutorId: null, fechaNacimiento: '', personasAutorizadas: '', nivel: '', grado: '', planPagoId: '' };
       this.erroresNuevoAlumno = {};
       this.sugerenciasTutor = [];
     },
@@ -492,6 +504,8 @@ function alumnosMixin() {
       const payload = {
         nombre: this.nuevoAlumnoData.nombre,
         matricula: this.nuevoAlumnoData.matricula,
+        grado: this.nuevoAlumnoData.grado,
+        planPagoId: this.nuevoAlumnoData.planPagoId || null,
         curp: this.nuevoAlumnoData.curp || undefined,
         fechaNacimiento: this.nuevoAlumnoData.fechaNacimiento || undefined,
         autorizadosRecoger: this.nuevoAlumnoData.personasAutorizadas || undefined,

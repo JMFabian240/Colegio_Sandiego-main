@@ -111,9 +111,9 @@ const PERIODOS_VALIDOS = Object.values(PERIODOS);
 
 // 🛑 Redirecciones por rol 🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑🛑
 const REDIRECT_POR_ROL = Object.freeze({
-  ADMIN:   '/admin_panel.html',
-  GESTOR:  '/gestor_panel.html',
-  MAESTRA: '/maestra_panel.html',
+  ADMIN:   '/panel.html',
+  GESTOR:  '/panel.html',
+  MAESTRA: '/panel.html',
 });
 
 const PERMISOS_POR_DEFECTO = Object.freeze({

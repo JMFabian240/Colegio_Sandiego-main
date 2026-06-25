@@ -24,11 +24,13 @@ const planesRoutes        = require('./v1/planes.routes');
 const calificacionesExtraRoutes = require('./v1/calificaciones-extra.routes');
 const calificacionesTallerRoutes = require('./v1/calificaciones-taller.routes');
 const importacionRoutes   = require('./importacion.routes');
+const planesGlobalRoutes  = require('./v1/planes-global.routes');
 
 const router = Router();
 
 router.use('/auth',          authRoutes);
 router.use('/alumnos/:id/planes', planesRoutes);
+router.use('/planes',        planesGlobalRoutes);
 router.use('/alumnos',       alumnosRoutes);
 router.use('/tutores',       tutoresRoutes);
 router.use('/pagos',         pagosRoutes);

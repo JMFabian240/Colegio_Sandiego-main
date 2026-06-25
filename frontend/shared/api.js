@@ -240,6 +240,11 @@
     }
   };
 
+  // ── Módulo: Planes ─────────────────────────────────────────────────────────
+  var planes = {
+    listarActivos: function () { return request('GET', '/planes'); }
+  };
+
   // ── Módulo: Becas ───────────────────────────────────────────────────────────
   var becas = {
     listar:            function ()          { return request('GET',    '/becas'); },
@@ -535,7 +540,7 @@
     auth: auth, alumnos: alumnos, tutores: tutores, pagos: pagos, becas: becas,
     calificaciones: calificaciones, calificacionesExtra: calificacionesExtra, calificacionesTaller: calificacionesTaller, grupos: grupos, usuarios: usuarios,
     bitacora: bitacora, permisos: permisos, configuracion: configuracion,
-    reportes: reportes,
+    reportes: reportes, planes: planes,
     // Fetch directo
     fetchApi: fetchApi,
     // Mappers

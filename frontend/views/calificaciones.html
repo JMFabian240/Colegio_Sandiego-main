@@ -44,6 +44,9 @@
               </div>
             </div>
             <div class="card-clean p-5" x-show="alumnoSeleccionadoCalif">
+              <button class="text-sm text-navy-600 hover:underline mb-4 flex items-center font-medium" @click="alumnoSeleccionadoCalif=false">
+                &larr; Regresar a lista de alumnos
+              </button>
               <div class="flex justify-between items-end mb-4">
                 <div>
                   <div class="font-bold text-lg text-navy-700" x-text="alumnoActualCalif?.nombre"></div>

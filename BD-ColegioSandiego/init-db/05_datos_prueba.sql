@@ -28,15 +28,15 @@ ON CONFLICT (nombre) DO NOTHING;
 INSERT INTO usuario (nombre_usuario, nombre_completo, correo, telefono,
                      password_hash, debe_cambiar_pwd) VALUES
     ('elizabeth.mendoza', 'Elizabeth Mendoza Castro',  'elizabeth@sandiego.edu',
-     '9211112233', crypt('Admin2026', gen_salt('bf', 10)), TRUE),
+     '9211112233', crypt('sandiego2026', gen_salt('bf', 10)), TRUE),
     ('maria.dolores',     'María Dolores Pérez Rangel','direccion@sandiego.edu',
-     '9211112234', crypt('Direct2026', gen_salt('bf', 10)), TRUE),
+     '9211112234', crypt('sandiego2026', gen_salt('bf', 10)), TRUE),
     ('laura.rios',        'Laura Ríos Méndez',         'laura.rios@sandiego.edu',
-     '9211112235', crypt('Empleado2026', gen_salt('bf', 10)), TRUE),
+     '9211112235', crypt('sandiego2026', gen_salt('bf', 10)), TRUE),
     ('mario.sanchez',     'Mario Sánchez Trejo',       'mario.sanchez@sandiego.edu',
-     '9211112236', crypt('Docente2026', gen_salt('bf', 10)), TRUE),
+     '9211112236', crypt('sandiego2026', gen_salt('bf', 10)), TRUE),
     ('patricia.nunez',    'Patricia Núñez García',     'patricia.nunez@sandiego.edu',
-     '9211112237', crypt('Docente2026', gen_salt('bf', 10)), TRUE)
+     '9211112237', crypt('sandiego2026', gen_salt('bf', 10)), TRUE)
 ON CONFLICT (nombre_usuario) DO NOTHING;
 
 INSERT INTO usuario_rol (usuario_id, rol_id, asignado_por)

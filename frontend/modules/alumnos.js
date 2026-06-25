@@ -49,8 +49,9 @@ function alumnosMixin() {
     get gradosDisponiblesFiltro() {
       if (!this.filtroNivel) return [];
       const nivel = this.filtroNivel.toUpperCase();
-      if (nivel === 'PREESCOLAR') return ['1', '2', '3'];
+      if (nivel.toUpperCase() === 'PREESCOLAR' || nivel.toUpperCase() === 'SECUNDARIA') return ['1', '2', '3'];
       return ['1', '2', '3', '4', '5', '6'];
+
     },
     get seccionesDisponiblesFiltro() {
       if (!this.filtroNivel || !this.filtroGrado) return [];
@@ -139,7 +140,7 @@ function alumnosMixin() {
         return;
       }
       const encabezados = ['Matrícula', 'Nombre Completo', 'Nivel', 'Grupo', 'Estado', 'Tutor Principal', 'Teléfono Tutor'];
-      
+
       const filas = this.alumnosFiltrados.map(a => [
         a.matricula || '',
         `"${a.nombre || ''}"`,
@@ -160,13 +161,13 @@ function alumnosMixin() {
       link.click();
       document.body.removeChild(link);
     },
-    
+
     procesarCSVAlumnos(event) {
       const file = event.target.files[0];
       if (!file) return;
-      
+
       window.saeApi.toast('info', 'Procesando archivo CSV...');
-      
+
       Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
@@ -196,7 +197,7 @@ function alumnosMixin() {
               body: JSON.stringify({ alumnos })
             });
             const data = res; // saeApi.fetchApi already returns parsed json if successful
-            
+
             if (res.ok && data.success) {
               window.saeApi.toast('exito', `Se importaron ${data.data.exitosos} alumnos correctamente.`);
               this._cargarAlumnosAPI(1);

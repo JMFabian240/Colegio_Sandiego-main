@@ -51,13 +51,22 @@ async function registrarCalificacion({ alumnoId, numeroTrimestre, cicloId, valor
     throw err;
   }
 
-  return calificacionesTallerRepository.create({
-    alumnoId,
-    periodoId,
-    cicloId: realCicloId,
-    valorCualitativo,
-    registradaPor: usuarioId
-  });
+  try {
+    return await calificacionesTallerRepository.create({
+      alumnoId,
+      periodoId,
+      cicloId: realCicloId,
+      valorCualitativo,
+      registradaPor: usuarioId
+    });
+  } catch (err) {
+    if (err.message && err.message.includes('Invalid prisma')) {
+      const customErr = new Error('Error en la base de datos al registrar la calificación del Taller. Por favor, verifique la configuración.');
+      customErr.statusCode = 500;
+      throw customErr;
+    }
+    throw err;
+  }
 }
 
 async function obtenerPorAlumno(alumnoId) {

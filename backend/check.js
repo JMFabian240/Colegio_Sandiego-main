@@ -1,9 +1,10 @@
-const prisma = require('./src/config/database');
+require('dotenv').config();
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
 async function check() {
-  const planes = await prisma.planPago.findMany({
-    where: { activo: true, ciclo: { activo: true } }
-  });
-  console.log("Planes activos en ciclo activo:", planes);
-  process.exit(0);
+  const res = await prisma.$queryRawUnsafe(`SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname = 'inscripcion_ciclo_estado_financiero_check'`);
+  console.log(res);
 }
-check();
+
+check().catch(console.error).finally(() => prisma.$disconnect());

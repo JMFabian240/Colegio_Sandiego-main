@@ -327,22 +327,29 @@
                       <i data-lucide="check-circle" class="w-8 h-8 text-emerald-500 opacity-50"></i>
                     </div>
 
-                    <div class="bg-gray-50 p-4 rounded-xl space-y-4" x-show="!previewPlanCalendario.length">
+                    <!-- Botones Ver Calendario / Cambiar Plan si ya tiene plan -->
+                    <div class="flex gap-4 items-center mb-4" x-show="alumnoActualFicha?.planPago && !modoCambiarPlan && !previewPlanCalendario.length">
+                      <button class="btn-outline border-navy-300 text-navy-700"
+                        @click="verCalendarioActual()">Ver calendario</button>
+                      <button class="btn-outline border-navy-300 text-navy-700"
+                        @click="modoCambiarPlan = true">Cambiar Plan</button>
+                    </div>
+
+                    <div class="bg-gray-50 p-4 rounded-xl space-y-4" x-show="(!alumnoActualFicha?.planPago || modoCambiarPlan) && !previewPlanCalendario.length">
                       <p class="text-sm text-gray-600">Selecciona el tipo de plan para generar la previsualización del
                         calendario de pagos basado en las tarifas del ciclo actual.</p>
-                      <div class="flex gap-4">
+                      <div class="flex gap-4 items-center">
                         <button class="btn-outline border-navy-300 text-navy-700"
-                          @click="previsualizarPlanPago(10)">Plan 10 Meses (Sep-Jun)</button>
+                          @click="modoVerCalendario = false; previsualizarPlanPago(10)">Plan 10 Meses (Sep-Jun)</button>
                         <button class="btn-outline border-navy-300 text-navy-700"
-                          @click="previsualizarPlanPago(12)">Plan 12 Meses (Sep-Ago, doble Diciembre)</button>
+                          @click="modoVerCalendario = false; previsualizarPlanPago(12)">Plan 12 Meses (Sep-Ago, doble Diciembre)</button>
+                        <button class="text-sm text-gray-500 underline" x-show="modoCambiarPlan" @click="modoCambiarPlan = false">Cancelar</button>
                       </div>
                     </div>
 
                     <div x-show="previewPlanCalendario.length > 0">
                       <div class="flex justify-between items-center mb-2">
                         <h4 class="font-bold text-navy-800">Previsualización del Calendario</h4>
-                        <button class="text-xs text-gray-500 underline" @click="previewPlanCalendario = []">Cambiar
-                          opción</button>
                       </div>
                       <div class="overflow-hidden rounded-xl border border-gray-200 shadow-sm mb-4">
                         <table class="w-full text-left text-sm text-gray-600">
@@ -370,9 +377,8 @@
                         </table>
                       </div>
                       <div class="flex justify-end gap-3">
-                        <button class="btn-outline" @click="previewPlanCalendario = []">Cancelar</button>
-                        <button class="btn-primary" @click="asignarPlanPagoConfirmar()" :disabled="cargando">Confirmar y
-                          Asignar Plan</button>
+                        <button class="btn-outline" @click="previewPlanCalendario = []; modoVerCalendario = false">Cerrar previsualización</button>
+                        <button class="btn-primary" x-show="!modoVerCalendario" @click="asignarPlanPagoConfirmar()" :disabled="cargando">Confirmar y Asignar Plan</button>
                       </div>
                     </div>
                   </div>

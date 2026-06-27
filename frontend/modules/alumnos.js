@@ -33,6 +33,8 @@ function alumnosMixin() {
     previewPlanCalendario: [],
     previewPlanMeses: null,
     planesPagoDisponibles: [],
+    modoCambiarPlan: false,
+    modoVerCalendario: false,
 
     // ── Nuevo alumno ─────────────────────────────────────────────────────────
     modalNuevoAlumno: false,
@@ -241,6 +243,8 @@ function alumnosMixin() {
           this.historialPagosAlumno = [];
           this.alumnoSeleccionado = true;
           this.tabAlumnoFicha = (this.alumnoActualFicha && this.alumnoActualFicha.id === al.id) ? this.tabAlumnoFicha : 'academicos';
+          this.modoCambiarPlan = false;
+          this.modoVerCalendario = false;
           if (this.becasAsignadas.length === 0) this.cargarBecasAsignadas();
 
           // Cargar Boleta Virtual
@@ -540,9 +544,32 @@ function alumnosMixin() {
         }
       } catch (e) {
         console.error(e);
-        window.saeApi.toast('error', 'Error al procesar la solicitud.');
-      } finally { this.cargando = false; }
+        window.saeApi.toast('error', e.message || 'Error al obtener previsualización');
+      } finally {
+        this.cargando = false;
+      }
     },
+
+    async verCalendarioActual() {
+      if (!this.alumnoActualFicha || !this.alumnoActualFicha.planPago) return;
+      this.cargando = true;
+      try {
+        const res = await window.saeApi.fetchApi(`/alumnos/${this.alumnoActualFicha.id}/planes/preview?meses=${this.alumnoActualFicha.planPago.meses}`);
+        if (res.ok && res.data) {
+          this.previewPlanCalendario = res.data.calendario;
+          this.previewPlanMeses = this.alumnoActualFicha.planPago.meses;
+          this.modoVerCalendario = true;
+        } else {
+          window.saeApi.toast('error', res.message || 'Error al generar la previsualización');
+        }
+      } catch (e) {
+        console.error(e);
+        window.saeApi.toast('error', e.message || 'Error al obtener previsualización');
+      } finally {
+        this.cargando = false;
+      }
+    },
+
     async asignarPlanPagoConfirmar() {
       if (!this.alumnoActualFicha || !this.previewPlanMeses) return;
       this.cargando = true;

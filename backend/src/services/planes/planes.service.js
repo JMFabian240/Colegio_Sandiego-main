@@ -43,11 +43,10 @@ async function previsualizarPlan(alumnoId, meses) {
     where: { alumnoId: Number(alumnoId), cicloId: ciclo.cicloId }
   });
 
-  if (inscripcion && inscripcion.planPagoId) {
-    // Si la inscripción ya tiene asignado un plan...
-    throw Object.assign(new Error('El alumno ya tiene un plan asignado para este ciclo.'), { statusCode: 400 });
-  }
-
+  // Si ya tiene un plan asignado, permitimos la previsualización para posibles cambios.
+  // if (inscripcion && inscripcion.planPagoId) {
+  //   throw Object.assign(new Error('El alumno ya tiene un plan asignado para este ciclo.'), { statusCode: 400 });
+  // }
   // Obtener tarifas
   const tarifas = await obtenerTarifas(ciclo.cicloId, alumno.nivelId);
   if (!tarifas.colegiatura) throw Object.assign(new Error('No están configuradas las tarifas de colegiatura.'), { statusCode: 400 });
@@ -125,18 +124,36 @@ async function asignarPlan(alumnoId, meses, usuarioId) {
     if (!inscripcion) {
       throw Object.assign(new Error('El alumno no tiene una inscripción activa en este ciclo. Asigne un grupo primero.'), { statusCode: 400 });
     } else {
-      // Si existe inscripción, pero ya generamos calendarios antes y queremos evitar duplicidad:
-      const calendariosExistentes = await tx.calendarioPago.count({
+      const calendariosPagados = await tx.calendarioPago.count({
+        where: { 
+          alumnoId: Number(alumnoId), 
+          cicloId: ciclo.cicloId,
+          OR: [
+            { montoPagado: { gt: 0 } },
+            { estadoCobro: { not: 'pendiente' } }
+          ]
+        }
+      });
+
+      if (calendariosPagados > 0) {
+        throw Object.assign(new Error('No se puede cambiar el plan de pago porque ya existen pagos registrados para este ciclo.'), { statusCode: 400 });
+      }
+      
+      // Si existen calendarios pero no están pagados, los borramos para reasignar el plan
+      await tx.calendarioPago.deleteMany({
         where: { alumnoId: Number(alumnoId), cicloId: ciclo.cicloId }
       });
 
-      if (calendariosExistentes > 0) {
-        throw Object.assign(new Error('El alumno ya tiene un calendario de pagos generado.'), { statusCode: 400 });
-      }
+      const planDb = await tx.planPago.findFirst({
+        where: { cicloId: ciclo.cicloId, meses: meses }
+      });
 
       inscripcion = await tx.inscripcionCiclo.update({
         where: { inscripcionId: inscripcion.inscripcionId },
-        data: { planPago: planString }
+        data: { 
+          planPago: planString,
+          planPagoId: planDb ? planDb.planPagoId : null
+        }
       });
     }
 

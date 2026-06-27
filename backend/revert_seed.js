@@ -26,7 +26,7 @@ async function revert() {
   const alumnosBorrados = await prisma.alumno.deleteMany({
     where: {
       matricula: {
-        startsWith: `MAT-${new Date().getFullYear()}-`
+        startsWith: 'MAT-'
       }
     }
   });
@@ -37,7 +37,7 @@ async function revert() {
   const tutoresBorrados = await prisma.tutor.deleteMany({
     where: {
       nombreCompleto: {
-        startsWith: 'Tutor Genérico'
+        startsWith: 'Tutor '
       }
     }
   });

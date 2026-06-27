@@ -26,7 +26,7 @@ async function main() {
   console.log('[SEED] Iniciando seed PostgreSQL v6 — SAE Colegio San Diego');
   console.log('[SEED] ═══════════════════════════════════════════════\n');
 
-  const passwordHash = await bcrypt.hash('sandiego', 12);
+  const passwordHash = await bcrypt.hash('sandiego', 8);
 
   // ── 1. Niveles educativos ─────────────────────────────────────
   console.log('[SEED] [1/7] Niveles educativos...');

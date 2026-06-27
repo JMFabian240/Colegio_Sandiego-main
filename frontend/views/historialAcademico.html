@@ -79,7 +79,7 @@
             </div>
 
             <!-- Despliegue del Historial -->
-            <div x-show="alumnoHistorialSeleccionado" class="space-y-6" id="historialAcademicoImprimible">
+            <div x-show="alumnoHistorialSeleccionado" class="space-y-6 print-area" id="historialAcademicoImprimible">
               <div class="flex items-center gap-4 mb-4 print:hidden">
                 <button class="btn-outline px-3 py-1 text-sm flex items-center" @click="alumnoHistorialSeleccionado = null; filtrarAlumnosHistorial();">
                   <i data-lucide="arrow-left" class="w-4 h-4 mr-1"></i> Volver a la lista

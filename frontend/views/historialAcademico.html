@@ -89,7 +89,7 @@
               <!-- Info del alumno -->
               <div class="bg-navy-800 text-white rounded-lg p-6 md:p-8 shadow-lg relative">
                 <div class="absolute top-6 right-6 print:hidden">
-                  <button class="btn-outline text-white border-white hover:bg-white/10" @click="window.print()">
+                  <button class="btn-outline text-white border-white hover:bg-white/10" @click="let old = document.title; document.title = 'HistorialAcademico_' + (alumnoHistorialSeleccionado.matricula || 'SM'); window.print(); document.title = old;">
                     <i data-lucide="printer" class="w-4 h-4 mr-2"></i> Imprimir
                   </button>
                 </div>

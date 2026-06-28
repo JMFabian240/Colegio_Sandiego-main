@@ -71,11 +71,11 @@
               <div
                 class="w-16 h-16 mx-auto bg-gradient-to-br from-navy-500 to-navy-700 rounded-full flex items-center justify-center text-white text-2xl font-bold"
                 x-text="usuarioPermisosActivo?.nombre?.charAt(0)"></div>
-              <h2 class="font-bold mt-3 text-navy-800" x-text="usuarioPermisosActivo?.nombre"></h2>
-              <p class="text-xs text-gray-500 font-medium mt-1" x-text="usuarioPermisosActivo?.rol"></p>
-              <div class="mt-3">
-                <span x-show="usuarioPermisosActivo?.activo" class="badge-emerald text-[10px]">Cuenta Activa</span>
-                <span x-show="!usuarioPermisosActivo?.activo" class="badge-gray text-[10px]">Cuenta Inactiva</span>
+              <h2 class="font-bold mt-4 text-navy-800 text-xl" x-text="usuarioPermisosActivo?.nombre"></h2>
+              <p class="text-sm text-gray-500 font-medium mt-1 uppercase" x-text="usuarioPermisosActivo?.rol === 'MAESTRA' ? 'DOCENTE' : usuarioPermisosActivo?.rol"></p>
+              <div class="mt-4">
+                <span x-show="usuarioPermisosActivo?.activo" class="badge-emerald text-xs px-3 py-1">Cuenta Activa</span>
+                <span x-show="!usuarioPermisosActivo?.activo" class="badge-gray text-xs px-3 py-1">Cuenta Inactiva</span>
               </div>
 
               <div class="mt-6 space-y-3 text-left border-t pt-4">

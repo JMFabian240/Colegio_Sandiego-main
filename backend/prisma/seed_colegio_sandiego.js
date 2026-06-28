@@ -28,19 +28,20 @@ async function main() {
   await prisma.inscripcionMateria.deleteMany();
   await prisma.inscripcionCiclo.deleteMany();
   await prisma.tutorAlumno.deleteMany();
-  
+
   await prisma.grupoMateria.deleteMany();
   await prisma.materia.deleteMany();
   await prisma.grupo.deleteMany();
-  
+
   await prisma.periodoEvaluacion.deleteMany({
     where: { ciclo: { activo: false } }
   });
-  
+
   await prisma.cicloEscolar.deleteMany({
     where: { activo: false }
   });
 
+  await prisma.calendarioPago.deleteMany();
   await prisma.alumno.deleteMany();
   await prisma.tutor.deleteMany();
   await prisma.planPago.deleteMany();
@@ -49,9 +50,9 @@ async function main() {
   // 2. Obtener Catálogos Base
   const niveles = await prisma.nivelEducativo.findMany();
   const ciclo = await prisma.cicloEscolar.findFirst({ where: { activo: true } });
-  
+
   if (!ciclo) throw new Error("No hay un ciclo escolar activo.");
-  
+
   let rolDocente = await prisma.rol.findUnique({ where: { codigo: 'DOCENTE' } });
   if (!rolDocente) rolDocente = await prisma.rol.create({ data: { codigo: 'DOCENTE', nombre: 'Docente' } });
 
@@ -59,7 +60,7 @@ async function main() {
     { codigo: 'PREESCOLAR', grados: ['1', '2', '3'], materias: [{ base: 'Lenguajes', tipo: 'curricular' }, { base: 'Saberes', tipo: 'curricular' }, { base: 'Inglés', tipo: 'curricular' }] },
     { codigo: 'PRIMARIA', grados: ['1', '2', '3', '4', '5', '6'], materias: [{ base: 'Lenguajes', tipo: 'curricular' }, { base: 'Matemáticas', tipo: 'curricular' }, { base: 'Inglés', tipo: 'curricular' }] },
     { codigo: 'SECUNDARIA', grados: ['1', '2', '3'], materias: [{ base: 'Español', tipo: 'curricular' }, { base: 'Inglés', tipo: 'curricular' }, { base: 'Matemáticas', tipo: 'curricular' }, { base: 'Artes', tipo: 'taller' }] },
-    { codigo: 'BACHILLERATO', grados: ['I', 'II', 'III', 'IV', 'V', 'VI'], materias: [{ base: 'Pensamiento Matemático', tipo: 'curricular' }, { base: 'Inglés', tipo: 'curricular' }, { base: 'Ciencias Experimentales', tipo: 'curricular' }, { base: 'Humanidades', tipo: 'curricular' }, { base: 'Computación', tipo: 'taller' }] }
+    { codigo: 'BACHILLERATO', grados: ['1', '2', '3', '4', '5', '6'], materias: [{ base: 'Pensamiento Matemático', tipo: 'curricular' }, { base: 'Inglés', tipo: 'curricular' }, { base: 'Ciencias Experimentales', tipo: 'curricular' }, { base: 'Humanidades', tipo: 'curricular' }, { base: 'Computación', tipo: 'taller' }] }
   ];
 
   // 3. Crear Periodos de Evaluación para el ciclo activo (si no existen)
@@ -83,8 +84,8 @@ async function main() {
             tipo: 'trimestre',
             numero: p,
             nombre: `Trimestre ${p}`,
-            fechaInicio: dates[p-1].start,
-            fechaFin: dates[p-1].end,
+            fechaInicio: dates[p - 1].start,
+            fechaFin: dates[p - 1].end,
             esFinalCiclo: p === 3
           }
         });
@@ -125,8 +126,66 @@ async function main() {
 
   const passwordHash = bcrypt.hashSync("sandiego", 10);
 
+  /* 
+  // --- INICIO: Crear usuarios adicionales ---
+   console.log('Creando usuarios fijos solicitados...');
+   const rolesParaCrear = ['ADMINISTRADOR', 'EMPLEADO', 'DOCENTE'];
+   const rolDict = {};
+   
+   for (const rCode of rolesParaCrear) {
+     let rDB = await prisma.rol.findUnique({ where: { codigo: rCode } });
+     if (!rDB) {
+       rDB = await prisma.rol.create({ data: { codigo: rCode, nombre: rCode.charAt(0) + rCode.slice(1).toLowerCase() } });
+     }
+     rolDict[rCode] = rDB;
+   }
+ 
+   const usuariosEspeciales = [
+     { nombreCompleto: 'Elizabeth Mendoza Castro', nombreUsuario: 'elizabeth.mendoza', roles: ['ADMINISTRADOR'] },
+     { nombreCompleto: 'María Dolores Pérez Rangel', nombreUsuario: 'maria.dolores', roles: ['ADMINISTRADOR'] },
+     { nombreCompleto: 'Laura Ríos Méndez', nombreUsuario: 'laura.rios', roles: ['EMPLEADO', 'DOCENTE'] },
+     { nombreCompleto: 'Mario Sánchez Trejo', nombreUsuario: 'mario.sanchez', roles: ['DOCENTE'] },
+     { nombreCompleto: 'Patricia Núñez García', nombreUsuario: 'patricia.nunez', roles: ['DOCENTE'] },
+     { nombreCompleto: 'jose manuel', nombreUsuario: 'harry.adm', roles: ['ADMINISTRADOR'] },
+     { nombreCompleto: 'jessica admin', nombreUsuario: 'jessy', roles: ['ADMINISTRADOR'] }
+   ];
+ 
+   for (const u of usuariosEspeciales) {
+     let uDB = await prisma.usuario.findUnique({ where: { nombreUsuario: u.nombreUsuario } });
+     if (!uDB) {
+       uDB = await prisma.usuario.create({
+         data: {
+           nombreUsuario: u.nombreUsuario,
+           nombreCompleto: u.nombreCompleto,
+           passwordHash: passwordHash,
+           activo: true
+         }
+       });
+     } else {
+       uDB = await prisma.usuario.update({
+         where: { usuarioId: uDB.usuarioId },
+         data: { nombreCompleto: u.nombreCompleto, passwordHash: passwordHash }
+       });
+     }
+ 
+     for (const r of u.roles) {
+       const rolTarget = rolDict[r];
+       if (rolTarget) {
+         const ur = await prisma.usuarioRol.findFirst({
+           where: { usuarioId: uDB.usuarioId, rolId: rolTarget.rolId }
+         });
+         if (!ur) {
+           await prisma.usuarioRol.create({
+             data: { usuarioId: uDB.usuarioId, rolId: rolTarget.rolId }
+           });
+         }
+       }
+     }
+   }
+   // --- FIN: Crear usuarios adicionales ---
+ */
   const gruposCreados = [];
-  const gmActuales = {}; 
+  const gmActuales = {};
 
   console.log('Generando Docentes, Grupos y Materias (Sufijos Romanos)...');
   for (const config of configuracionNiveles) {
@@ -197,7 +256,7 @@ async function main() {
             aula: `Salón ${grado}A`
           }
         });
-        
+
         if (!gmActuales[grupo.grupoId]) gmActuales[grupo.grupoId] = [];
         gmActuales[grupo.grupoId].push(gm);
       }
@@ -242,11 +301,11 @@ async function main() {
 
   // Segmentación Financiera Matemática Estricta
   const estadosFinancieros = [];
-  for(let i=0; i<25; i++) estadosFinancieros.push({ grupoFinanciero: 1, adeudo_activo: true, mesesAdeudo: 1, beca: false });
-  for(let i=0; i<20; i++) estadosFinancieros.push({ grupoFinanciero: 2, adeudo_activo: false, mesesAdeudo: 0, beca: true });
-  for(let i=0; i<5; i++) estadosFinancieros.push({ grupoFinanciero: 3, adeudo_activo: true, mesesAdeudo: 3, beca: true });
-  for(let i=0; i<5; i++) estadosFinancieros.push({ grupoFinanciero: 4, adeudo_activo: true, mesesAdeudo: 3, beca: false });
-  for(let i=0; i<45; i++) estadosFinancieros.push({ grupoFinanciero: 5, adeudo_activo: false, mesesAdeudo: 0, beca: false });
+  for (let i = 0; i < 25; i++) estadosFinancieros.push({ grupoFinanciero: 1, adeudo_activo: true, mesesAdeudo: 1, beca: false });
+  for (let i = 0; i < 20; i++) estadosFinancieros.push({ grupoFinanciero: 2, adeudo_activo: false, mesesAdeudo: 0, beca: true });
+  for (let i = 0; i < 5; i++) estadosFinancieros.push({ grupoFinanciero: 3, adeudo_activo: true, mesesAdeudo: 3, beca: true });
+  for (let i = 0; i < 5; i++) estadosFinancieros.push({ grupoFinanciero: 4, adeudo_activo: true, mesesAdeudo: 3, beca: false });
+  for (let i = 0; i < 45; i++) estadosFinancieros.push({ grupoFinanciero: 5, adeudo_activo: false, mesesAdeudo: 0, beca: false });
   estadosFinancieros.sort(() => Math.random() - 0.5); // Barajar una sola vez
 
   // 5. Alumnos (Distribución Equitativa)
@@ -254,15 +313,15 @@ async function main() {
   const alumnosData = [];
   let alumnoIdCount = 1;
   let tutorIndex = 0;
-  
+
   for (let gIdx = 0; gIdx < gruposCreados.length; gIdx++) {
     const grupo = gruposCreados[gIdx];
     const cantidadAlumnos = gIdx < 10 ? 6 : 5;
-    
+
     for (let a = 0; a < cantidadAlumnos; a++) {
       const fName = faker.person.firstName();
       const lName = faker.person.lastName();
-      
+
       const alumno = await prisma.alumno.create({
         data: {
           matricula: `MAT-${new Date().getFullYear()}-${alumnoIdCount.toString().padStart(4, '0')}`,
@@ -274,10 +333,10 @@ async function main() {
           estado: 'Activo'
         }
       });
-      
+
       // Asignar Tutor
       let t = tutores[tutorIndex];
-      while(t.asignados >= t.cap) {
+      while (t.asignados >= t.cap) {
         tutorIndex++;
         t = tutores[tutorIndex];
       }
@@ -285,14 +344,14 @@ async function main() {
         data: { tutorId: t.dbTutor.tutorId, alumnoId: alumno.alumnoId, esResponsableFinanciero: true }
       });
       t.asignados++;
-      
+
       const estadoFinancieroPop = estadosFinancieros.pop();
       const planPagoAsignado = planesPago[Math.floor(Math.random() * planesPago.length)];
-      
+
       let estadoFinancieroDB = 'al_corriente';
       if (estadoFinancieroPop.mesesAdeudo === 1) estadoFinancieroDB = 'aviso_preventivo';
       if (estadoFinancieroPop.mesesAdeudo === 3) estadoFinancieroDB = 'examen_restringido';
-      
+
       // Inscripcion Ciclo
       const inscripcion = await prisma.inscripcionCiclo.create({
         data: {
@@ -306,6 +365,26 @@ async function main() {
         }
       });
 
+      if (estadoFinancieroPop.mesesAdeudo > 0) {
+        for (let m = 1; m <= estadoFinancieroPop.mesesAdeudo; m++) {
+          const pastDate = new Date();
+          pastDate.setMonth(pastDate.getMonth() - m);
+          await prisma.calendarioPago.create({
+            data: {
+              alumnoId: alumno.alumnoId,
+              cicloId: ciclo.cicloId,
+              concepto: 'colegiatura',
+              mes: `Mes -${m}`,
+              fechaVencimiento: pastDate,
+              montoOriginal: planPagoAsignado.montoMensual,
+              montoPagado: 0,
+              montoRecargo: 0,
+              estadoCobro: 'pendiente'
+            }
+          });
+        }
+      }
+
       // Asignar Beca si corresponde
       if (estadoFinancieroPop.beca) {
         const becaSeleccionada = becas[Math.floor(Math.random() * becas.length)];
@@ -317,7 +396,7 @@ async function main() {
           }
         });
       }
-      
+
       // Inscripcion Materia
       const gmList = gmActuales[grupo.grupoId] || [];
       for (const gm of gmList) {
@@ -325,7 +404,7 @@ async function main() {
           data: { alumnoId: alumno.alumnoId, grupoMateriaId: gm.grupoMateriaId }
         });
       }
-      
+
       alumnosData.push({ alumno, grupo, gmList });
       alumnoIdCount++;
     }
@@ -334,13 +413,13 @@ async function main() {
   // 6. Calificaciones Actuales (50% de los alumnos)
   console.log('Asignando Calificaciones Actuales (50% de la población)...');
   const alumnosCalificar = [...alumnosData].sort(() => Math.random() - 0.5).slice(0, 50);
-  
+
   for (const { alumno, grupo, gmList } of alumnosCalificar) {
     const periodosGrupo = periodosActivos.filter(p => p.nivelId === grupo.nivelId);
     if (periodosGrupo.length === 0) continue;
-    
+
     const p = periodosGrupo[0];
-    
+
     for (const gm of gmList) {
       await prisma.calificacion.create({
         data: {
@@ -358,7 +437,7 @@ async function main() {
   // 7. Historial Denso para Bachillerato Semestre VI
   console.log('Generando Historial Denso (17 ciclos pasados) para alumnos de 6to Semestre...');
   const alumnosSexto = alumnosData.filter(a => a.grupo.grado === 'VI' && a.grupo.nivelId === niveles.find(n => n.codigo === 'BACHILLERATO')?.nivelId);
-  
+
   if (alumnosSexto.length > 0) {
     const ordenGrados = [
       { nivel: 'PREESCOLAR', grado: '1' }, { nivel: 'PREESCOLAR', grado: '2' }, { nivel: 'PREESCOLAR', grado: '3' },
@@ -368,14 +447,14 @@ async function main() {
       { nivel: 'BACHILLERATO', grado: 'I' }, { nivel: 'BACHILLERATO', grado: 'II' }, { nivel: 'BACHILLERATO', grado: 'III' },
       { nivel: 'BACHILLERATO', grado: 'IV' }, { nivel: 'BACHILLERATO', grado: 'V' }
     ];
-    
+
     const startYear = new Date(ciclo.fechaInicio).getFullYear() - ordenGrados.length;
-    
+
     for (let i = 0; i < ordenGrados.length; i++) {
       const { nivel, grado } = ordenGrados[i];
       const nivelDB = niveles.find(n => n.codigo === nivel);
       const yearStr = `${startYear + i}-${startYear + i + 1}`;
-      
+
       let c = await prisma.cicloEscolar.create({
         data: {
           nombre: yearStr,
@@ -384,7 +463,7 @@ async function main() {
           activo: false
         }
       });
-      
+
       const pDates = [
         { start: new Date(`${startYear + i}-08-15`), end: new Date(`${startYear + i}-11-15`) },
         { start: new Date(`${startYear + i}-11-16`), end: new Date(`${startYear + i + 1}-03-15`) },
@@ -399,14 +478,14 @@ async function main() {
             tipo: 'trimestre',
             numero: p,
             nombre: `Trimestre ${p}`,
-            fechaInicio: pDates[p-1].start,
-            fechaFin: pDates[p-1].end,
+            fechaInicio: pDates[p - 1].start,
+            fechaFin: pDates[p - 1].end,
             esFinalCiclo: p === 3
           }
         });
         periodosPasados.push(per);
       }
-      
+
       const grupoPasado = await prisma.grupo.create({
         data: {
           cicloId: c.cicloId,
@@ -417,10 +496,10 @@ async function main() {
           cupoMaximo: 30
         }
       });
-      
+
       const config = configuracionNiveles.find(cf => cf.codigo === nivel);
       const gmPasadas = [];
-      
+
       // Compute correct Roman Suffix for past classes
       // We must calculate its gIndex based on the degree.
       const gIndex = config.grados.indexOf(grado);
@@ -436,17 +515,17 @@ async function main() {
           where: { nivelId_nombre_tipo: { nivelId: nivelDB.nivelId, nombre: nombreMateria, tipo: def.tipo } }
         });
         if (!materia) {
-           materia = await prisma.materia.create({
-             data: { nivelId: nivelDB.nivelId, nombre: nombreMateria, tipo: def.tipo, cuentaParaPromedio: def.tipo === 'curricular', horasSemanales: def.tipo === 'curricular' ? 5 : 2 }
-           });
+          materia = await prisma.materia.create({
+            data: { nivelId: nivelDB.nivelId, nombre: nombreMateria, tipo: def.tipo, cuentaParaPromedio: def.tipo === 'curricular', horasSemanales: def.tipo === 'curricular' ? 5 : 2 }
+          });
         }
-        
+
         const gm = await prisma.grupoMateria.create({
           data: { grupoId: grupoPasado.grupoId, materiaId: materia.materiaId }
         });
         gmPasadas.push(gm);
       }
-      
+
       for (const a of alumnosSexto) {
         await prisma.inscripcionCiclo.create({
           data: {
@@ -458,12 +537,12 @@ async function main() {
             mesesAdeudo: 0
           }
         });
-        
+
         for (const gm of gmPasadas) {
           await prisma.inscripcionMateria.create({
             data: { alumnoId: a.alumno.alumnoId, grupoMateriaId: gm.grupoMateriaId }
           });
-          
+
           for (const per of periodosPasados) {
             await prisma.calificacion.create({
               data: {

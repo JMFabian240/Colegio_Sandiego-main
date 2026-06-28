@@ -347,6 +347,27 @@ async function create(datos, auditCtx = {}) {
            }
          });
       }
+
+      // 6. Verificar y reactivar alumno si estaba suspendido por adeudo y baja de 3
+      const checkAlumno = await tx.alumno.findUnique({ where: { alumnoId: Number(alumnoId) }, select: { estado: true, observaciones: true } });
+      if (checkAlumno && (checkAlumno.estado === 'Baja Temporal' || checkAlumno.estado === 'Baja temporal')) {
+        const adeudosTotales = await tx.calendarioPago.count({
+          where: {
+            alumnoId: Number(alumnoId),
+            estadoCobro: { in: ['pendiente', 'parcial'] },
+            fechaVencimiento: { lt: new Date() },
+            eliminadoEn: null
+          }
+        });
+        if (adeudosTotales < 3) {
+          const obsExtra = `[REACTIVACIÓN AUTOMÁTICA ${new Date().toLocaleDateString()}]: Regularización de adeudos (< 3 meses).`;
+          const obsFinal = checkAlumno.observaciones ? checkAlumno.observaciones + '\n' + obsExtra : obsExtra;
+          await tx.alumno.update({
+            where: { alumnoId: Number(alumnoId) },
+            data: { estado: 'Activo', observaciones: obsFinal }
+          });
+        }
+      }
     }
 
     return nuevoPago;
@@ -482,6 +503,27 @@ async function createAdelantado(datos, periodos, auditCtx = {}) {
       });
     }
 
+    // 5. Verificar y reactivar alumno si estaba suspendido por adeudo
+    const checkAlumno = await tx.alumno.findUnique({ where: { alumnoId: Number(alumnoId) }, select: { estado: true, observaciones: true } });
+    if (checkAlumno && (checkAlumno.estado === 'Baja Temporal' || checkAlumno.estado === 'Baja temporal')) {
+      const adeudosTotales = await tx.calendarioPago.count({
+        where: {
+          alumnoId: Number(alumnoId),
+          estadoCobro: { in: ['pendiente', 'parcial'] },
+          fechaVencimiento: { lt: new Date() },
+          eliminadoEn: null
+        }
+      });
+      if (adeudosTotales < 3) {
+        const obsExtra = `[REACTIVACIÓN AUTOMÁTICA ${new Date().toLocaleDateString()}]: Regularización de adeudos (< 3 meses).`;
+        const obsFinal = checkAlumno.observaciones ? checkAlumno.observaciones + '\n' + obsExtra : obsExtra;
+        await tx.alumno.update({
+          where: { alumnoId: Number(alumnoId) },
+          data: { estado: 'Activo', observaciones: obsFinal }
+        });
+      }
+    }
+
     return nuevoPago;
   });
 
@@ -595,6 +637,29 @@ async function createConsolidado(datos, abonos, auditCtx = {}) {
           direccionIp: auditCtx.ip
         }
       });
+    }
+
+    // Reactivar alumnos si sus adeudos caen por debajo de 3
+    for (const aId of Array.from(alumnoIdsAfectados)) {
+      const checkAlumno = await tx.alumno.findUnique({ where: { alumnoId: Number(aId) }, select: { estado: true, observaciones: true } });
+      if (checkAlumno && (checkAlumno.estado === 'Baja Temporal' || checkAlumno.estado === 'Baja temporal')) {
+        const adeudosTotales = await tx.calendarioPago.count({
+          where: {
+            alumnoId: Number(aId),
+            estadoCobro: { in: ['pendiente', 'parcial'] },
+            fechaVencimiento: { lt: new Date() },
+            eliminadoEn: null
+          }
+        });
+        if (adeudosTotales < 3) {
+          const obsExtra = `[REACTIVACIÓN AUTOMÁTICA ${new Date().toLocaleDateString()}]: Regularización de adeudos (< 3 meses).`;
+          const obsFinal = checkAlumno.observaciones ? checkAlumno.observaciones + '\n' + obsExtra : obsExtra;
+          await tx.alumno.update({
+            where: { alumnoId: Number(aId) },
+            data: { estado: 'Activo', observaciones: obsFinal }
+          });
+        }
+      }
     }
 
     return nuevoPago;

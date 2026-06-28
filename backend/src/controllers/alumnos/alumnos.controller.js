@@ -46,6 +46,16 @@ async function crear(req, res, next) {
 async function actualizar(req, res, next) {
   try {
     const auditCtx = { usuarioId: req.usuario?.id, ip: req.ip };
+    
+    if (req.body.estado) {
+      const alumnoPrevio = await alumnosService.obtenerPorId(req.params.id);
+      if (alumnoPrevio.estado === 'Baja Definitiva' && req.body.estado !== 'Baja Definitiva') {
+        if (req.usuario?.rol !== 'ADMIN' && req.usuario?.rol !== 'Administrador') {
+          return res.status(403).json({ ok: false, message: 'Solo un administrador puede reactivar a un alumno con Baja Definitiva.' });
+        }
+      }
+    }
+
     const alumno = await alumnosService.actualizar(req.params.id, req.body, auditCtx);
     return success(res, alumno, 'Datos del alumno actualizados.');
   } catch (err) { next(err); }

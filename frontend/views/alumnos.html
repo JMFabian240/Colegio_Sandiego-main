@@ -269,6 +269,10 @@
                             <span class="text-xs font-bold text-crimson-600">Expediente Cerrado (Baja Definitiva)</span>
                             <span class="text-xs text-crimson-500 mt-1" x-show="alumnoActualFicha?.observaciones"
                               x-text="alumnoActualFicha.observaciones.split('\\n').pop()"></span>
+                            <template x-if="esAdmin()">
+                              <button class="btn-outline text-emerald-600 border-emerald-200 mt-3 self-start"
+                                @click="cambiarEstadoAlumno('Activo')">Reactivar (Solo Admin)</button>
+                            </template>
                           </div>
                         </template>
                       </div>

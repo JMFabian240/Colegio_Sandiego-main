@@ -139,7 +139,7 @@ async function deudores(req, res, next) {
       },
       include: {
         alumno: {
-          select: { alumnoId: true, nombreCompleto: true, matricula: true, estado: true,
+          select: { alumnoId: true, nombreCompleto: true, matricula: true, estado: true, observaciones: true,
                     nivel: { select: { nombre: true } } },
         },
       },
@@ -157,6 +157,7 @@ async function deudores(req, res, next) {
           matricula: cal.alumno.matricula,
           nivel: cal.alumno.nivel?.nombre || '',
           estado: cal.alumno.estado,
+          observaciones: cal.alumno.observaciones || '',
           mesesAdeudo: 0,
           montoTotal: 0,
           detalle: [],
@@ -176,9 +177,23 @@ async function deudores(req, res, next) {
 
     // Aplicar sanciones
     for (const alumno of lista) {
-      if (alumno.mesesAdeudo >= 3) alumno.sancion = 'Baja temporal';
-      else if (alumno.mesesAdeudo >= 2) alumno.sancion = 'Examen restringido';
-      else alumno.sancion = 'Aviso preventivo';
+      if (alumno.mesesAdeudo >= 3) {
+        alumno.sancion = 'Baja temporal';
+        if (alumno.estado === 'Activo' || alumno.estado === 'activo') {
+          const obsExtra = `[BAJA TEMPORAL AUTOMÁTICA ${new Date().toLocaleDateString()}]: Por acumular 3 o más meses de adeudo.`;
+          const obsFinal = alumno.observaciones ? alumno.observaciones + '\n' + obsExtra : obsExtra;
+          
+          await prisma.alumno.update({
+            where: { alumnoId: alumno.alumnoId },
+            data: { estado: 'Baja Temporal', observaciones: obsFinal }
+          });
+          alumno.estado = 'Baja Temporal';
+        }
+      } else if (alumno.mesesAdeudo >= 2) {
+        alumno.sancion = 'Examen restringido';
+      } else {
+        alumno.sancion = 'Aviso preventivo';
+      }
     }
 
     res.json({ ok: true, data: lista });

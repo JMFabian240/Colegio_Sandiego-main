@@ -17,6 +17,8 @@ const config = require('../config/env');
 function errorHandler(err, req, res, next) {
   // Log del error en consola (siempre)
   console.error(`[ERROR] ${req.method} ${req.originalUrl} —`, err.message);
+  // Log full stack always for debugging
+  require('fs').appendFileSync('debug.log', new Date().toISOString() + ' [' + req.method + ' ' + req.originalUrl + '] ' + err.stack + '\n');
 
   if (config.env === 'development') {
     console.error(err.stack);

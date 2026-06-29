@@ -29,13 +29,15 @@ async function findAll(filtros = {}) {
     });
   }
 
-  const offset = (page - 1) * limit;
+  const numLimit = Number(limit) || 20;
+  const numPage = Number(page) || 1;
+  const offset = (numPage - 1) * numLimit;
   const [total, data] = await Promise.all([
     prisma.tutor.count({ where }),
     prisma.tutor.findMany({
       where,
       skip: offset,
-      take: limit,
+      take: numLimit,
       include: { alumnos: { select: { alumnoId: true } } },
       orderBy: { nombreCompleto: 'asc' },
     })
@@ -70,7 +72,11 @@ async function findById(id) {
             }
           }
         }
-      }
+      },
+      pagos: { orderBy: { fechaPago: 'desc' }, take: 5 },
+      facturas: { orderBy: { fechaEmision: 'desc' }, take: 5 },
+      movimientosSaldo: { orderBy: { creadoEn: 'desc' }, take: 5 },
+      documentos: { orderBy: { subidoEn: 'desc' }, take: 5 }
     }
   });
 }

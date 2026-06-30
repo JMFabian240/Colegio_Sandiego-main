@@ -159,7 +159,52 @@ async function asignarPlan(alumnoId, meses, usuarioId) {
   });
 }
 
+async function resetPlan(alumnoId, usuarioId) {
+  const alumno = await prisma.alumno.findUnique({ where: { alumnoId: Number(alumnoId) } });
+  if (!alumno) throw Object.assign(new Error('Alumno no encontrado.'), { statusCode: 404 });
+
+  const ciclo = await prisma.cicloEscolar.findFirst({ where: { activo: true } });
+  if (!ciclo) throw Object.assign(new Error('No hay ciclo escolar activo.'), { statusCode: 400 });
+
+  return withAudit(usuarioId, 'IP_AQUI', async (tx) => {
+    const inscripcion = await tx.inscripcionCiclo.findFirst({
+      where: { alumnoId: Number(alumnoId), cicloId: ciclo.cicloId }
+    });
+
+    if (!inscripcion) {
+      throw Object.assign(new Error('El alumno no tiene inscripción en este ciclo.'), { statusCode: 400 });
+    }
+
+    // Verificar si hay pagos ya realizados para este ciclo
+    const pagosRealizados = await tx.calendarioPago.count({
+      where: { 
+        alumnoId: Number(alumnoId), 
+        cicloId: ciclo.cicloId,
+        montoPagado: { gt: 0 }
+      }
+    });
+
+    if (pagosRealizados > 0) {
+      throw Object.assign(new Error('No se puede resetear el plan porque ya hay recibos pagados en este ciclo.'), { statusCode: 400 });
+    }
+
+    // Eliminar calendario pendiente
+    await tx.calendarioPago.deleteMany({
+      where: { alumnoId: Number(alumnoId), cicloId: ciclo.cicloId }
+    });
+
+    // Limpiar plan en inscripcion
+    await tx.inscripcionCiclo.update({
+      where: { inscripcionId: inscripcion.inscripcionId },
+      data: { planPago: '10_meses' }
+    });
+
+    return { success: true, message: 'Plan reseteado correctamente.' };
+  });
+}
+
 module.exports = {
   previsualizarPlan,
-  asignarPlan
+  asignarPlan,
+  resetPlan
 };

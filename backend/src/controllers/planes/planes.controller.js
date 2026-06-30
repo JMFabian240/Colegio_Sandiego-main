@@ -56,8 +56,23 @@ async function listarActivos(req, res) {
   }
 }
 
+async function resetPlan(req, res) {
+  try {
+    const { id } = req.params;
+    const resultado = await planesService.resetPlan(id, req.usuario.id);
+    return success(res, resultado, 'Plan reseteado exitosamente.', 200);
+  } catch (err) {
+    console.error('[PlanesController.resetPlan] Error:', err);
+    if (err.statusCode && err.statusCode < 500) {
+      return clientError(res, err.message, err.statusCode);
+    }
+    return serverError(res, err.message || 'Error al resetear el plan.');
+  }
+}
+
 module.exports = {
   previewPlan,
   assignPlan,
-  listarActivos
+  listarActivos,
+  resetPlan
 };

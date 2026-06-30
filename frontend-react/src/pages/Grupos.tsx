@@ -43,9 +43,7 @@ export function Grupos() {
     grado: '',
     seccion: '',
     docente: '',
-    dias: [] as string[],
-    horaInicio: '',
-    horaFin: '',
+    horariosDia: [] as { dia: string, inicio: string, fin: string }[],
     aula: ''
   });
 
@@ -208,9 +206,8 @@ export function Grupos() {
         return;
       }
 
-      const diasStr = nuevaMateria.dias.join(', ');
-      const horarioStr = (diasStr || nuevaMateria.horaInicio || nuevaMateria.horaFin) 
-        ? `${diasStr} ${nuevaMateria.horaInicio} - ${nuevaMateria.horaFin}`.trim()
+      const horarioStr = nuevaMateria.horariosDia.length > 0 
+        ? nuevaMateria.horariosDia.map(h => `${h.dia} ${h.inicio}-${h.fin}`).join(', ')
         : '';
       
       const newMateriaObj = {
@@ -249,7 +246,7 @@ export function Grupos() {
       setMateriaEditandoInfo(null);
       setNuevaMateria({
         nombre: '', tipo: 'curricular', nivel: '', grado: '', seccion: '',
-        docente: '', dias: [], horaInicio: '', horaFin: '', aula: ''
+        docente: '', horariosDia: [], aula: ''
       });
       cargarGrupos();
     } catch (error) {
@@ -260,21 +257,29 @@ export function Grupos() {
 
   const handleEditarMateria = (m: any, g: any, index: number) => {
     setMateriaEditandoInfo({ index, grupoId: g.id || g.grupoId });
-    // Parse horario to extract dias, horaInicio, horaFin
-    let dias: string[] = [];
-    let horaInicio = '';
-    let horaFin = '';
+    // Parse horario: "Lun 10:00-11:00, Mar 12:00-13:00"
+    let horariosDiaParsed: {dia: string, inicio: string, fin: string}[] = [];
     if (m.horario) {
-      // Very basic parsing attempt. E.g. "Lun, Mar 10:00 - 11:00"
-      const match = m.horario.match(/(.*?)\s+(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
-      if (match) {
-        dias = match[1].split(',').map((d: string) => d.trim()).filter(Boolean);
-        horaInicio = match[2];
-        horaFin = match[3];
-      } else {
-        dias = m.horario.split(',').map((d: string) => d.trim()).filter((d: string) => ['Lun','Mar','Mie','Jue','Vie','Sab'].includes(d));
-      }
+      const parts = m.horario.split(',').map((p:string)=>p.trim());
+      parts.forEach((p:string) => {
+        const match = p.match(/^([A-Za-z]{3})\s+(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})$/);
+        if (match) {
+          horariosDiaParsed.push({ dia: match[1], inicio: match[2], fin: match[3] });
+        } else {
+          // Fallback legacy (Lun, Mar 10:00 - 11:00)
+          const legacyMatch = m.horario.match(/(.*?)\s+(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
+          if (legacyMatch && horariosDiaParsed.length === 0) {
+            const lDias = legacyMatch[1].split(',').map((d:string)=>d.trim());
+            lDias.forEach((ld:string) => {
+              if (['Lun','Mar','Mie','Jue','Vie','Sab'].includes(ld)) {
+                horariosDiaParsed.push({ dia: ld, inicio: legacyMatch[2], fin: legacyMatch[3] });
+              }
+            });
+          }
+        }
+      });
     }
+
     setNuevaMateria({
       nombre: m.materia || m.nombre,
       tipo: m.tipo || 'curricular',
@@ -282,9 +287,7 @@ export function Grupos() {
       grado: String(g.grado),
       seccion: g.seccion,
       docente: m.docente ? docentes.find(d => d.nombre === m.docente || d.nombreCompleto === m.docente)?.id?.toString() || '' : '',
-      dias,
-      horaInicio,
-      horaFin,
+      horariosDia: horariosDiaParsed,
       aula: m.aula || ''
     });
     setIsMateriaModalOpen(true);
@@ -547,7 +550,7 @@ export function Grupos() {
                 className="flex items-center gap-2 px-4 py-2 bg-navy-600 text-white rounded-xl hover:bg-navy-700 transition-colors shadow-sm font-medium"
                 onClick={() => {
                   setMateriaEditandoInfo(null);
-                  setNuevaMateria({ nombre: '', tipo: 'curricular', nivel: '', grado: '', seccion: '', docente: '', dias: [], horaInicio: '', horaFin: '', aula: '' });
+                  setNuevaMateria({ nombre: '', tipo: 'curricular', nivel: '', grado: '', seccion: '', docente: '', horariosDia: [], aula: '' });
                   setIsMateriaModalOpen(true);
                 }}
               >
@@ -701,7 +704,8 @@ export function Grupos() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Nivel Educativo *</label>
                   <select 
                     required
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-navy-500 outline-none"
+                    disabled={!!grupoEditandoId}
+                    className={`w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-navy-500 outline-none ${grupoEditandoId ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                     value={nuevoGrupo.nivel}
                     onChange={(e) => setNuevoGrupo({...nuevoGrupo, nivel: e.target.value, grado: '', seccion: ''})}
                   >
@@ -714,7 +718,8 @@ export function Grupos() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Grado *</label>
                   <select 
                     required
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-navy-500 outline-none"
+                    disabled={!!grupoEditandoId}
+                    className={`w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-navy-500 outline-none ${grupoEditandoId ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                     value={nuevoGrupo.grado}
                     onChange={(e) => setNuevoGrupo({...nuevoGrupo, grado: e.target.value})}
                   >
@@ -729,9 +734,10 @@ export function Grupos() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Sección (Grupo) *</label>
                   <input 
                     required
+                    disabled={!!grupoEditandoId}
                     type="text"
                     placeholder="EJ. A, B"
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-navy-500 outline-none uppercase"
+                    className={`w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-navy-500 outline-none uppercase ${grupoEditandoId ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                     value={nuevoGrupo.seccion}
                     onChange={(e) => setNuevoGrupo({...nuevoGrupo, seccion: e.target.value.toUpperCase()})}
                   />
@@ -1026,19 +1032,20 @@ export function Grupos() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Días de Impartición</label>
-                <div className="flex gap-2 flex-wrap">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Días y Horarios de Impartición</label>
+                <div className="flex gap-2 flex-wrap mb-4">
                   {['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'].map(dia => {
-                    const isSelected = nuevaMateria.dias.includes(dia);
+                    const idx = nuevaMateria.horariosDia.findIndex(h => h.dia === dia);
+                    const isSelected = idx >= 0;
                     return (
                       <button
                         key={dia}
                         type="button"
                         onClick={() => {
                           if (isSelected) {
-                            setNuevaMateria({...nuevaMateria, dias: nuevaMateria.dias.filter(d => d !== dia)});
+                            setNuevaMateria({...nuevaMateria, horariosDia: nuevaMateria.horariosDia.filter(h => h.dia !== dia)});
                           } else {
-                            setNuevaMateria({...nuevaMateria, dias: [...nuevaMateria.dias, dia]});
+                            setNuevaMateria({...nuevaMateria, horariosDia: [...nuevaMateria.horariosDia, { dia, inicio: '08:00', fin: '09:00' }]});
                           }
                         }}
                         className={`px-4 py-2 rounded-xl text-sm transition-colors border ${
@@ -1050,27 +1057,39 @@ export function Grupos() {
                     )
                   })}
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Hora de Inicio</label>
-                  <input 
-                    type="time" 
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-navy-500 outline-none"
-                    value={nuevaMateria.horaInicio}
-                    onChange={(e) => setNuevaMateria({...nuevaMateria, horaInicio: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Hora de Fin</label>
-                  <input 
-                    type="time" 
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-navy-500 outline-none"
-                    value={nuevaMateria.horaFin}
-                    onChange={(e) => setNuevaMateria({...nuevaMateria, horaFin: e.target.value})}
-                  />
-                </div>
+                {nuevaMateria.horariosDia.length > 0 && (
+                  <div className="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                    {nuevaMateria.horariosDia.map((horario, index) => (
+                      <div key={horario.dia} className="flex items-center gap-4">
+                        <div className="w-16 font-bold text-navy-800">{horario.dia}</div>
+                        <div className="flex items-center gap-2 flex-1">
+                          <input 
+                            type="time" 
+                            className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-navy-500 outline-none text-sm"
+                            value={horario.inicio}
+                            onChange={(e) => {
+                              const newH = [...nuevaMateria.horariosDia];
+                              newH[index].inicio = e.target.value;
+                              setNuevaMateria({...nuevaMateria, horariosDia: newH});
+                            }}
+                          />
+                          <span className="text-gray-400">a</span>
+                          <input 
+                            type="time" 
+                            className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-navy-500 outline-none text-sm"
+                            value={horario.fin}
+                            onChange={(e) => {
+                              const newH = [...nuevaMateria.horariosDia];
+                              newH[index].fin = e.target.value;
+                              setNuevaMateria({...nuevaMateria, horariosDia: newH});
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div>

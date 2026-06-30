@@ -11,5 +11,6 @@ router.use(authenticate);
 // Endpoint montado asumiendo que viene de /api/v1/alumnos/:id/planes
 router.get('/preview', authorize('ADMIN', 'GESTOR'), planesController.previewPlan);
 router.post('/', authorize('ADMIN', 'GESTOR'), planesController.assignPlan);
+router.delete('/', authorize('ADMIN', 'GESTOR'), planesController.resetPlan);
 
 module.exports = router;

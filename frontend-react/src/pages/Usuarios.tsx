@@ -19,8 +19,12 @@ export function Usuarios() {
     rol: 'MAESTRA'
   });
 
-  // Slide-over (Panel lateral) para Detalles/Permisos
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  
+  // Permissions state
+  const [modulosValidos, setModulosValidos] = useState<string[]>([]);
+  const [permisosActivos, setPermisosActivos] = useState<Record<string, 'NINGUNO' | 'lectura' | 'escritura'>>({});
+  const [loadingPermisos, setLoadingPermisos] = useState(false);
 
   const cargarUsuarios = async () => {
     setLoading(true);
@@ -39,6 +43,48 @@ export function Usuarios() {
   useEffect(() => {
     cargarUsuarios();
   }, [mostrarInactivos]);
+
+  useEffect(() => {
+    if (selectedUser) {
+      cargarPermisosUsuario(selectedUser.id || selectedUser.usuarioId);
+    }
+  }, [selectedUser]);
+
+  const cargarPermisosUsuario = async (userId: number) => {
+    setLoadingPermisos(true);
+    try {
+      let modulos = modulosValidos;
+      if (modulos.length === 0) {
+        const resModulos = await api.get('/permisos/modulos');
+        if (resModulos.data) {
+          modulos = resModulos.data;
+          setModulosValidos(modulos);
+        }
+      }
+
+      const resPermisos = await api.get(`/permisos/usuarios/${userId}`);
+      const permisosArray = resPermisos.data || [];
+      
+      const newPermisosMap: Record<string, 'NINGUNO' | 'lectura' | 'escritura'> = {};
+      
+      modulos.forEach((mod: string) => {
+        newPermisosMap[mod] = 'NINGUNO';
+      });
+
+      permisosArray.forEach((p: any) => {
+        if (newPermisosMap[p.modulo] !== undefined) {
+          newPermisosMap[p.modulo] = p.nivel;
+        }
+      });
+
+      setPermisosActivos(newPermisosMap);
+
+    } catch (error) {
+      console.error('Error cargando permisos', error);
+    } finally {
+      setLoadingPermisos(false);
+    }
+  };
 
   const handleCrearUsuario = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,12 +133,177 @@ export function Usuarios() {
     }
   };
 
+  const handleGuardarPermisos = async () => {
+    if (!selectedUser) return;
+    setLoadingPermisos(true);
+    try {
+      const permisosToSave = Object.keys(permisosActivos).map(modulo => ({
+        modulo,
+        nivel: permisosActivos[modulo]
+      }));
+      await api.put(`/permisos/usuarios/${selectedUser.id || selectedUser.usuarioId}`, { permisos: permisosToSave });
+      alert('Permisos actualizados correctamente.');
+    } catch (error: any) {
+      console.error('Error guardando permisos', error);
+      alert(error.response?.data?.message || 'Error al guardar los permisos.');
+    } finally {
+      setLoadingPermisos(false);
+    }
+  };
+
   const usuariosFiltrados = usuarios.filter(u => {
     const q = search.toLowerCase();
     const matchBusqueda = u.nombre.toLowerCase().includes(q) || u.username.toLowerCase().includes(q);
     const matchRol = !filtroRol || u.rol === filtroRol;
     return matchBusqueda && matchRol;
   });
+
+  if (selectedUser) {
+    return (
+      <div className="h-full flex flex-col relative overflow-hidden bg-gray-50/50">
+        <div className="flex items-center gap-2 mb-6">
+          <span className="text-gray-500 font-medium text-sm tracking-wide">SAE /</span>
+          <span className="text-navy-900 font-bold text-sm tracking-wide">Usuarios</span>
+        </div>
+        
+        <div className="flex gap-6 h-full pb-6 overflow-hidden">
+          {/* Panel Izquierdo: Ficha del usuario */}
+          <div className="w-80 flex-shrink-0 bg-white rounded-2xl shadow-sm border border-gray-100 p-8 flex flex-col items-center">
+            <div className="w-24 h-24 rounded-full bg-navy-900 mx-auto flex items-center justify-center text-white text-3xl font-bold uppercase shadow-sm mb-6">
+              {selectedUser.nombre.charAt(0)}
+            </div>
+            <h2 className="text-xl font-bold text-navy-900 text-center leading-tight mb-2">{selectedUser.nombre}</h2>
+            <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-6">
+              {selectedUser.rol === 'MAESTRA' ? 'DOCENTE' : selectedUser.rol}
+            </p>
+            
+            <span className={`px-4 py-1.5 rounded-full text-xs font-bold mb-8 ${
+              selectedUser.activo ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+            }`}>
+              {selectedUser.activo ? 'Cuenta Activa' : 'Cuenta Inactiva'}
+            </span>
+
+            <div className="w-full space-y-4 mt-auto">
+              <button 
+                onClick={() => handleRestablecerPassword(selectedUser)}
+                className="w-full py-2.5 bg-white border border-gray-200 text-navy-700 font-medium rounded-xl hover:bg-gray-50 transition-colors text-sm"
+              >
+                Restablecer Contraseña
+              </button>
+              {selectedUser.activo ? (
+                <button 
+                  onClick={() => handleToggleEstado(selectedUser)}
+                  className="w-full py-2.5 bg-white border border-red-200 text-red-600 font-medium rounded-xl hover:bg-red-50 transition-colors text-sm"
+                >
+                  Desactivar / Eliminar
+                </button>
+              ) : (
+                <button 
+                  onClick={() => handleToggleEstado(selectedUser)}
+                  className="w-full py-2.5 bg-emerald-50 text-emerald-700 font-medium rounded-xl hover:bg-emerald-100 transition-colors text-sm"
+                >
+                  Reactivar Cuenta
+                </button>
+              )}
+              <button 
+                onClick={() => setSelectedUser(null)}
+                className="w-full py-3 bg-navy-900 text-white font-medium rounded-xl hover:bg-navy-800 transition-colors text-sm flex items-center justify-center gap-2 mt-6"
+              >
+                ← Volver al listado
+              </button>
+            </div>
+          </div>
+
+          {/* Panel Derecho: Permisos */}
+          <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-white">
+              <h3 className="font-bold text-lg text-navy-900">Permisos de Acceso a Módulos</h3>
+              <div className="flex gap-3">
+                <button 
+                  type="button"
+                  onClick={() => {
+                    const defaultPerms: Record<string, 'NINGUNO' | 'lectura' | 'escritura'> = {};
+                    modulosValidos.forEach(m => defaultPerms[m] = 'NINGUNO');
+                    setPermisosActivos(defaultPerms);
+                  }}
+                  className="px-5 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors"
+                  disabled={selectedUser.rol === 'ADMIN'}
+                >
+                  Default
+                </button>
+                <button 
+                  type="button"
+                  onClick={handleGuardarPermisos}
+                  disabled={loadingPermisos || selectedUser.rol === 'ADMIN'}
+                  className="px-6 py-2 text-sm font-semibold text-white bg-navy-900 hover:bg-navy-800 rounded-xl transition-colors disabled:opacity-50 shadow-sm"
+                >
+                  {loadingPermisos ? 'Guardando...' : 'Guardar cambios'}
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-8 bg-white">
+              {selectedUser.rol === 'ADMIN' && (
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-xl text-blue-800 text-sm">
+                  <strong>Nota:</strong> Los usuarios con rol Administrador tienen acceso total e irrestricto al sistema. No es necesario ni posible configurar permisos individuales.
+                </div>
+              )}
+
+              {loadingPermisos && selectedUser.rol !== 'ADMIN' ? (
+                <div className="text-center py-10 text-gray-400 font-medium">Cargando permisos...</div>
+              ) : (
+                <div className="space-y-0">
+                  {modulosValidos.map((modulo, idx) => (
+                    <div key={modulo} className={`flex items-center justify-between py-5 ${idx !== modulosValidos.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                      <span className="text-gray-700 font-medium capitalize">{modulo.replace(/_/g, ' ')}</span>
+                      <div className="flex items-center gap-8">
+                        <label className="flex items-center gap-2.5 cursor-pointer">
+                          <input 
+                            type="radio" 
+                            name={`permiso_${modulo}`} 
+                            value="NINGUNO"
+                            checked={permisosActivos[modulo] === 'NINGUNO'}
+                            onChange={() => setPermisosActivos(prev => ({...prev, [modulo]: 'NINGUNO'}))}
+                            disabled={selectedUser.rol === 'ADMIN'}
+                            className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                          />
+                          <span className="text-sm text-gray-600 font-medium">Ninguno</span>
+                        </label>
+                        <label className="flex items-center gap-2.5 cursor-pointer">
+                          <input 
+                            type="radio" 
+                            name={`permiso_${modulo}`} 
+                            value="lectura"
+                            checked={permisosActivos[modulo] === 'lectura'}
+                            onChange={() => setPermisosActivos(prev => ({...prev, [modulo]: 'lectura'}))}
+                            disabled={selectedUser.rol === 'ADMIN'}
+                            className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                          />
+                          <span className="text-sm text-gray-600 font-medium">Lectura</span>
+                        </label>
+                        <label className="flex items-center gap-2.5 cursor-pointer">
+                          <input 
+                            type="radio" 
+                            name={`permiso_${modulo}`} 
+                            value="escritura"
+                            checked={permisosActivos[modulo] === 'escritura'}
+                            onChange={() => setPermisosActivos(prev => ({...prev, [modulo]: 'escritura'}))}
+                            disabled={selectedUser.rol === 'ADMIN'}
+                            className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                          />
+                          <span className="text-sm text-gray-600 font-medium">Lectura y Edición</span>
+                        </label>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col relative overflow-hidden">
@@ -102,15 +313,14 @@ export function Usuarios() {
           <p className="text-sm text-gray-500 mt-1">Gestiona los accesos, roles y permisos de tu personal.</p>
         </div>
         <div className="flex gap-4 items-center">
-          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-            <input 
-              type="checkbox" 
-              checked={mostrarInactivos}
-              onChange={(e) => setMostrarInactivos(e.target.checked)}
-              className="rounded border-gray-300 text-navy-600 focus:ring-navy-600"
-            />
-            Mostrar inactivos
-          </label>
+          <select 
+            className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-navy-500 outline-none text-gray-700"
+            value={mostrarInactivos ? 'inactivos' : 'activos'}
+            onChange={(e) => setMostrarInactivos(e.target.value === 'inactivos')}
+          >
+            <option value="activos">Mostrar activos</option>
+            <option value="inactivos">Mostrar inactivos (Eliminados)</option>
+          </select>
           <button 
             className="flex items-center gap-2 px-4 py-2 bg-navy-600 text-white rounded-xl hover:bg-navy-700 transition-colors shadow-sm font-medium"
             onClick={() => setIsModalOpen(true)}
@@ -204,73 +414,6 @@ export function Usuarios() {
             </tbody>
           </table>
         </div>
-      </div>
-
-      {/* Slide-over (Panel lateral) para Gestionar Ficha */}
-      <div className={`fixed inset-y-0 right-0 w-96 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out z-40 border-l border-gray-200 ${selectedUser ? 'translate-x-0' : 'translate-x-full'}`}>
-        {selectedUser && (
-          <div className="h-full flex flex-col">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-              <h3 className="font-bold text-lg text-navy-800">Ficha de Usuario</h3>
-              <button onClick={() => setSelectedUser(null)} className="text-gray-400 hover:text-gray-600">
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="p-6 flex-1 overflow-y-auto">
-              <div className="text-center mb-8">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-navy-500 to-navy-700 mx-auto flex items-center justify-center text-white text-3xl font-bold uppercase shadow-md mb-3">
-                  {selectedUser.nombre.charAt(0)}
-                </div>
-                <h2 className="text-xl font-bold text-navy-800">{selectedUser.nombre}</h2>
-                <p className="text-gray-500 mb-2">@{selectedUser.username}</p>
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${
-                  selectedUser.activo ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'
-                }`}>
-                  {selectedUser.activo ? 'Cuenta Activa' : 'Cuenta Inactiva'}
-                </span>
-              </div>
-
-              <div className="space-y-4">
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <div className="text-sm text-gray-500 mb-1">Rol de Sistema</div>
-                  <div className="font-semibold text-navy-800 flex items-center gap-2">
-                    {selectedUser.rol === 'ADMIN' ? <Shield size={16} className="text-navy-600" /> : <UserCircle size={16} />}
-                    {selectedUser.rol === 'MAESTRA' ? 'DOCENTE' : selectedUser.rol}
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-100 pt-6 mt-6 space-y-3">
-                  <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Acciones Administrativas</h4>
-                  
-                  {selectedUser.activo ? (
-                    <>
-                      <button 
-                        onClick={() => handleRestablecerPassword(selectedUser)}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-navy-700 font-medium rounded-xl hover:bg-gray-50 transition-colors"
-                      >
-                        <Key size={16} /> Restablecer Contraseña
-                      </button>
-                      <button 
-                        onClick={() => handleToggleEstado(selectedUser)}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-50 text-red-600 font-medium rounded-xl hover:bg-red-100 transition-colors"
-                      >
-                        <Trash2 size={16} /> Desactivar Usuario
-                      </button>
-                    </>
-                  ) : (
-                    <button 
-                      onClick={() => handleToggleEstado(selectedUser)}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-700 font-medium rounded-xl hover:bg-emerald-100 transition-colors"
-                    >
-                      <Power size={16} /> Reactivar Cuenta
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Modal Nuevo Usuario */}

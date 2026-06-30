@@ -438,19 +438,15 @@ async function createAdelantado(datos, periodos, auditCtx = {}) {
         },
       });
 
-      // Si había beca que reducía el monto original, debemos actualizar el montoOriginal
-      if (periodo.montoOriginal !== periodo.montoCobrado) {
-         await tx.calendarioPago.update({
-           where: { calendarioPagoId: periodo.calendarioPagoId },
-           data: { montoOriginal: periodo.montoCobrado }
-         });
-      }
+      // Si había beca que reducía el monto original, deberíamos actualizarlo pero requerimos el original real.
+      // Para simplificar, registramos el monto aplicado en AplicacionPago y marcamos como pagado.
+      // No corrompemos montoOriginal.
 
       // Marcar periodo como pagado
       await tx.calendarioPago.update({
         where: { calendarioPagoId: periodo.calendarioPagoId },
         data: {
-          montoPagado: periodo.montoCobrado,
+          montoPagado: { increment: periodo.montoCobrado },
           estadoCobro: 'pagado',
           liquidadoAt: new Date(),
         },

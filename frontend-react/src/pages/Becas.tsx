@@ -25,6 +25,17 @@ export function Becas() {
   useEffect(() => {
     cargarCatalogo();
     cargarAsignadas();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const alumnoId = urlParams.get('alumnoId');
+    const alumnoNombre = urlParams.get('alumnoNombre');
+    
+    if (alumnoId) {
+      setAsignarForm(prev => ({ ...prev, alumnoId }));
+      setBusquedaAlumno(alumnoNombre || `ID: ${alumnoId}`);
+      setIsModalAsignarOpen(true);
+      window.history.replaceState({}, '', '/becas');
+    }
   }, []);
 
   const cargarCatalogo = async () => {
@@ -206,7 +217,7 @@ export function Becas() {
         )}
 
         {/* Tabla de Becas Asignadas */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex-1 flex flex-col overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex-1 flex flex-col overflow-hidden min-h-[400px]">
           <div className="p-5 border-b border-gray-100 bg-gray-50/50">
             <h3 className="font-semibold text-gray-800">Becas Asignadas Actualmente</h3>
           </div>

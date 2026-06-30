@@ -216,8 +216,8 @@ async function mapearAuditoria(registros) {
 /**
  * Lista registros de la bitácora con filtros y paginación.
  */
-async function listar(filtros) {
-  const result = await bitacoraRepository.findAll(filtros);
+async function listar({ fechaInicio, fechaFin, usuarioId, accion, rol, pagina, limite }) {
+  const result = await bitacoraRepository.findAll({ fechaInicio, fechaFin, usuarioId, accion, rol, pagina, limite });
   result.datos = await mapearAuditoria(result.datos);
   return result;
 }

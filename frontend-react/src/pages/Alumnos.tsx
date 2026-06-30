@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { UserPlus, Upload, Download, Search, X, Users, Calendar, Clock, Receipt, GraduationCap, Award } from 'lucide-react';
 import api from '../services/api';
 import { generateCURP } from '../utils/curp';
@@ -10,6 +11,7 @@ import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 
 export function Alumnos() {
+  const navigate = useNavigate();
   const [alumnos, setAlumnos] = useState<Alumno[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -50,6 +52,11 @@ export function Alumnos() {
   const [calificacionesAlumno, setCalificacionesAlumno] = useState<any[]>([]);
   const [calificacionesExtra, setCalificacionesExtra] = useState<any[]>([]);
   
+  // Planes
+  const [planPreview, setPlanPreview] = useState<any>(null);
+  const [mesesPlanSeleccionado, setMesesPlanSeleccionado] = useState<number | null>(null);
+  const [loadingPlan, setLoadingPlan] = useState(false);
+
   // Vincular tutor modal
   const [modalVincularTutor, setModalVincularTutor] = useState(false);
   const [busquedaVincularTutor, setBusquedaVincularTutor] = useState('');
@@ -62,9 +69,78 @@ export function Alumnos() {
 
   const nivelesDisponibles = ['PREESCOLAR', 'PRIMARIA', 'SECUNDARIA', 'BACHILLERATO'];
 
+  const cargarEstadoCuenta = async () => {
+    if (!alumnoFichaEditable?.id) return;
+    try {
+      const res: any = await api.get(`/alumnos/${alumnoFichaEditable.id}/estado-cuenta`);
+      setEstadoCuentaAlumno(res.data || res);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const previsualizarPlan = async (meses: number) => {
+    if (!alumnoFichaEditable?.id) return;
+    setLoadingPlan(true);
+    setMesesPlanSeleccionado(meses);
+    try {
+      const res: any = await api.get(`/alumnos/${alumnoFichaEditable.id}/planes/preview?meses=${meses}`);
+      setPlanPreview(res.data || res);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al previsualizar plan.');
+      setPlanPreview(null);
+      setMesesPlanSeleccionado(null);
+    } finally {
+      setLoadingPlan(false);
+    }
+  };
+
+  const asignarPlan = async () => {
+    if (!alumnoFichaEditable?.id || !mesesPlanSeleccionado) return;
+    if (!window.confirm(`¿Estás seguro de asignar el plan de ${mesesPlanSeleccionado} meses?`)) return;
+    try {
+      await api.post(`/alumnos/${alumnoFichaEditable.id}/planes`, { meses: mesesPlanSeleccionado });
+      alert('Plan asignado correctamente.');
+      setPlanPreview(null);
+      setMesesPlanSeleccionado(null);
+      setAlumnoSeleccionado((prev: any) => ({
+        ...prev,
+        planPago: { nombre: `Plan de ${mesesPlanSeleccionado} Meses` }
+      }));
+      // Recargar cuenta
+      cargarEstadoCuenta();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al asignar el plan.');
+    }
+  };
+
+  const resetearPlan = async () => {
+    if (!alumnoFichaEditable?.id) return;
+    if (!window.confirm('¿Estás seguro de eliminar el plan actual? Se borrarán todos los cargos pendientes. Los cargos pagados no se pueden eliminar.')) return;
+    try {
+      await api.delete(`/alumnos/${alumnoFichaEditable.id}/planes`);
+      alert('Plan reseteado correctamente.');
+      setPlanPreview(null);
+      setMesesPlanSeleccionado(null);
+      setEstadoCuentaAlumno([]);
+      setAlumnoSeleccionado((prev: any) => ({
+        ...prev,
+        planPago: null
+      }));
+      cargarEstadoCuenta();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al resetear el plan.');
+    }
+  };
+
   const abrirFicha = async (al: any) => {
     setAlumnoSeleccionado(al);
-    setAlumnoFichaEditable({ ...al });
+    setAlumnoFichaEditable({ 
+      ...al,
+      nivel: al.grupo?.nivel || al.nivel || '',
+      grado: al.grupo?.grado || al.grado || '',
+      seccion: al.grupo?.seccion || al.seccion || ''
+    });
     setTabAlumnoFicha('academicos');
     setPadresAlumno(al.padres || al.padresLista || []);
     setEstadoCuentaAlumno([]);
@@ -76,17 +152,31 @@ export function Alumnos() {
       const full = await alumnosService.getAlumnoById(al.id || al.alumnoId as number);
       if (full) {
         setPadresAlumno(full.padres || full.padresLista || []);
+        setAlumnoSeleccionado((prev: any) => ({ ...prev, ...full }));
       }
     } catch (e) { console.error(e); }
   };
 
   const handleGuardarFicha = async () => {
     try {
-      await alumnosService.updateAlumno(alumnoFichaEditable.id || alumnoFichaEditable.alumnoId as number, alumnoFichaEditable);
+      const payload = { ...alumnoFichaEditable };
+      if (payload.nivel && payload.grado && payload.seccion) {
+        const grupoMatch = gruposData.find((g: any) => g.nivel === payload.nivel && String(g.grado) === String(payload.grado) && g.seccion === payload.seccion);
+        if (grupoMatch) payload.grupoId = grupoMatch.grupoId || grupoMatch.id;
+      }
+      await alumnosService.updateAlumno(payload.id || payload.alumnoId as number, payload);
       alert('Información actualizada correctamente');
       cargarAlumnos();
       // Update local state to reflect changes
-      setAlumnoSeleccionado({ ...alumnoFichaEditable });
+      setAlumnoSeleccionado({ 
+        ...payload,
+        grupo: payload.grupoId ? {
+          nivel: payload.nivel,
+          grado: payload.grado,
+          seccion: payload.seccion,
+          nombre: `${payload.grado}°${payload.seccion} ${payload.nivel}`
+        } : payload.grupo
+      });
     } catch (error) {
       console.error('Error actualizando alumno', error);
       alert('Error al guardar los cambios');
@@ -203,6 +293,12 @@ export function Alumnos() {
         nombre: `${nuevoAlumnoData.nombrePila} ${nuevoAlumnoData.paterno} ${nuevoAlumnoData.materno || ''}`.trim(),
         fechaNacimiento: nuevoAlumnoData.fechaNacimiento ? new Date(nuevoAlumnoData.fechaNacimiento).toISOString() : undefined,
       };
+      
+      if (payload.nivel && payload.grado && payload.seccion) {
+        const grupoMatch = gruposData.find((g: any) => g.nivel === payload.nivel && String(g.grado) === String(payload.grado) && g.seccion === payload.seccion);
+        if (grupoMatch) payload.grupoId = grupoMatch.grupoId || grupoMatch.id;
+      }
+      
       await alumnosService.createAlumno(payload);
       alert('Alumno registrado correctamente');
       setModalNuevoAlumno(false);
@@ -255,12 +351,15 @@ export function Alumnos() {
   };
 
   const handleRegistrarPago = () => {
-    alert('Esta funcionalidad será implementada próximamente. Por favor, utilice el módulo de Pagos.');
+    if (alumnoSeleccionado) {
+      const id = alumnoSeleccionado.id || alumnoSeleccionado.alumnoId;
+      navigate(`/pagos?alumnoId=${id}`);
+    }
   };
 
   const cargarGrupos = async () => {
     try {
-      const res = await api.get('/grupos', { params: { limit: 1000 } });
+      const res = await api.get('/grupos', { params: { limit: 1000, todos: true } });
       if (res.data) setGruposData(res.data.data || res.data); // Handle pagination object or direct array
     } catch (error) {
       console.error('Error cargando grupos', error);
@@ -351,21 +450,6 @@ export function Alumnos() {
         </div>
       </div>
 
-      <div className="flex border-b border-gray-200 mb-6">
-        <button 
-          className={`px-6 py-3 text-sm font-semibold ${tabDirectorio === 'alumnos' ? 'text-navy-700 border-b-2 border-navy-700' : 'text-gray-500 hover:text-gray-700'}`}
-          onClick={() => setTabDirectorio('alumnos')}
-        >
-          Directorio de Alumnos
-        </button>
-        <button 
-          className={`px-6 py-3 text-sm font-semibold ${tabDirectorio === 'tutores' ? 'text-navy-700 border-b-2 border-navy-700' : 'text-gray-500 hover:text-gray-700'}`}
-          onClick={() => setTabDirectorio('tutores')}
-        >
-          Padres / Tutores
-        </button>
-      </div>
-
       {tabDirectorio === 'alumnos' && (
         <>
         <div className="flex flex-wrap gap-3 mb-6 items-center">
@@ -389,6 +473,7 @@ export function Alumnos() {
           <option value="Todos">Todos</option>
           <option value="Baja Temporal">Baja Temporal</option>
           <option value="Baja Definitiva">Baja Definitiva</option>
+          <option value="Egresado">Egresado</option>
         </select>
 
         <select 
@@ -738,16 +823,30 @@ export function Alumnos() {
                     <button className="w-full px-4 py-2 bg-navy-600 text-white rounded-xl hover:bg-navy-700 font-medium" onClick={handleRegistrarPago}>
                       Registrar Pago
                     </button>
-                    <button className="w-full px-4 py-2 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 rounded-xl hover:bg-emerald-100 font-medium">
-                      <Award size={16} /> Asignar Beca
-                    </button>
+                    {alumnoSeleccionado.beca ? (
+                      <div className="w-full px-4 py-3 bg-emerald-50 rounded-xl border border-emerald-100 text-sm">
+                        <div className="flex items-center gap-2 mb-1 font-bold text-emerald-800">
+                          <Award size={16} className="text-emerald-600" /> Beca Activa
+                        </div>
+                        <p className="text-emerald-700 font-medium">{alumnoSeleccionado.beca.nombreBeca || alumnoSeleccionado.beca.nombre}</p>
+                        <p className="text-xs text-emerald-600 font-semibold">{alumnoSeleccionado.beca.porcentaje}% de descuento</p>
+                      </div>
+                    ) : (
+                      <button 
+                        className="w-full px-4 py-2 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 rounded-xl hover:bg-emerald-100 font-medium"
+                        onClick={() => navigate(`/becas?alumnoId=${alumnoSeleccionado.id || alumnoSeleccionado.alumnoId}&alumnoNombre=${encodeURIComponent(alumnoSeleccionado.nombre)}`)}
+                      >
+                        <Award size={16} /> Asignar Beca
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Right Column: Tabs and Content */}
               <div className="w-2/3 flex flex-col">
-                <div className="flex border-b overflow-x-auto whitespace-nowrap mb-6">
+                <div className="sticky top-0 bg-white z-10 pt-2 pb-0 mb-6 border-b">
+                  <div className="flex overflow-x-auto whitespace-nowrap">
                   <button 
                     className={`px-4 py-3 text-sm font-medium ${tabAlumnoFicha === 'academicos' ? 'text-navy-700 border-b-2 border-navy-700' : 'text-gray-500'}`}
                     onClick={() => setTabAlumnoFicha('academicos')}
@@ -784,6 +883,7 @@ export function Alumnos() {
                   >
                     <GraduationCap size={16} /> Calificaciones
                   </button>
+                  </div>
                 </div>
 
                 <div className="flex-1">
@@ -966,10 +1066,105 @@ export function Alumnos() {
                   )}
 
                   {tabAlumnoFicha === 'planes' && (
-                    <div className="text-gray-500 text-center py-10">
-                      <Calendar size={40} className="mx-auto mb-3 text-gray-300" />
-                      <p className="font-medium">Plan de Pago</p>
-                      <p className="text-sm mt-1">Funcionalidad en desarrollo. Próximamente podrás asignar planes de 10 o 12 meses desde aquí.</p>
+                    <div className="py-4">
+                      {estadoCuentaAlumno.length > 0 ? (
+                        <div className="text-center py-8">
+                          <Calendar size={40} className="mx-auto mb-3 text-emerald-500" />
+                          <h4 className="font-bold text-gray-900 mb-2">
+                            Plan Actual: {alumnoSeleccionado?.planPago?.nombre || 'Plan Activo'}
+                          </h4>
+                          <p className="text-sm text-gray-500 mb-6">Puedes revisar sus saldos y cargos pendientes en la pestaña de Estado de Cuenta.</p>
+                          <button 
+                            onClick={resetearPlan}
+                            className="px-4 py-2 border border-red-200 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 font-medium text-sm transition-colors"
+                          >
+                            Eliminar / Resetear Plan
+                          </button>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="flex justify-between items-center mb-6">
+                            <h3 className="font-semibold text-gray-700">Asignar Plan de Pagos</h3>
+                          </div>
+                          
+                          {!planPreview ? (
+                            <div className="grid grid-cols-2 gap-4">
+                              <button 
+                                onClick={() => previsualizarPlan(10)}
+                                className="p-6 border border-gray-200 rounded-2xl hover:border-navy-500 hover:shadow-md transition-all text-left bg-white"
+                              >
+                                <div className="flex justify-between items-start mb-4">
+                                  <div className="w-12 h-12 bg-navy-50 text-navy-600 rounded-full flex items-center justify-center font-bold text-lg">
+                                    10
+                                  </div>
+                                </div>
+                                <h4 className="font-bold text-gray-900 text-lg mb-1">Plan de 10 Meses</h4>
+                                <p className="text-sm text-gray-500">Distribuye el pago del ciclo en 10 mensualidades equitativas (Septiembre - Junio).</p>
+                              </button>
+
+                              <button 
+                                onClick={() => previsualizarPlan(12)}
+                                className="p-6 border border-gray-200 rounded-2xl hover:border-navy-500 hover:shadow-md transition-all text-left bg-white"
+                              >
+                                <div className="flex justify-between items-start mb-4">
+                                  <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center font-bold text-lg">
+                                    12
+                                  </div>
+                                </div>
+                                <h4 className="font-bold text-gray-900 text-lg mb-1">Plan de 12 Meses</h4>
+                                <p className="text-sm text-gray-500">Mensualidad más baja. Distribuye el costo total en 12 meses. Diciembre incluye cobro doble por enero.</p>
+                              </button>
+                            </div>
+                          ) : (
+                            <div>
+                              <div className="flex items-center gap-4 mb-4">
+                                <button 
+                                  onClick={() => { setPlanPreview(null); setMesesPlanSeleccionado(null); }}
+                                  className="text-sm text-gray-500 hover:text-navy-600 font-medium"
+                                >
+                                  &larr; Cambiar opción
+                                </button>
+                                <h4 className="font-bold text-gray-900">Vista Previa - Plan {mesesPlanSeleccionado} Meses</h4>
+                                <button 
+                                  onClick={asignarPlan}
+                                  className="ml-auto px-4 py-2 bg-emerald-600 text-white font-medium text-sm rounded-lg hover:bg-emerald-700 shadow-sm transition-colors"
+                                >
+                                  Confirmar y Asignar Plan
+                                </button>
+                              </div>
+                              
+                              <div className="overflow-x-auto border border-gray-100 rounded-xl">
+                                <table className="w-full text-sm text-left text-gray-600">
+                                  <thead className="bg-gray-50 text-gray-700">
+                                    <tr>
+                                      <th className="px-4 py-3 font-semibold">Concepto</th>
+                                      <th className="px-4 py-3 font-semibold">Mes</th>
+                                      <th className="px-4 py-3 font-semibold text-right">Vencimiento</th>
+                                      <th className="px-4 py-3 font-semibold text-right">Monto Original</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-gray-50">
+                                    {planPreview.calendario?.map((item: any, idx: number) => (
+                                      <tr key={idx} className="hover:bg-gray-50/50">
+                                        <td className="px-4 py-3 capitalize">{item.concepto}</td>
+                                        <td className="px-4 py-3 capitalize">{item.mes}</td>
+                                        <td className="px-4 py-3 text-right">{item.fechaVencimiento?.split('T')[0]}</td>
+                                        <td className="px-4 py-3 text-right font-medium text-gray-900">${Number(item.montoOriginal).toFixed(2)}</td>
+                                      </tr>
+                                    ))}
+                                    <tr className="bg-gray-50 font-bold text-gray-900">
+                                      <td colSpan={3} className="px-4 py-3 text-right">Total Ciclo:</td>
+                                      <td className="px-4 py-3 text-right">
+                                        ${planPreview.calendario?.reduce((acc: number, cur: any) => acc + Number(cur.montoOriginal), 0).toFixed(2)}
+                                      </td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
 

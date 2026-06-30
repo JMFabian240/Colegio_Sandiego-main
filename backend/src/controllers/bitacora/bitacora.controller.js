@@ -15,11 +15,13 @@ const { success }     = require('../../utils/response.utils');
  */
 async function listar(req, res, next) {
   try {
-    const { fechaInicio, fechaFin, usuarioId, pagina, limite } = req.query;
+    const { fechaInicio, fechaFin, usuarioId, accion, rol, pagina, limite } = req.query;
     const resultado = await bitacoraService.listar({
       fechaInicio,
       fechaFin,
       usuarioId: usuarioId ? Number(usuarioId) : undefined,
+      accion:    accion    || undefined,
+      rol:       rol       || undefined,
       pagina:    pagina    ? Number(pagina)    : 1,
       limite:    limite    ? Number(limite)    : 50,
     });

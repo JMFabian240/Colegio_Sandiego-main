@@ -38,7 +38,7 @@ export function Reportes() {
   const cargarCorteCaja = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/reportes/financieros/caja');
+      const res = await api.get('/reportes/corte-caja');
       setCorteCaja(res.data);
     } catch (e) { console.error('Error cargando corte caja', e); }
     finally { setLoading(false); }
@@ -47,7 +47,7 @@ export function Reportes() {
   const cargarIngresos = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/reportes/financieros/ingresos', { params: { cicloId: cicloSeleccionado }});
+      const res = await api.get('/reportes/ingresos-mensuales', { params: { cicloId: cicloSeleccionado }});
       setIngresos(res.data);
     } catch (e) { console.error('Error cargando ingresos', e); }
     finally { setLoading(false); }
@@ -56,7 +56,7 @@ export function Reportes() {
   const cargarDeudores = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/reportes/financieros/deudores');
+      const res = await api.get('/reportes/deudores');
       setDeudores(res.data || []);
     } catch (e) { console.error('Error cargando deudores', e); }
     finally { setLoading(false); }
@@ -65,7 +65,7 @@ export function Reportes() {
   const cargarFacturables = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/reportes/financieros/facturables');
+      const res = await api.get('/reportes/facturables');
       setFacturables(res.data || []);
     } catch (e) { console.error('Error cargando facturables', e); }
     finally { setLoading(false); }

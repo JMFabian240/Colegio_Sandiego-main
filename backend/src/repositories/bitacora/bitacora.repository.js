@@ -20,7 +20,7 @@ const prisma = require('../../config/database');
  * @param {number}  [opciones.limite=50]
  * @returns {Promise<{ datos: object[], total: number }>}
  */
-async function findAll({ fechaInicio, fechaFin, usuarioId, pagina = 1, limite = 50 } = {}) {
+async function findAll({ fechaInicio, fechaFin, usuarioId, accion, rol, pagina = 1, limite = 50 } = {}) {
   const where = {};
 
   if (fechaInicio) {
@@ -33,6 +33,22 @@ async function findAll({ fechaInicio, fechaFin, usuarioId, pagina = 1, limite = 
   }
   if (usuarioId) {
     where.usuarioId = Number(usuarioId);
+  }
+  if (accion) {
+    where.accion = { contains: accion, mode: 'insensitive' };
+  }
+  if (rol) {
+    where.usuario = {
+      roles: {
+        some: {
+          rol: {
+            codigo: { contains: rol, mode: 'insensitive' }
+          },
+          activo: true,
+          eliminadoEn: null
+        }
+      }
+    };
   }
 
   const skip = (Math.max(1, pagina) - 1) * limite;

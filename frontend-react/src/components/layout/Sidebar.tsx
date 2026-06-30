@@ -8,7 +8,7 @@ export function Sidebar() {
 
   const navItems = [
     { name: 'Dashboard', path: '/', icon: Home, roles: ['ADMIN', 'DIRECTOR', 'GESTOR', 'DOCENTE', 'MAESTRA'] },
-    { name: 'Alumnos', path: '/alumnos', icon: Users, roles: ['ADMIN', 'DIRECTOR', 'GESTOR', 'DOCENTE', 'MAESTRA'] },
+    { name: 'Directorio Escolar', path: '/alumnos', icon: Users, roles: ['ADMIN', 'DIRECTOR', 'GESTOR', 'DOCENTE', 'MAESTRA'] },
     { name: 'Padres & Tutores', path: '/tutores', icon: Heart, roles: ['ADMIN', 'DIRECTOR', 'GESTOR'] },
     { name: 'Grupos & Materias', path: '/grupos', icon: BookOpen, roles: ['ADMIN', 'DIRECTOR', 'GESTOR', 'DOCENTE', 'MAESTRA'] },
     { name: 'Calificaciones', path: '/calificaciones', icon: Award, roles: ['ADMIN', 'DIRECTOR', 'GESTOR', 'DOCENTE', 'MAESTRA'] },

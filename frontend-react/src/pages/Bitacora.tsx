@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { History, RefreshCw, Download, FileText } from 'lucide-react';
+import { History, RefreshCw, Download, FileText, X } from 'lucide-react';
 import api from '../services/api';
 
 export function Bitacora() {
@@ -8,16 +8,45 @@ export function Bitacora() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
+  
+  // Filtros
+  const [filtros, setFiltros] = useState({
+    fechaInicio: '',
+    fechaFin: '',
+    rol: '',
+    accion: '',
+    usuarioId: ''
+  });
+  const [usuariosDisp, setUsuariosDisp] = useState<any[]>([]);
+
   const limit = 20;
 
   useEffect(() => {
+    cargarUsuarios();
+  }, []);
+
+  useEffect(() => {
     cargarBitacora(page);
-  }, [page]);
+  }, [page, filtros]);
+
+  const cargarUsuarios = async () => {
+    try {
+      const res = await api.get('/usuarios');
+      setUsuariosDisp(res.data?.datos || res.data || []);
+    } catch(e) {}
+  };
 
   const cargarBitacora = async (pagina = 1) => {
     setLoading(true);
     try {
-      const res = await api.get('/bitacora', { params: { pagina, limite: limit } });
+      const params: any = { pagina, limite: limit };
+      if (filtros.fechaInicio) params.fechaInicio = filtros.fechaInicio;
+      if (filtros.fechaFin) params.fechaFin = filtros.fechaFin;
+      if (filtros.rol) params.rol = filtros.rol;
+      if (filtros.accion) params.accion = filtros.accion;
+      if (filtros.usuarioId) params.usuarioId = filtros.usuarioId;
+      
+      const res = await api.get('/bitacora', { params });
       const data = res.data;
       if (data && data.datos) {
         setLogs(data.datos);
@@ -71,6 +100,16 @@ export function Bitacora() {
         </div>
         <div className="flex gap-3">
           <button 
+            onClick={() => {
+              setFiltros({ fechaInicio: '', fechaFin: '', rol: '', accion: '', usuarioId: '' });
+              setPage(1);
+            }}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-white text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm font-medium disabled:opacity-50"
+          >
+            <X size={16} /> Limpiar Filtros
+          </button>
+          <button 
             onClick={() => cargarBitacora(page)}
             disabled={loading}
             className="flex items-center gap-2 px-4 py-2 bg-white text-navy-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm font-medium disabled:opacity-50"
@@ -83,6 +122,46 @@ export function Bitacora() {
           >
             <Download size={16} /> Exportar CSV
           </button>
+        </div>
+      </div>
+
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4 grid grid-cols-5 gap-4">
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Desde</label>
+          <input type="date" className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-navy-500" value={filtros.fechaInicio} onChange={e => {setFiltros({...filtros, fechaInicio: e.target.value}); setPage(1);}} />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Hasta</label>
+          <input type="date" className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-navy-500" value={filtros.fechaFin} onChange={e => {setFiltros({...filtros, fechaFin: e.target.value}); setPage(1);}} />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Rol</label>
+          <select className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-navy-500" value={filtros.rol} onChange={e => {setFiltros({...filtros, rol: e.target.value}); setPage(1);}}>
+            <option value="">Todos los roles</option>
+            <option value="ADMIN">Administrador</option>
+            <option value="DIRECTOR">Director</option>
+            <option value="GESTOR">Gestor</option>
+            <option value="MAESTRA">Maestra</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Acción</label>
+          <select className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-navy-500" value={filtros.accion} onChange={e => {setFiltros({...filtros, accion: e.target.value}); setPage(1);}}>
+            <option value="">Todas las acciones</option>
+            <option value="INSERT">Crear</option>
+            <option value="UPDATE">Actualizar</option>
+            <option value="DELETE">Eliminar</option>
+            <option value="LOGIN">Acceso (Login)</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Usuario</label>
+          <select className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-navy-500" value={filtros.usuarioId} onChange={e => {setFiltros({...filtros, usuarioId: e.target.value}); setPage(1);}}>
+            <option value="">Todos los usuarios</option>
+            {usuariosDisp.map(u => (
+              <option key={u.usuarioId || u.id} value={u.usuarioId || u.id}>{u.nombreCompleto || u.nombre}</option>
+            ))}
+          </select>
         </div>
       </div>
 

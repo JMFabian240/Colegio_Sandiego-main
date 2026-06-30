@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Users, AlertTriangle, TrendingUp, Award, Clock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Users, AlertTriangle, TrendingUp, Award, Clock, CreditCard } from 'lucide-react';
 import api from '../services/api';
 
 import { useAuthStore } from '../store/useAuthStore';
 
 export function Dashboard() {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const role = user?.rol?.toUpperCase() || '';
   const isDocente = role === 'DOCENTE' || role === 'MAESTRA';
@@ -79,6 +81,14 @@ export function Dashboard() {
           <h2 className="text-2xl font-bold text-navy-800">Dashboard</h2>
           <p className="text-gray-500">Resumen operativo {isDocente ? 'académico' : 'y financiero del día'}</p>
         </div>
+        {!isDocente && (
+          <button 
+            onClick={() => navigate('/pagos')}
+            className="flex items-center gap-2 px-6 py-2.5 bg-crimson-600 text-white font-medium rounded-xl hover:bg-crimson-700 transition-colors shadow-sm"
+          >
+            <CreditCard size={18} /> Pago Rápido
+          </button>
+        )}
       </div>
 
       <div className={`grid grid-cols-1 md:grid-cols-2 ${isDocente ? 'lg:grid-cols-1' : 'lg:grid-cols-4'} gap-6`}>

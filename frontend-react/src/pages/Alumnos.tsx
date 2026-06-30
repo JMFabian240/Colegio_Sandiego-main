@@ -384,8 +384,8 @@ export function Alumnos() {
       if (res.data) {
         const lista = res.data.data || res.data;
         setAlumnos(Array.isArray(lista) ? lista : []);
-        setTotal(res.data.pagination?.totalItems || res.data.pagination?.total || lista.length || 0);
-        setPaginasTotales(res.data.pagination?.pages || res.data.pagination?.totalPages || 1);
+        setTotal((res as any).pagination?.totalItems || (res as any).pagination?.total || lista.length || 0);
+        setPaginasTotales((res as any).pagination?.pages || (res as any).pagination?.totalPages || 1);
       }
     } catch (error) {
       console.error('Error cargando alumnos', error);

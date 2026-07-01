@@ -11,10 +11,15 @@ const app    = require('./app');
 const config = require('./config/env');
 const prisma = require('./config/database');
 
+const { initPagosCron } = require('./cron/pagos.cron');
+
 async function startServer() {
   try {
     // Verificar conexión a la DB antes de levantar el servidor
     await prisma.$connect();
+    
+    // Inicializar tareas programadas
+    initPagosCron();
     
     const server = app.listen(config.port, config.host, () => {
       console.log('');

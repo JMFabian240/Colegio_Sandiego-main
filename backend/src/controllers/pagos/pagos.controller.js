@@ -69,10 +69,12 @@ async function registrarAdelantado(req, res, next) {
 async function registrarConsolidado(req, res, next) {
   try {
     const auditCtx = { usuarioId: req.usuario?.id, ip: req.ip };
-    // Esperamos req.body.abonos = [{ calendarioPagoId, montoAbonado }], req.body.metodoPago, etc.
     const pago = await pagosService.registrarConsolidado(req.body, req.usuario.id, auditCtx);
     return created(res, pago, 'Pago consolidado registrado correctamente.');
-  } catch (err) { next(err); }
+  } catch (err) {
+    require('fs').appendFileSync('error_dump_controller.log', `[ERROR CONSOLIDADO] ${err.message}\n${err.stack}\n`);
+    next(err);
+  }
 }
 
 module.exports = { listar, obtener, registrar, calendario, totalPorAlumno, registrarAdelantado, registrarConsolidado };

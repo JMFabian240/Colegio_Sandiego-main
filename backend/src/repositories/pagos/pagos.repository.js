@@ -212,7 +212,7 @@ async function create(datos, auditCtx = {}) {
         tutorId:       tId,
         fechaPago:     new Date(fecha),
         montoTotal:    monto,
-        metodoPago:    metodoPago ?? 'efectivo',
+        metodoPago:    metodoPago ?? 'transferencia',
         observaciones: observaciones ?? null,
         registradoPor: registradoPorId ? Number(registradoPorId) : null,
       },
@@ -419,7 +419,7 @@ async function createAdelantado(datos, periodos, auditCtx = {}) {
         tutorId:       tId,
         fechaPago:     new Date(fecha),
         montoTotal:    montoTotal,
-        metodoPago:    metodoPago ?? 'efectivo',
+        metodoPago:    metodoPago ?? 'transferencia',
         observaciones: `Pago adelantado de colegiaturas (${periodos.length} meses)`,
         registradoPor: registradoPorId ? Number(registradoPorId) : null,
       },
@@ -489,10 +489,11 @@ async function createConsolidado(datos, abonos, auditCtx = {}) {
     // 1. Crear el pago principal
     const nuevoPago = await tx.pago.create({
       data: {
-        tutorId:       datos.tutorId,
-        fechaPago:     new Date(datos.fecha || new Date()),
+        tutorId:       datos.tutorId ? Number(datos.tutorId) : null,
+        alumnoId:      datos.alumnoId ? Number(datos.alumnoId) : null,
+        fechaPago:     datos.fecha ? new Date(datos.fecha) : new Date(),
         montoTotal:    datos.montoTotal,
-        metodoPago:    datos.metodoPago ?? 'efectivo',
+        metodoPago:    datos.metodoPago ?? 'transferencia',
         observaciones: datos.observaciones || 'Pago Consolidado',
         registradoPor: datos.registradoPorId ? Number(datos.registradoPorId) : null,
       },
@@ -553,7 +554,6 @@ async function createConsolidado(datos, abonos, auditCtx = {}) {
           pagoId: nuevoPago.pagoId,
           calendarioPagoId: deuda.calendarioPagoId,
           montoAplicado: abonoMonto,
-          fechaAplicacion: new Date(),
           aplicadoA: 'capital',
         },
       });

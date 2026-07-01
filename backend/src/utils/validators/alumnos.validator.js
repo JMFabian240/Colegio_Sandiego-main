@@ -10,13 +10,12 @@ const crearAlumnoValidators = [
 
   body('matricula')
     .trim()
-    .notEmpty().withMessage('La matrícula es obligatoria.')
-    .matches(/^SDM-\d{4}-\d{4}$/).withMessage('La matrícula debe tener el formato SDM-XXXX-XXXX.'),
+    .notEmpty().withMessage('La matrícula es obligatoria.'),
 
   body('curp')
     .optional({ nullable: true })
     .trim()
-    .isLength({ min: 18, max: 18 }).withMessage('La CURP debe tener 18 caracteres.')
+    .isLength({ min: 16, max: 18 }).withMessage('La CURP debe tener entre 16 y 18 caracteres.')
     .toUpperCase(),
 
   body('grupoId')

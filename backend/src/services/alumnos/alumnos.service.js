@@ -22,6 +22,8 @@ async function obtenerPorId(id) {
 }
 
 async function crear(datos, auditCtx) {
+  if (datos.curp === '') datos.curp = null;
+
   // Verificar matrícula única
   const existente = await alumnosRepository.findByMatricula(datos.matricula);
   if (existente) {
@@ -54,6 +56,7 @@ async function crear(datos, auditCtx) {
 }
 
 async function actualizar(id, datos, auditCtx) {
+  if (datos.curp === '') datos.curp = null;
   const alumnoPrevio = await obtenerPorId(id); // Lanza 404 si no existe
   
   const alumnoActualizado = await alumnosRepository.update(id, datos, auditCtx);

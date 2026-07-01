@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Phone, Mail, User, Edit2, X, ChevronLeft, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
-import api from '../services/api';
+import { Search, Plus, Phone, Mail, User, Edit2, X, ChevronLeft, ChevronRight, CheckCircle, XCircle, FileText, Download } from 'lucide-react';
+import api from '../services/api'; // v2
 
 interface Tutor {
   [key: string]: any;
@@ -41,11 +41,50 @@ export function Tutores() {
   const [tutorActual, setTutorActual] = useState<Partial<Tutor>>(TUTOR_INIT);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
+  const [filtroFacturantes, setFiltroFacturantes] = useState(false);
+
+  const exportarFacturantes = async () => {
+    try {
+      const res: any = await api.get('/tutores', { params: { limit: 1000, requiereFactura: true } });
+      const lista = Array.isArray(res) ? res : (res.data || []);
+      const facturantes = lista.filter((t: any) => t.requiereFactura);
+      
+      if (facturantes.length === 0) { alert('No hay tutores que requieran factura.'); return; }
+
+      const headers = ['Nombre', 'RFC', 'CURP', 'Régimen Fiscal', 'Uso CFDI', 'Dirección Fiscal', 'Código Postal', 'Correo Facturación', 'Teléfono', 'Alumnos'];
+      const rows = facturantes.map((t: any) => [
+        t.nombreCompleto || '',
+        t.rfc || '',
+        t.curp || '',
+        t.regimenFiscal || '',
+        t.usoCfdi || '',
+        t.direccionFiscal || '',
+        t.codigoPostal || '',
+        t.correoFacturacion || '',
+        t.telefono || '',
+        (t.alumnos || []).map((a: any) => a.nombre || a.nombreCompleto).join(' | '),
+      ]);
+      
+      const csvContent = [headers, ...rows].map(r => r.map((v: string) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `tutores_facturantes_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      alert('Error al exportar. Intenta de nuevo.');
+    }
+  };
 
   const cargarTutores = async () => {
     setLoading(true);
     try {
-      const res: any = await api.get('/tutores', { params: { page: pagina, limit: 20, q: busqueda } });
+      const params: any = { page: pagina, limit: 20, q: busqueda };
+      if (filtroFacturantes) params.requiereFactura = true;
+      const res: any = await api.get('/tutores', { params });
       // api interceptor returns response.data directly
       const lista = Array.isArray(res) ? res : (res.data || []);
       setTutores(Array.isArray(lista) ? lista : []);
@@ -66,7 +105,7 @@ export function Tutores() {
   useEffect(() => {
     const t = setTimeout(cargarTutores, 300);
     return () => clearTimeout(t);
-  }, [busqueda, pagina]);
+  }, [busqueda, pagina, filtroFacturantes]);
 
   const abrirCrear = () => {
     setTutorActual(TUTOR_INIT);
@@ -132,13 +171,32 @@ export function Tutores() {
           <h2 className="text-2xl font-bold text-navy-800">Padres & Tutores</h2>
           <p className="text-gray-500 text-sm mt-1">{total} tutor(es) registrados</p>
         </div>
-        <button
-          onClick={abrirCrear}
-          className="flex items-center gap-2 px-4 py-2 bg-navy-800 text-white rounded-xl hover:bg-navy-900 shadow-sm font-medium text-sm transition-colors"
-        >
-          <Plus size={16} />
-          Nuevo Tutor
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { setFiltroFacturantes(f => !f); setPagina(1); }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-medium text-sm transition-colors ${
+              filtroFacturantes 
+                ? 'bg-amber-500 text-white border-amber-500 shadow-sm' 
+                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            <FileText size={16} />
+            {filtroFacturantes ? 'Ver Todos' : 'Solo Facturantes'}
+          </button>
+          <button
+            onClick={exportarFacturantes}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 font-medium text-sm transition-colors"
+          >
+            <Download size={16} /> Exportar CSV
+          </button>
+          <button
+            onClick={abrirCrear}
+            className="flex items-center gap-2 px-4 py-2 bg-navy-800 text-white rounded-xl hover:bg-navy-900 shadow-sm font-medium text-sm transition-colors"
+          >
+            <Plus size={16} />
+            Nuevo Tutor
+          </button>
+        </div>
       </div>
 
       {/* Search */}
@@ -166,6 +224,7 @@ export function Tutores() {
               <tr>
                 <th className="px-6 py-4 font-semibold">Tutor / Contacto</th>
                 <th className="px-6 py-4 font-semibold">RFC</th>
+                <th className="px-6 py-4 font-semibold">Factura</th>
                 <th className="px-6 py-4 font-semibold">Alumnos</th>
                 <th className="px-6 py-4 font-semibold">Estado</th>
                 <th className="px-6 py-4 font-semibold text-right">Acciones</th>
@@ -194,6 +253,15 @@ export function Tutores() {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-gray-600 font-mono text-xs">{tutor.rfc || '—'}</td>
+                  <td className="px-6 py-4">
+                    {tutor.requiereFactura ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                        <FileText size={10} /> Factura
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-xs">—</span>
+                    )}
+                  </td>
                   <td className="px-6 py-4">
                     <span className="text-xs text-gray-500">
                       {tutor.alumnos && tutor.alumnos.length > 0 ? `${tutor.alumnos.length} vinculado(s)` : 'Ninguno'}
@@ -321,10 +389,28 @@ export function Tutores() {
                       onChange={e => setTutorActual({ ...tutorActual, regimenFiscal: e.target.value })} />
                   </div>
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Uso CFDI</label>
+                    <input type="text" placeholder="Ej. D10, G01..." className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-navy-500 outline-none uppercase"
+                      value={tutorActual.usoCfdi || ''}
+                      onChange={e => setTutorActual({ ...tutorActual, usoCfdi: e.target.value.toUpperCase() })} />
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Correo Facturación</label>
                     <input type="email" className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-navy-500 outline-none"
                       value={tutorActual.correoFacturacion || ''}
                       onChange={e => setTutorActual({ ...tutorActual, correoFacturacion: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Código Postal</label>
+                    <input type="text" className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-navy-500 outline-none"
+                      value={tutorActual.codigoPostal || ''}
+                      onChange={e => setTutorActual({ ...tutorActual, codigoPostal: e.target.value })} />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Dirección Fiscal</label>
+                    <input type="text" className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-navy-500 outline-none"
+                      value={tutorActual.direccionFiscal || ''}
+                      onChange={e => setTutorActual({ ...tutorActual, direccionFiscal: e.target.value })} />
                   </div>
                 </div>
               )}

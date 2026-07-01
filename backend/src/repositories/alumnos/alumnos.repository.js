@@ -76,6 +76,7 @@ function mapAlumno(a) {
     estado:   a.estado,
     nivel:    a.nivel?.codigo ?? null,
     fechaNacimiento: a.fechaNacimiento,
+    lugarNacimiento: a.lugarNacimiento,
     sexo:           a.sexo,
     diaLimitePago:  a.diaLimitePago,
     personasAutorizadas: a.personasAutorizadas ?? [],
@@ -306,6 +307,7 @@ async function create(datos, auditCtx = {}) { return withAudit(auditCtx.usuarioI
       matricula:          alumnoData.matricula,
       curp:               alumnoData.curp ?? null,
       fechaNacimiento:    alumnoData.fechaNacimiento ?? null,
+      lugarNacimiento:    alumnoData.lugarNacimiento ?? null,
       sexo:               alumnoData.sexo ?? null,
       nivelId,
       estado:             alumnoData.estado ?? 'Activo',
@@ -432,6 +434,7 @@ async function update(id, datos, auditCtx = {}) { return withAudit(auditCtx.usua
         ...(rest.estado === 'Baja Definitiva' ? { eliminadoEn: new Date() } : (rest.estado === 'Activo' ? { eliminadoEn: null } : {}))
       } : {}),
       ...(rest.fechaNacimiento !== undefined ? { fechaNacimiento: rest.fechaNacimiento ? new Date(rest.fechaNacimiento) : null } : {}),
+      ...(rest.lugarNacimiento !== undefined ? { lugarNacimiento: rest.lugarNacimiento } : {}),
       ...(rest.diaLimitePago !== undefined ? { diaLimitePago: rest.diaLimitePago } : {}),
       ...(rest.observaciones !== undefined ? { observaciones: rest.observaciones } : {}),
     },

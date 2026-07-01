@@ -5,11 +5,14 @@ const { success, created } = require('../../utils/response.utils');
 
 async function listar(req, res, next) {
   try {
-    const { q, activo, page, limit } = req.query;
+    const { q, activo, requiereFactura, page, limit } = req.query;
     
     const filtros = { q, page, limit };
     if (activo !== undefined) {
       filtros.activo = activo === 'true';
+    }
+    if (requiereFactura !== undefined) {
+      filtros.requiereFactura = requiereFactura;
     }
 
     const resultado = await tutoresService.listar(filtros);

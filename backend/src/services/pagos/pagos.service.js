@@ -88,7 +88,7 @@ async function registrar(datos, usuarioId, auditCtx = {}) {
     montoRecargo:    recargo,
     registradoPorId: usuarioId,
     observaciones:   datos.observaciones ?? null,
-    metodoPago:      datos.metodoPago ?? 'efectivo',
+    metodoPago:      datos.metodoPago ?? 'transferencia',
     tutorId:         datos.tutorId ?? null,
     calendarioPagoId:datos.calendarioPagoId ?? null,
   }, auditCtx);
@@ -204,10 +204,10 @@ async function registrarAdelantado(datos, usuarioId, auditCtx = {}) {
 }
 
 async function registrarConsolidado(datos, usuarioId, auditCtx = {}) {
-  const { tutorId, metodoPago, fecha, abonos } = datos;
+  const { tutorId, alumnoId, metodoPago, fecha, abonos } = datos;
 
-  if (!tutorId) {
-    throw Object.assign(new Error('El ID del tutor es requerido para un pago consolidado.'), { statusCode: 400 });
+  if (!tutorId && !alumnoId) {
+    throw Object.assign(new Error('El ID del tutor o del alumno es requerido para un pago consolidado.'), { statusCode: 400 });
   }
   if (!abonos || !Array.isArray(abonos) || abonos.length === 0) {
     throw Object.assign(new Error('No se han proporcionado abonos para procesar el pago consolidado.'), { statusCode: 400 });

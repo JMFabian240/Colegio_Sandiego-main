@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Plus, Search, DollarSign, X, CheckCircle2, Printer } from 'lucide-react';
+import { CreditCard, Plus, Search, DollarSign, X, CheckCircle2, Printer, Download } from 'lucide-react';
 import api from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
 
@@ -21,6 +21,8 @@ export function Pagos() {
   const [alumnoSeleccionado, setAlumnoSeleccionado] = useState<any>(null);
   
   const [adeudos, setAdeudos] = useState<any[]>([]);
+  const [selectedDeudas, setSelectedDeudas] = useState<any[]>([]);
+  const [porcentajeBeca, setPorcentajeBeca] = useState(0);
   const [calculando, setCalculando] = useState(false);
   
   const [pagoForm, setPagoForm] = useState({
@@ -39,10 +41,12 @@ export function Pagos() {
   const imprimirTicket = () => {
     const contenido = document.getElementById('ticket-imprimible')?.innerHTML;
     if (!contenido) return;
-    const ventanaImpresion = window.open('', '', 'height=600,width=400');
+    const ventanaImpresion = window.open('', '', 'height=800,width=800');
     if (ventanaImpresion) {
-      ventanaImpresion.document.write('<html><head><title>Imprimir Recibo</title>');
+      const titulo = `Recibo_SAE_${ticketRecibo?.pagoId || '0'}_${ticketRecibo?.alumno?.replace(/[\s*]+/g, '_') || 'Alumno'}`;
+      ventanaImpresion.document.write(`<html><head><title>${titulo}</title>`);
       ventanaImpresion.document.write('<style>');
+      ventanaImpresion.document.write('@page { size: A5 portrait; margin: 15mm; }');
       ventanaImpresion.document.write('body { font-family: sans-serif; padding: 20px; }');
       ventanaImpresion.document.write('.text-center { text-align: center; }');
       ventanaImpresion.document.write('.mb-6 { margin-bottom: 24px; }');
@@ -135,41 +139,25 @@ export function Pagos() {
     const id = al.id || al.alumnoId;
     try {
       let becaInfo = null;
+      let pctBeca = 0;
       // Obtener ficha completa para ver si tiene beca
       const alRes = await api.get(`/alumnos/${id}`);
       if (alRes.data && alRes.data.beca) {
         becaInfo = alRes.data.beca;
+        pctBeca = Number(becaInfo.porcentaje);
       }
+      setPorcentajeBeca(pctBeca);
       
       // Obtener adeudos
       const adRes = await api.get('/pagos/calendario', { params: { alumnoId: id, estadoCobro: 'pendiente' } });
       if (adRes.data) {
         setAdeudos(adRes.data);
-        
-        // Calcular monto sugerido del primer adeudo
-        let total = 0;
-        let primerConcepto = 'Colegiatura';
-        
-        if (adRes.data.length > 0) {
-          adRes.data.forEach((d: any) => {
-            let deuda = Number(d.montoOriginal) + Number(d.montoRecargo || 0) - Number(d.montoPagado || 0);
-            if (d.concepto?.toLowerCase() === 'colegiatura' && becaInfo) {
-              deuda -= (deuda * Number(becaInfo.porcentaje)) / 100;
-            }
-            total += Math.max(0, deuda);
-          });
-          
-          const primer = adRes.data[0];
-          const cMap: Record<string, string> = { 'COLEGIATURA': 'Colegiatura', 'INSCRIPCION': 'Inscripción', 'MATERIAL_DIDACTICO': 'Material didáctico', 'UNIFORME': 'Uniforme' };
-          primerConcepto = cMap[primer.concepto?.toUpperCase()] || 'Colegiatura';
-        }
-        
-        
+        setSelectedDeudas([]);
         setPagoForm(prev => ({
           ...prev,
-          concepto: primerConcepto
+          concepto: 'Colegiatura',
+          monto: ''
         }));
-        recalcularMontoPorConcepto(primerConcepto, adRes.data, becaInfo ? Number(becaInfo.porcentaje) : 0);
       }
     } catch (e) {
       console.error('Error calculando adeudos', e);
@@ -182,6 +170,7 @@ export function Pagos() {
     setAlumnoSeleccionado(null);
     setBusquedaAlumno('');
     setAdeudos([]);
+    setSelectedDeudas([]);
     setPagoForm({ concepto: 'Colegiatura', monto: '', metodoPago: 'transferencia', fecha: new Date().toISOString().split('T')[0] });
     setComprobante(null);
     setPagoAdelantado(false);
@@ -210,6 +199,38 @@ export function Pagos() {
       total = 0; 
     }
     setPagoForm(prev => ({ ...prev, monto: total > 0 ? total.toFixed(2) : '' }));
+  };
+
+  const recalcularMontoSeleccion = (deudasSeleccionadas: any[], becaPct: number = porcentajeBeca) => {
+    if (deudasSeleccionadas.length === 0) {
+      setPagoForm(prev => ({ ...prev, monto: '' }));
+      return;
+    }
+    let total = 0;
+    deudasSeleccionadas.forEach((d: any) => {
+      let deuda = Number(d.montoOriginal) + Number(d.montoRecargo || 0) - Number(d.montoPagado || 0);
+      if (d.concepto?.toLowerCase() === 'colegiatura') {
+        deuda -= (deuda * becaPct) / 100;
+      }
+      total += Math.max(0, deuda);
+    });
+    setPagoForm(prev => ({ ...prev, monto: total.toFixed(2) }));
+  };
+
+  const toggleDeuda = (adeudo: any) => {
+    let newSelected = [...selectedDeudas];
+    if (newSelected.some((d: any) => d.calendarioPagoId === adeudo.calendarioPagoId)) {
+      newSelected = newSelected.filter((d: any) => d.calendarioPagoId !== adeudo.calendarioPagoId);
+    } else {
+      newSelected.push(adeudo);
+    }
+    setSelectedDeudas(newSelected);
+    recalcularMontoSeleccion(newSelected);
+  };
+
+  const seleccionarTodasLasDeudas = () => {
+    setSelectedDeudas(adeudos);
+    recalcularMontoSeleccion(adeudos);
   };
 
   const recalcularMontoAdelanto = async (meses: number) => {
@@ -252,10 +273,30 @@ export function Pagos() {
       };
       const conceptoToSend = conceptoBackendMap[pagoForm.concepto] || 'COLEGIATURA';
 
+      let tutorIdToSend = undefined;
+      if (alumnoSeleccionado.padres && alumnoSeleccionado.padres.length > 0) {
+        const tutor = alumnoSeleccionado.padres.find((p: any) => p.esTutor);
+        tutorIdToSend = tutor ? (tutor.id || tutor.tutorId) : (alumnoSeleccionado.padres[0].id || alumnoSeleccionado.padres[0].tutorId);
+      }
+
       let res;
-      if (pagoAdelantado && conceptoToSend === 'COLEGIATURA') {
+      if (selectedDeudas.length > 0) {
+        const abonos = selectedDeudas.map((d: any) => {
+          let deuda = Number(d.montoOriginal) + Number(d.montoRecargo || 0) - Number(d.montoPagado || 0);
+          if (d.concepto?.toLowerCase() === 'colegiatura') deuda -= (deuda * porcentajeBeca) / 100;
+          return { calendarioPagoId: d.calendarioPagoId, montoAbonado: Math.max(0, deuda) };
+        });
+        res = await api.post('/pagos/consolidado', {
+          alumnoId: id,
+          tutorId: tutorIdToSend,
+          metodoPago: pagoForm.metodoPago,
+          fecha: pagoForm.fecha,
+          abonos
+        });
+      } else if (pagoAdelantado && conceptoToSend === 'COLEGIATURA') {
         res = await api.post('/pagos/adelantado', {
           alumnoId: id,
+          tutorId: tutorIdToSend,
           monto: Number(pagoForm.monto),
           meses: Number(mesesAdelanto),
           metodoPago: pagoForm.metodoPago,
@@ -264,6 +305,7 @@ export function Pagos() {
       } else {
         res = await api.post('/pagos', {
           alumnoId: id,
+          tutorId: tutorIdToSend,
           monto: Number(pagoForm.monto),
           concepto: conceptoToSend,
           metodoPago: pagoForm.metodoPago,
@@ -286,12 +328,40 @@ export function Pagos() {
       }
 
       const pagoData = res?.data?.data || res?.data;
+      const conceptoStr = selectedDeudas.length > 0
+        ? selectedDeudas.map((d: any) => `${d.concepto.replace(/_/g, ' ')}${d.mes ? ` (${d.mes})` : ''}`).join(', ')
+        : pagoForm.concepto;
+
+      let totalDescuento = 0;
+      const detalles = selectedDeudas.length > 0
+        ? selectedDeudas.map((d: any) => {
+            let deuda = Number(d.montoOriginal) + Number(d.montoRecargo || 0) - Number(d.montoPagado || 0);
+            if (d.concepto?.toLowerCase() === 'colegiatura' && porcentajeBeca > 0) {
+              const descuento = (deuda * porcentajeBeca) / 100;
+              totalDescuento += descuento;
+              deuda -= descuento;
+            }
+            return {
+              descripcion: `${d.concepto.replace(/_/g, ' ')}${d.mes ? ` (${d.mes})` : ''}`,
+              monto: Math.max(0, deuda)
+            };
+          })
+        : [{ descripcion: pagoForm.concepto, monto: Number(pagoForm.monto) }];
+
+      if (pagoAdelantado && porcentajeBeca > 0 && conceptoToSend === 'COLEGIATURA') {
+        const original = Number(pagoForm.monto) / (1 - (porcentajeBeca / 100));
+        totalDescuento = original - Number(pagoForm.monto);
+      }
+
       setTicketRecibo({
         pagoId: pagoData?.pagoId || pagoData?.id || '---',
         fecha: new Date().toLocaleString('es-MX'),
         alumno: alumnoSeleccionado.nombre,
-        concepto: pagoForm.concepto,
-        monto: pagoForm.monto
+        concepto: conceptoStr,
+        monto: pagoForm.monto,
+        detalles,
+        descuentoBeca: totalDescuento,
+        metodoPago: pagoForm.metodoPago
       });
       cargarPagos(1);
     } catch (error: any) {
@@ -371,15 +441,19 @@ export function Pagos() {
       {/* Modal Nuevo Pago */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-navy-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden overflow-y-visible">
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-emerald-50/50">
+          <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] shadow-2xl flex flex-col overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-emerald-50/50 shrink-0">
               <h3 className="text-lg font-bold text-emerald-800 flex items-center gap-2"><DollarSign size={20} /> Registrar Nuevo Pago</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-emerald-700 hover:text-emerald-900 p-2 rounded-full hover:bg-emerald-100 transition-colors"><X size={20} /></button>
+              <button type="button" onClick={() => setIsModalOpen(false)} className="text-emerald-700 hover:text-emerald-900 p-2 rounded-full hover:bg-emerald-100 transition-colors"><X size={20} /></button>
             </div>
             
-            <form onSubmit={registrarPago} className="p-6 space-y-5 overflow-visible">
-              <div className="relative z-20">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Buscar Alumno</label>
+            <form onSubmit={registrarPago} className="p-6 flex-1 overflow-y-auto">
+              {!ticketRecibo ? (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-5">
+                      <div className="relative z-20">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Buscar Alumno</label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                   <input 
@@ -414,23 +488,35 @@ export function Pagos() {
                 )}
               </div>
 
-              {calculando ? (
-                <div className="text-center py-4 text-emerald-600 font-medium animate-pulse">Calculando adeudos...</div>
-              ) : alumnoSeleccionado && !ticketRecibo && (
-                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 max-h-48 overflow-y-auto">
-                    <h4 className="text-xs font-semibold text-gray-500 mb-3">Adeudos Pendientes</h4>
+                      {calculando ? (
+                        <div className="text-center py-4 text-emerald-600 font-medium animate-pulse">Calculando adeudos...</div>
+                      ) : alumnoSeleccionado && (
+                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                          <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 max-h-48 overflow-y-auto">
+                            <div className="flex justify-between items-center mb-3">
+                      <h4 className="text-xs font-semibold text-gray-500">Adeudos Pendientes</h4>
+                      {adeudos.length > 0 && (
+                        <button type="button" onClick={seleccionarTodasLasDeudas} className="text-xs font-medium text-emerald-600 hover:text-emerald-700">Pagar Todos</button>
+                      )}
+                    </div>
                     {adeudos.length === 0 ? (
                       <p className="text-sm text-gray-500">No hay adeudos pendientes.</p>
                     ) : (
                       <div className="space-y-2">
                         {adeudos.map((adeudo: any, idx: number) => {
-                          const monto = Number(adeudo.montoOriginal) + Number(adeudo.montoRecargo || 0) - Number(adeudo.montoPagado || 0);
+                          const montoRaw = Number(adeudo.montoOriginal) + Number(adeudo.montoRecargo || 0) - Number(adeudo.montoPagado || 0);
+                          const monto = adeudo.concepto?.toLowerCase() === 'colegiatura' ? montoRaw - (montoRaw * porcentajeBeca / 100) : montoRaw;
+                          const isSelected = selectedDeudas.some((d: any) => d.calendarioPagoId === adeudo.calendarioPagoId);
                           return (
-                            <div key={idx} className="flex justify-between items-center bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
-                              <div>
-                                <div className="font-medium text-sm text-gray-800 capitalize">{adeudo.concepto.replace(/_/g, ' ')} {adeudo.mes ? `(${adeudo.mes})` : ''}</div>
-                                <div className="text-xs text-gray-400 mt-0.5">Vencimiento: {new Date(adeudo.fechaVencimiento).toLocaleDateString('es-MX')}</div>
+                            <div key={idx} 
+                              onClick={() => toggleDeuda(adeudo)}
+                              className={`flex justify-between items-center p-3 rounded-lg border shadow-sm cursor-pointer transition-colors ${isSelected ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-gray-200'}`}>
+                              <div className="flex items-center gap-3">
+                                <input type="checkbox" checked={isSelected} readOnly className="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500" />
+                                <div>
+                                  <div className="font-medium text-sm text-gray-800 capitalize">{adeudo.concepto.replace(/_/g, ' ')} {adeudo.mes ? `(${adeudo.mes})` : ''}</div>
+                                  <div className="text-xs text-gray-400 mt-0.5">Vencimiento: {new Date(adeudo.fechaVencimiento).toLocaleDateString('es-MX')}</div>
+                                </div>
                               </div>
                               <div className="font-bold text-red-600 text-sm">
                                 ${monto.toFixed(2)}
@@ -439,11 +525,17 @@ export function Pagos() {
                           );
                         })}
                       </div>
-                    )}
-                  </div>
-
-                  <div className="flex bg-white rounded-xl border border-gray-200 p-1">
-                    <button type="button" className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${!pagoAdelantado ? 'bg-navy-900 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`} onClick={() => {
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  
+                    <div className="space-y-5">
+                      {alumnoSeleccionado && (
+                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                          <div className="flex bg-white rounded-xl border border-gray-200 p-1">
+                            <button type="button" className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${!pagoAdelantado ? 'bg-navy-900 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`} onClick={() => {
                       setPagoAdelantado(false);
                       recalcularMontoPorConcepto(pagoForm.concepto, adeudos, 0); 
                     }}>
@@ -521,9 +613,9 @@ export function Pagos() {
                       <label className="block text-xs font-medium text-gray-700 mb-1">Método de pago</label>
                       <select required className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" value={pagoForm.metodoPago} onChange={e => setPagoForm({...pagoForm, metodoPago: e.target.value})}>
                         <option value="transferencia">Transferencia</option>
+                        <option value="tarjeta">Tarjeta</option>
                         <option value="efectivo">Efectivo</option>
-                        <option value="tarjeta">Tarjeta (Crédito/Débito)</option>
-                        <option value="cheque">Cheque</option>
+                        <option value="deposito">Depósito</option>
                       </select>
                     </div>
                   </div>
@@ -543,13 +635,25 @@ export function Pagos() {
                       }}
                     />
                   </div>
+                        </div>
+                    )}
+                  </div>
                 </div>
-              )}
 
-              {ticketRecibo ? (
+                <div className="pt-6 mt-6 flex justify-end gap-3 border-t border-gray-100 relative z-0">
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">Cancelar</button>
+                  <button type="submit" disabled={saving || !alumnoSeleccionado} className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors shadow-sm disabled:opacity-70">
+                    <CheckCircle2 size={16} /> {saving ? 'Registrando...' : 'Registrar Pago'}
+                  </button>
+                </div>
+              </>
+              ) : (
                 <div className="pt-4 border-t border-gray-100 mt-2 animate-in slide-in-from-bottom-4 fade-in duration-300">
                   <div id="ticket-imprimible" className="border-2 border-dashed border-gray-200 rounded-xl p-6 bg-white mb-6">
                     <div className="text-center mb-6">
+                      <div className="flex justify-center mb-2">
+                        <img src="/escudo.png" alt="Logo Colegio" style={{ width: '60px', height: '60px', objectFit: 'contain', margin: '0 auto 8px' }} />
+                      </div>
                       <h4 className="font-bold text-lg text-navy-900 tracking-tight">COLEGIO SAN DIEGO</h4>
                       <p className="text-sm text-gray-500">Recibo de Pago No. {ticketRecibo.pagoId}</p>
                     </div>
@@ -562,9 +666,33 @@ export function Pagos() {
                         <span className="text-gray-500 font-medium">Alumno:</span>
                         <span className="text-gray-800 text-right max-w-[220px]">{ticketRecibo.alumno}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500 font-medium">Concepto:</span>
-                        <span className="text-gray-800">{ticketRecibo.concepto}</span>
+                      {ticketRecibo.detalles && ticketRecibo.detalles.length > 0 ? (
+                        <div className="border-t border-gray-100 my-3 pt-3">
+                          <div className="text-gray-500 font-medium" style={{ marginBottom: '12px' }}>Conceptos Pagados:</div>
+                          <div className="space-y-3">
+                            {ticketRecibo.detalles.map((det: any, i: number) => (
+                              <div key={i} className="flex justify-between text-gray-800 text-sm">
+                                <span style={{ textTransform: 'capitalize' }}>{det.descripcion}</span>
+                                <span className="font-medium">${Number(det.monto).toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500 font-medium">Concepto:</span>
+                          <span className="text-gray-800 max-w-[220px] text-right">{ticketRecibo.concepto}</span>
+                        </div>
+                      )}
+                      {ticketRecibo.descuentoBeca > 0 && (
+                        <div className="flex justify-between items-center pt-2 text-emerald-600">
+                          <span className="font-medium text-sm">Ahorro por Beca:</span>
+                          <span className="font-bold text-sm">-${Number(ticketRecibo.descuentoBeca).toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center pt-2 pb-1">
+                        <span className="text-gray-500 font-medium text-sm">Método de pago:</span>
+                        <span className="text-gray-800 text-sm" style={{ textTransform: 'capitalize' }}>{ticketRecibo.metodoPago?.replace('_', ' ')}</span>
                       </div>
                       <div className="border-t border-gray-100 my-3 pt-3 flex justify-between items-center">
                         <span className="text-gray-700 font-bold">Total Pagado:</span>
@@ -576,16 +704,9 @@ export function Pagos() {
                   <div className="flex justify-center gap-3">
                     <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors">Cerrar</button>
                     <button type="button" onClick={imprimirTicket} className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white bg-navy-800 hover:bg-navy-900 rounded-xl transition-colors shadow-sm">
-                      <Printer size={16} /> Imprimir Recibo
+                      <Download size={16} /> Descargar Recibo
                     </button>
                   </div>
-                </div>
-              ) : (
-                <div className="pt-4 flex justify-end gap-3 border-t border-gray-100 relative z-0">
-                  <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">Cancelar</button>
-                  <button type="submit" disabled={saving || !alumnoSeleccionado} className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors shadow-sm disabled:opacity-70">
-                    <CheckCircle2 size={16} /> {saving ? 'Registrando...' : 'Registrar Pago'}
-                  </button>
                 </div>
               )}
             </form>

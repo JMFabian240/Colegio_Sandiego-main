@@ -65,7 +65,7 @@ export function Alumnos() {
   // Nuevo Alumno modal
   const [modalNuevoAlumno, setModalNuevoAlumno] = useState(false);
   const [erroresNuevoAlumno, setErroresNuevoAlumno] = useState<Record<string, string>>({});
-  const [nuevoAlumnoData, setNuevoAlumnoData] = useState<any>({ nombrePila: '', paterno: '', materno: '', genero: '', fechaNacimiento: '', estadoNacimiento: '', matricula: '', curp: '', nivel: '', grado: '', estado: 'Activo' });
+  const [nuevoAlumnoData, setNuevoAlumnoData] = useState<any>({ nombrePila: '', paterno: '', materno: '', genero: '', fechaNacimiento: '', estadoNacimiento: '', ciudadNacimiento: '', matricula: '', curp: '', nivel: '', grado: '', seccion: '', estado: 'Activo', planPagoMeses: '' });
 
   const nivelesDisponibles = ['PREESCOLAR', 'PRIMARIA', 'SECUNDARIA', 'BACHILLERATO'];
 
@@ -232,9 +232,44 @@ export function Alumnos() {
     try {
       const res = await api.get(`/calificaciones/alumno/${alumnoSeleccionado?.id}`);
       if (res.data) {
-        const todas = Array.isArray(res.data) ? res.data : (res.data.calificaciones || []);
-        setCalificacionesAlumno(todas.filter((c: any) => c.tipo === 'curricular' || !c.tipo));
-        setCalificacionesExtra(todas.filter((c: any) => c.tipo === 'extracurricular' || c.tipo === 'taller'));
+        const todas = Array.isArray(res.data) ? res.data : (res.data.calificaciones || res.data.data || []);
+        
+        const materiasMap = new Map();
+        todas.forEach((c: any) => {
+          const matNombre = c.grupoMateria?.materia || c.materia?.nombre || 'Materia Desconocida';
+          if (!materiasMap.has(matNombre)) {
+            materiasMap.set(matNombre, { 
+              nombre: matNombre, 
+              tipo: c.grupoMateria?.tipo || c.tipoEvaluacion || 'curricular',
+              valores: [],
+              trimestre1: '-',
+              trimestre2: '-',
+              trimestre3: '-'
+            });
+          }
+          
+          const m = materiasMap.get(matNombre);
+          if (c.valor !== null && c.valor !== undefined) {
+             m.valores.push(c.valor);
+             const periodoStr = String(c.periodo || c.periodoId || '').toUpperCase();
+             if (periodoStr.includes('1') || periodoStr === 'TRIMESTRE_1') m.trimestre1 = c.valor;
+             else if (periodoStr.includes('2') || periodoStr === 'TRIMESTRE_2') m.trimestre2 = c.valor;
+             else if (periodoStr.includes('3') || periodoStr === 'TRIMESTRE_3') m.trimestre3 = c.valor;
+          }
+        });
+
+        const grouped = Array.from(materiasMap.values()).map((m: any) => {
+           if (m.valores.length > 0) {
+             const sum = m.valores.reduce((a:number, b:number) => a + b, 0);
+             m.promedio = Number((sum / m.valores.length).toFixed(1));
+           } else {
+             m.promedio = '-';
+           }
+           return m;
+        });
+
+        setCalificacionesAlumno(grouped.filter((c: any) => c.tipo === 'curricular' || c.tipo === 'numerica' || !c.tipo));
+        setCalificacionesExtra(grouped.filter((c: any) => c.tipo === 'extracurricular' || c.tipo === 'taller'));
       }
     } catch (e) { console.error(e); }
   };
@@ -279,8 +314,18 @@ export function Alumnos() {
     if (!nuevoAlumnoData.nombrePila?.trim()) errores.nombrePila = 'Requerido. Ej: Luis Angel';
     if (!nuevoAlumnoData.paterno?.trim()) errores.paterno = 'Requerido. Ej: Reyes';
     if (!nuevoAlumnoData.matricula?.trim()) errores.matricula = 'Requerido. Ej: MAT-2023-01';
-    if (!nuevoAlumnoData.curp?.trim() || nuevoAlumnoData.curp.length !== 18) errores.curp = 'CURP debe tener 18 caracteres';
+    
+    if (nuevoAlumnoData.estadoNacimiento !== 'Extranjero') {
+      if (!nuevoAlumnoData.curp?.trim() || nuevoAlumnoData.curp.length !== 18) errores.curp = 'CURP debe tener 18 caracteres';
+    } else {
+      if (nuevoAlumnoData.curp && nuevoAlumnoData.curp.trim().length > 0 && nuevoAlumnoData.curp.length < 16) {
+        errores.curp = 'Si se ingresa, deben ser al menos 16 caracteres';
+      }
+    }
+    
     if (!nuevoAlumnoData.nivel) errores.nivel = 'Requerido';
+    if (!nuevoAlumnoData.grado) errores.grado = 'Requerido';
+    if (!nuevoAlumnoData.seccion) errores.seccion = 'Requerido';
 
     if (Object.keys(errores).length > 0) {
       setErroresNuevoAlumno(errores);
@@ -292,6 +337,7 @@ export function Alumnos() {
         ...nuevoAlumnoData,
         nombre: `${nuevoAlumnoData.nombrePila} ${nuevoAlumnoData.paterno} ${nuevoAlumnoData.materno || ''}`.trim(),
         fechaNacimiento: nuevoAlumnoData.fechaNacimiento ? new Date(nuevoAlumnoData.fechaNacimiento).toISOString() : undefined,
+        lugarNacimiento: [nuevoAlumnoData.ciudadNacimiento, nuevoAlumnoData.estadoNacimiento].filter(Boolean).join(', '),
       };
       
       if (payload.nivel && payload.grado && payload.seccion) {
@@ -299,10 +345,22 @@ export function Alumnos() {
         if (grupoMatch) payload.grupoId = grupoMatch.grupoId || grupoMatch.id;
       }
       
-      await alumnosService.createAlumno(payload);
+      const creado: any = await alumnosService.createAlumno(payload);
+      
+      if (nuevoAlumnoData.planPagoMeses && payload.grupoId) {
+        try {
+          const idCreado = creado.id || creado.alumnoId || creado.data?.id || creado.data?.alumnoId;
+          if (idCreado) {
+            await api.post(`/alumnos/${idCreado}/planes`, { meses: Number(nuevoAlumnoData.planPagoMeses) });
+          }
+        } catch (planError) {
+          console.error("Error al asignar plan de pago al alumno", planError);
+        }
+      }
+
       alert('Alumno registrado correctamente');
       setModalNuevoAlumno(false);
-      setNuevoAlumnoData({ nombrePila: '', paterno: '', materno: '', genero: '', fechaNacimiento: '', estadoNacimiento: '', matricula: '', curp: '', nivel: '', grado: '', estado: 'Activo' });
+      setNuevoAlumnoData({ nombrePila: '', paterno: '', materno: '', genero: '', fechaNacimiento: '', estadoNacimiento: '', ciudadNacimiento: '', matricula: '', curp: '', nivel: '', grado: '', seccion: '', estado: 'Activo', planPagoMeses: '' });
       setErroresNuevoAlumno({});
       cargarAlumnos();
     } catch (e: any) { 
@@ -1379,7 +1437,7 @@ export function Alumnos() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Nac.</label>
                   <input 
@@ -1401,8 +1459,10 @@ export function Alumnos() {
                     <option value="M">Mujer</option>
                   </select>
                 </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Lugar de Nac.</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Lugar de Nac. (Estado)</label>
                   <select 
                     className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-navy-500 outline-none"
                     value={nuevoAlumnoData.estadoNacimiento}
@@ -1444,6 +1504,16 @@ export function Alumnos() {
                     <option value="Extranjero">Extranjero</option>
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ciudad / Municipio</label>
+                  <input 
+                    type="text"
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-navy-500 outline-none"
+                    placeholder="Ej. Tijuana, Monterrey..."
+                    value={nuevoAlumnoData.ciudadNacimiento}
+                    onChange={(e) => setNuevoAlumnoData({...nuevoAlumnoData, ciudadNacimiento: e.target.value})}
+                  />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -1460,7 +1530,9 @@ export function Alumnos() {
                   {erroresNuevoAlumno.matricula && <p className="text-red-500 text-xs mt-1">{erroresNuevoAlumno.matricula}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">CURP <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    CURP {nuevoAlumnoData.estadoNacimiento !== 'Extranjero' && <span className="text-red-500">*</span>}
+                  </label>
                   <input 
                     type="text"
                     className={`w-full px-4 py-2 rounded-xl border focus:ring-2 outline-none uppercase ${erroresNuevoAlumno.curp ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-navy-500'}`} 
@@ -1473,14 +1545,14 @@ export function Alumnos() {
                   {erroresNuevoAlumno.curp && <p className="text-red-500 text-xs mt-1">{erroresNuevoAlumno.curp}</p>}
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Nivel <span className="text-red-500">*</span></label>
                   <select 
                     className={`w-full px-4 py-2 rounded-xl border focus:ring-2 outline-none ${erroresNuevoAlumno.nivel ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-navy-500'}`} 
                     value={nuevoAlumnoData.nivel}
                     onChange={(e) => {
-                      setNuevoAlumnoData({...nuevoAlumnoData, nivel: e.target.value, grado: ''});
+                      setNuevoAlumnoData({...nuevoAlumnoData, nivel: e.target.value, grado: '', seccion: ''});
                       if (erroresNuevoAlumno.nivel) setErroresNuevoAlumno({...erroresNuevoAlumno, nivel: ''});
                     }}
                   >
@@ -1501,6 +1573,37 @@ export function Alumnos() {
                     {[1,2,3,4,5,6].map(g => <option key={g} value={g}>{g}°</option>)}
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Sección</label>
+                  <select 
+                    className={`w-full px-4 py-2 rounded-xl border focus:ring-2 outline-none ${erroresNuevoAlumno.seccion ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-navy-500'}`} 
+                    value={nuevoAlumnoData.seccion}
+                    onChange={(e) => setNuevoAlumnoData({...nuevoAlumnoData, seccion: e.target.value})}
+                    disabled={!nuevoAlumnoData.grado}
+                  >
+                    <option value="">Selecciona Sección</option>
+                    {Array.from(new Set(
+                      gruposData
+                        .filter(g => g.nivel === nuevoAlumnoData.nivel && String(g.grado) === String(nuevoAlumnoData.grado))
+                        .map(g => g.seccion)
+                    )).map((s: any) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  {erroresNuevoAlumno.seccion && <p className="text-red-500 text-xs mt-1">{erroresNuevoAlumno.seccion}</p>}
+                </div>
+              </div>
+              
+              <div className="border-t pt-4 mt-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Plan de Pago (Opcional)</label>
+                <select 
+                  className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-navy-500 outline-none" 
+                  value={nuevoAlumnoData.planPagoMeses}
+                  onChange={(e) => setNuevoAlumnoData({...nuevoAlumnoData, planPagoMeses: e.target.value})}
+                >
+                  <option value="">- Sin Plan Asignado Inicialmente -</option>
+                  <option value="10">Plan de 10 Meses (Septiembre a Junio)</option>
+                  <option value="12">Plan de 12 Meses (Pago doble en Diciembre)</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">El plan se asignará automáticamente al calendario de pagos.</p>
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-3">

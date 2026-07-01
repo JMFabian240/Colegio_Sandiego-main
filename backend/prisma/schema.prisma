@@ -300,6 +300,7 @@ model Alumno {
   curp                  String?   @unique @db.VarChar(18)
   nombreCompleto        String    @map("nombre_completo") @db.VarChar(120)
   fechaNacimiento       DateTime? @map("fecha_nacimiento") @db.Date
+  lugarNacimiento       String?   @map("lugar_nacimiento") @db.VarChar(100)
   sexo                  String?   @db.Char(1)
   nivelId               Int?      @map("nivel_id")
   estado                String    @default("Activo") @db.VarChar(20)

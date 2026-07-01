@@ -56,10 +56,9 @@ const CONCEPTOS_PAGO_VALIDOS = Object.values(CONCEPTOS_PAGO);
 
 // ── Métodos de pago ───────────────────────────────────────────
 const METODOS_PAGO = Object.freeze({
-  EFECTIVO:      'efectivo',
-  TRANSFERENCIA: 'transferencia',
-  TARJETA:       'tarjeta',
-  CHEQUE:        'cheque',
+  TRANSFERENCIA:   'transferencia',
+  TARJETA_CREDITO: 'tarjeta_credito',
+  TARJETA_DEBITO:  'tarjeta_debito',
 });
 
 const METODOS_PAGO_VALIDOS = Object.values(METODOS_PAGO);

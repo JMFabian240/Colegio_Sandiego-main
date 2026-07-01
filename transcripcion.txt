@@ -1,0 +1,382 @@
+0:00de forma manual, aparte de que también se ingresa en la plataforma de la SEP,
+0:055 segundospero definitivamente al ingresar plataforma de la SEP este implica este que te dan periodos para abrir y
+0:1414 segundosentonces pues este si no lo tienes pues ya. Entonces nosotros trabajamos adelantadamente a la fechas, ¿no? Sí,
+0:2121 segundosporque si te da o no te no se abre la plataforma para incluir las boletas,
+0:2626 segundosnosotros podemos imprimir, ¿no? Aparte de que también tenemos una diferencia entre lo que son las boletas de con las
+0:3535 segundosde nosotros, porque nosotros agregamos el club, ¿no?, que llevan inglés, que llevan computación, que llevan danza y
+0:4242 segundoscosas de ese tipo. Entonces, de tal manera la boleta interna es de otra forma a comparación de las calificaciones que se cortan la plataforma de Entonces ese sería,
+0:5353 segundosdigamos los dos esquemas. Pero ustedes dígan pueden hacer los dos o pues mira, para empezar, para ver cómo
+1:011 minuto y 1 segundovamos a trabajar, lo primero que necesito definir cuánto es el volumen de usuarios que puedes manejar. Por ejemplo, si fuera en el de nominal,
+1:101 minuto y 10 segundosel un número 500 nómina 400, pero en base a eso ya vemos si es viable los dos
+1:171 minuto y 17 segundoseste productos o solo uno, porque pues como tanto usted tiene los tiempos muy acortados como nosotros, si los dos son
+1:241 minuto y 24 segundospara varios usuarios, sí, no creo que no. Mira, los usuarios que tú manejas, el total de usuario, ¿cuánto es? 180.
+1:321 minuto y 32 segundos170. Pues por ejemplo, para lo de ingresos serían los padres de familia. Son alrededor de digamos que 200.
+1:401 minuto y 40 segundosAjá. Exactamente. Exactamente.
+1:441 minuto y 44 segundos200 para mantenerlo simple entonces sería un sistema de gestión de de las colegiaturas. Entonces,
+1:501 minuto y 50 segundosmira, por ejemplo, e la maestra le gustaría esa parte y también la otra. Por ejemplo, en el de gestión de las
+1:571 minuto y 57 segundoscolegiaturas podría ser una base en donde en vez de manejarlo en un Excel,
+2:022 minutos y 2 segundosnosotros podamos dar de alta alumno en ese software. Lo vamos dando de alta junto con eh si factura, no factura, los
+2:102 minutos y 10 segundospagos que ha hecho, los pagos que va a hacer. ¿Por qué? Porque cuando lleggaue un punto en la cocidatura, donde nosotros, por ejemplo, para que tengan la información de grandes rasgos, los
+2:192 minutos y 19 segundosreciben los primeros 5 días de cada Necesitamos que cuando pasen esos primeros 5 días nos haría una excelente
+2:262 minutos y 26 segundoschampa, que el sistema nos avisara, esos padres son los que aún no te han pagado dentro de los primeros 5 días. M.
+2:332 minutos y 33 segundosEntonces, ya con eso se nos hace para nosotros más fácil pasar esos padres deudores a otra base limpia o nada más empezar a decirle a los padres que
+2:412 minutos y 41 segundosempiecen a pagar este para que ya se nos acorte esa parte de tener que andar buscando quién ya pagó, quién no ha pagado.
+2:492 minutos y 49 segundosViene muy bien para las consultas a la base de datos. Eso sí me agrada bast no no son muy complejos. El otro que me había dicho que era sobre las clificaciones,
+2:592 minutos y 59 segundospues depende porque por lo que entendí eh quería que se hiciera se van agregando las especificaciones y un sistema va sumando para promediarlo y generar sería para generar la boleta.
+3:113 minutos y 11 segundosAhora, má, le pregunto, ¿cómo son los periodos de evaluaciones aquí en el colegio, aquí en secundaria? Son trimestrales.
+3:183 minutos y 18 segundosBrimestral. O sea, sería en el caso de bachillerato son este bimestrales. Sí, más o menos porque es semestre, ¿no?
+3:263 minutos y 26 segundosEs bimestral. Pero lo que de alguna manera me gustaría para que no sepan tanto el de secundaria y el de administración,
+3:343 minutos y 34 segundosporque el de secundaria tiene más alumnos, el deato nada más tiene cuatro alumnos. Okay, entonces podríamos, yo me imagino la boleta que sería la
+3:413 minutos y 41 segundoscalificación como del bloque uno, bloque dos y bloque tres y ya la final que ya sería antes de lo que termina el periodo
+3:483 minutos y 48 segundoscomo nos una nómina, lo que le entendía es que usted quería que cada padre familia tuviera
+3:573 minutos y 57 segundoscomo una historia, ejemplo, una línea de tiempo de los pagos que ella hizo que falta por hacer est en el punto medio y verlo, pues mira, te faltan tres pagos
+4:054 minutos y 5 segundosya para terminar la la educación de tu hijo o debes tanto para que puedas acreditar.
+4:094 minutos y 9 segundosExactamente. Pero más que que se le ve el reflejo a los padres, que se lo ve a nosotros.
+4:144 minutos y 14 segundosEntonces, por ejemplo, también nosotros eh a principio de ciclo se paga lo que es inscripción, aranceles, materiales,
+4:204 minutos y 20 segundos¿no? Y esos también llevan un periodo de tiempo determinado porque, por ejemplo,
+4:244 minutos y 24 segundosnos manejamos por promociones. Digamos que de enero a febrero manejamos una promoción y los padres que ya pagaron todo eso en ese tiempo reciben un cierto tipo de beca.
+4:354 minutos y 35 segundosEntonces también necesitaríamos si se pudiera que, por ejemplo, tenemos 60 días para liquidar inscripción, y material. Si en esos 60 días liquidaron,
+4:454 minutos y 45 segundostodo va bien y prácticamente se queda en ese. Pero si no que me avise unos 5 días antes para que yo tenga conocimiento de avisar a los padres de familia, oye,
+4:544 minutos y 54 segundos¿sabe qué? No se ha pagado.
+4:564 minutos y 56 segundosSe está a punto de vencer el tiempo para que usted pueda hacer el pago y no afecte nada. M, prácticamente lo que queremos es que en vez de hacerlo en un
+5:055 minutos y 5 segundosExcel, ingresamos los datos del niño en una base, ¿sí?
+5:085 minutos y 8 segundosEh, en esa base vamos registrando los pagos que va haciendo cada padre.
+5:125 minutos y 12 segundosya va a quedar ahí ahora sí que plasmado eh con cierto tipo de fechas porque tenemos fechas de tiempo límite para
+5:195 minutos y 19 segundospagos y que por ejemplo cuando estén debiendo algo que no se avise o que pueda simplificar la información así de que me pidan un reporte, por ejemplo,
+5:285 minutos y 28 segundosoye, fíjate cuánto he ingresado en este mes, que yo pueda hacer el reporte nada más meterme a la base, eh generar todos
+5:365 minutos y 36 segundoslos pagos, ahora sí como que en un layout más o menos y que ya me lo desglosado así de el lo que ha pagado,
+5:425 minutos y 42 segundoslo que ha pagado, lo que ha pagado y una suma final poniendo su nombre y que aparezca.
+5:465 minutos y 46 segundosÁndale. Exactamente. Y también un global de todo lo que ingresado. Entonces, eso nos serviría bastante para llevar una administración más óptima. Okay.
+5:555 minutos y 55 segundosAhora, los pagos que hacen los padres de familia, ¿ustedes cómo cómo los ellos les notifican a ustedes que pago? No,
+6:026 minutos y 2 segundospero ¿cómo cómo actualmente cómo lo hacen? Ellos, por ejemplo, nos mandan un WhatsApp, nos mandan la captura del pago. Eh, ya nosotros registramos el
+6:106 minutos y 10 segundospago, pero antes tenemos, bueno, después tenemos que revisar en el corte de del banco la conciliación para ver que los pagos coincidan.
+6:196 minutos y 19 segundosEsa es una parte. No sé si habrá alguna manera de que eh, por ejemplo, el padre pueda meter
+6:286 minutos y 28 segundosalguna información para que se registre en automático. No sé si eso sería factible, sería óptimo, si se pueda,
+6:376 minutos y 37 segundosalgo que se me ocurre a primeras instancias. Okay.
+6:416 minutos y 41 segundosY pregunta, ¿y qué pasa cuando el padre no paga tiempo? No hay. Ah, exacto. Qué bueno que lo menciones.
+6:486 minutos y 48 segundosHay una multa exactamente de 400 pesos.
+6:516 minutos y 51 segundosEntonces, la colegiatura, supongamos que es de 4,000, ya no sería de 4,000. Es 4000 los primeros 5 días, a partir del sexto serían 4400.
+7:017 minutos y 1 segundoExactamente.
+7:027 minutos y 2 segundosAhora, bueno, una nada más para ver cómo haríamos la del sistema de ¿Qué dato se le hace a usted relevante
+7:107 minutos y 10 segundosque ya tenemos de los padres en este caso? alumno, semestre, este, matrícula.
+7:177 minutos y 17 segundosAjá. De hecho, por ejemplo, los datos principales del alumno serían nombre, el alumno, grado, eh fecha de nacimiento,
+7:267 minutos y 26 segundoscurv, mm, de ahí podría ser la información del padre. ¿Por qué? porque de ahí nosotros no jalamos para
+7:347 minutos y 34 segundosfacturarlo. Entonces, por ejemplo, me serviría mucho que ir a una casilla en donde yo pudiera marcarla y que me aparecieran todos los que facturan. Así
+7:437 minutos y 43 segundosde que al momento de registrarlo yo le pongo factura. Si no, yo le pongo sí. Y entonces al final de cuentas yo, por ejemplo, antes de que empiecen los
+7:517 minutos y 51 segundosprimeros pagos de colegiatura, yo puedo buscar en un global así los padres que facturan que me aparezca el nombre, dirección. Ándel. Exactamente.
+8:008 minutosNombre, dirección, RFC.
+8:028 minutos y 2 segundostodos los datos que necesito yo para poder emitir la factura. ¿Por qué?
+8:058 minutos y 5 segundosPorque así es más fácil para nosotros de ahí jalar la información, darlo de alta para el sistema de facturación que tenemos y empezar a emitir las facturas.
+8:178 minutos y 17 segundosEh, este sistema solo lo va a usar una persona o Pues mira, por ejemplo, el sistema está pensado para administración, pero por
+8:258 minutos y 25 segundosejemplo me gustaría que hubiera partes que solo pudiera ser un usuario y partes que Exactamente.
+8:328 minutos y 32 segundosY y otros que una administración, un administrador, ¿no? Sí, me imagino que el en este caso el de mayor rango, el que va a tener mayor poder en ese base,
+8:418 minutos y 41 segundospues va a ser todos los demás se le van a quitar accesos y solamente pueden ver exactamente nada más podrían checarlo
+8:498 minutos y 49 segundosmás modifican ya la parte de nosotros ingresar pagos pues ya le haríamos los que tenemos el acceso complejo pero actualmente lo que ustedes hacen es
+8:578 minutos y 57 segundosel padre de familia dice ya pagué mando al WhatsApp ustedes lo revisan de ahí cotejan con el banco y de ahí lo meten al excelent Sí,
+9:079 minutos y 7 segundosexactamente. Entonces es un es muy laborioso, ¿no?
+9:099 minutos y 9 segundosSon tres pasos o cuatro para poder hacerlo.
+9:119 minutos y 11 segundosEntonces Exactamente. Y entonces el problema mayor viene cuando queremos hacer, por ejemplo, eh, no sé, algún resumen del mes.
+9:209 minutos y 20 segundos¿Por qué? Porque se está sumando en automático, entonces se vuelve un poquito más tedioso. Algo que puedes que podemos hacer tal vez en una hora nos lamos haciendo dos tr días.
+9:329 minutos y 32 segundosSí. Ándale. Exactamente.
+9:349 minutos y 34 segundosY este sistema de pagos solo es como, o sea, transferencia, no hay efectivo, hay pagos, ¿no? Efectivo, no manejamos nada,
+9:429 minutos y 42 segundoses pago por transferencia, depósito bancario y prácticamente no nada de cheque.
+9:489 minutos y 48 segundosTarjeta, eh, crédito, débito, cualquiera de esas dos son los tres pagos que manejamos.
+9:569 minutos y 56 segundosAsí como somos una escuela, tratamos de no tener Sí. efectivo.
+10:0210 minutos y 2 segundos¿Alguna otra pregunta que se para el pues eh seguirían utilizando también el WhatsApp, ¿no?, como herramienta. App si nosotros desarrollamos este también.
+10:1310 minutos y 13 segundosSí, es que ah, perdón, ¿dónde prefieren que sea la aplicación? Para celular o que se computadora.
+10:2110 minutos y 21 segundosNo, yo creo que sería para para nosotros siempre estamos en computadora. Bu sería un plus increíble que también la pudiera
+10:3010 minutos y 30 segundosusar en el celular porque si no estoy aquí, estoy en cualquier lugar y alguien me pregunta, pues poder entrar sería en plus, ¿no? Pero
+10:3910 minutos y 39 segundosestamos aquí. Sí, porque utilizamos otra tecnología para Exactamente. Entonces si se fue escritorio, nada más de escritorio, con eso extraamos bien.
+10:4810 minutos y 48 segundosEste, algunas sugerencia en la interfaz que sí,
+10:5210 minutos y 52 segundosalgunos colores, los colores institucionales.
+10:5410 minutos y 54 segundosAh, claro que sí. los colores institucionales o el escudo. Exactamente.
+11:0011 minutosDe ahí en fuera algo que no se vea tan cargada de información porque por ejemplo hay veces
+11:0711 minutos y 7 segundosExactamente. Yo pues se me hace un poquito más fácil entenderlo en algunas ocasiones porque estoy pues más joven,
+11:1411 minutos y 14 segundosmás cercano a la tecnología, pero por ejemplo el objetivo no es que solamente ellos lo ocupen, sino que por ejemplo las maestras que ya están un poquito más
+11:2311 minutos y 23 segundoslejos en el uso de las tecnologías de la información también puedan verlo y que sea un poquito fácil para ellas así de ah bueno, me meto aquí, aquí, aquí para
+11:3111 minutos y 31 segundosya poder hacer cualquier cosa, ¿no? para que no les cueste tanto trabajo esa parte, para que no se saturen de información y lejos de querer utilizarlo le tengan miedo.
+11:4011 minutos y 40 segundosOkay.
+11:4111 minutos y 41 segundosQue sea simple, pero que cumpla con Ándale. Exactamente. Sí.
+11:4411 minutos y 44 segundosSí. Y ¿dónde se puede consultar los colores institucionales? ¿Hay una página o
+11:5311 minutos y 53 segundosno sé si podemos también estar en comunicación por cualquier duda, sugerencia,
+11:5811 minutos y 58 segundoscualquier duda que salga? Sí, claro que sí,
+12:0012 minutosporque sabemos que las visitas tanto para ustedes como para nosotros sí se nos complica un poco. Sí, sí, claro que sí.
+12:0712 minutos y 7 segundosUna llamadita más.
+12:1512 minutos y 15 segundosYa tenemos los datos que va a llevar la consulta, la base de datos, tanto padre como ya sabemos lo que quier periodes que se
+12:2412 minutos y 24 segundosmuestren para las calificaciones.
+12:2712 minutos y 27 segundosPues mira, ahorita lo que yo veo vamos a decir, vamos a centrarle todo en el demonioaciones,
+12:3412 minutos y 34 segundoscomo están los tiempos va a estar muy completo por centrarnos en las dos, una la vamos a entregar a media y la otra.
+12:4312 minutos y 43 segundosPor eso nos aseguraron lo que nosotros le damos la palabra es Sí. para para que ustedes también se entren en diseñar solo uno.
+12:5012 minutos y 50 segundosSí, pues sí. Aparte pues estoy viendo que están en diseño, principio de diseño. Principio de diseño.
+12:5612 minutos y 56 segundosOkay. Miren, lo que hace todo vamos a hacer esto. Nosotros nos chutamos la base de datos la base de datos obviamente pronto ustedes el Luis y pues ahí entre los dos equipos pues aventamos. Bajo.
+13:0713 minutos y 7 segundosEso ya es clave casi.
+13:0813 minutos y 8 segundosY ellos ellos también tienen que hacer el RS también.
+13:1413 minutos y 14 segundosAh, no sé si ya lo preguntaron, pero o sea, ¿qué tipo de pagos manejan? Manejan con legiatura, inscripción, pagos de uniforme, eventos. Exactamente. Es, por
+13:2313 minutos y 23 segundosejemplo, vámonos desde cero, desde que viene un padre de familia, ¿no? Nosotros tenemos lo que es pago de inscripción, arancel,
+13:3113 minutos y 31 segundosmaterial, son uniformes y son libros.
+13:3613 minutos y 36 segundosY ya de ahí vienen los pagos de colegiatura mensuales. ¿Por qué? Porque no sé si también sea relevante, me imagino que sí. Tenemos dos tipos de planes de pago. Tenemos algunos padres
+13:4613 minutos y 46 segundosque están a 10 meses ah y otros padres de familia que están a 12 meses. Por ejemplo, en el de 12 meses, este,
+13:5413 minutos y 54 segundoshay un pago doble en diciembre.
+13:5713 minutos y 57 segundosEn diciembre se paga lo que es el mes de diciembre y el periodo vacacional adelantando julio del siguiente año. Por ejemplo, digamos
+14:0514 minutos y 5 segundosque ahorita estamos en para todos.
+14:0714 minutos y 7 segundosExactamente. Para todos. Ahorita estamos en 2026 y tengo cinco, tengo 10 padres también inscritos. Tengo cinco que están a 10 meses y tengo cinco que están a 12.
+14:1614 minutos y 16 segundosEsos cinco que están a 12, ya estamos ahorita al 2026, estamos viendo que estamos en diciembre. En diciembre me tienen que pagar dos colegiaturas, los
+14:2414 minutos y 24 segundosde 12 meses. Me van a pagar diciembre 2026, me van a pagar julio 2027m
+14:3014 minutos y 30 segundosy ahí se hace un solo match. Y los que están a 10 meses, ellos no me van a hacer ningún pago doble. Ellos me van a pagar nada más diciembre. y van a continuar pagando mes con mes nada más.
+14:4214 minutos y 42 segundosEsa es la única diferencia que puede haber.
+14:4414 minutos y 44 segundosAhora, una pregunta, por ejemplo, así como si un padre se retrasa se crea la editorial, si un padre supongamos que va pagando,
+14:5314 minutos y 53 segundostenemos quiere adelantar tr meses, cuatro. Ah,
+14:5614 minutos y 56 segundosel sistema quiere que caso es de saciones.
+14:5914 minutos y 59 segundosSí, sí, sí, sí. Me gustaría que se pudiera porque incluso hay padres de familia que se anteponen a todo y para evitarse esas preocupaciones pagan de
+15:0615 minutos y 6 segundosmanera anual. Okay. Casi daño y ya no se preocupe.
+15:1015 minutos y 10 segundosExactamente. Ellos te van a pagar todo de un jalón prácticamente y ya dejan de preocuparse por eso.
+15:1615 minutos y 16 segundosEntonces igual está esa parte.
+15:2115 minutos y 21 segundosYo creo que prácticamente serían como que muchos filtros.
+15:2515 minutos y 25 segundosSí, porque siempre tenemos algún padre que está 10 meses, otro padre que está a 12.
+15:2915 minutos y 29 segundos¿Y cuál es la Bueno, sé que la diferencia obviamente también es monetaria, pero cómo es de que deciden que uno sea de 10? Ah, el padre lo escoge. Escoge. Sí. en el plan.
+15:3815 minutos y 38 segundosExactamente. De hecho, si hacemos la suma al final es el la misma cantidad de dinero, nada más que repartido en
+15:4515 minutos y 45 segundosdiferentes partes para que no sea tan pesado.
+15:4815 minutos y 48 segundosPero al final de cuentas es es la misma cantidad que va a pagar uno de 10 y uno de 12, nada más es la manera en que van pagando los periodos, por así decirlo.
+15:5515 minutos y 55 segundosSí, cierto. Si el alumno, un alumno llegara a recaudar una materia un semestre, se los al repetir o el cursar
+16:0316 minutos y 3 segundosla materia se le hace cobro en la nómina o no hace cobro. Ah. Por ejemplo,
+16:0816 minutos y 8 segundossinceramente, ya por las partes de la CEP y todo eso, es muy muy difícil reprobar un alumno. Okay.
+16:1516 minutos y 15 segundosEntonces, es muy difícil. Puede pasar que tengan que hacer extraordinarios,
+16:1916 minutos y 19 segundospero por ejemplo los extraordinarios ya son pago en efectivo y los hacen aquí en dirección, entonces ya es más el tema de las maestras. Exactamente. Ya no entra
+16:2816 minutos y 28 segundostanto como tal en nuestro sistema de información.
+16:3216 minutos y 32 segundosNuestro sistema de información que dice que son 200 padres, dice más o menos. Exactamente. Muy aproximado. Primaria,
+16:3816 minutos y 38 segundossecundaria y Exactamente.
+16:4216 minutos y 42 segundosY kinder también. y prácticamente todos los datos son iguales, nada más va a cambiar, por ejemplo, que si pudieran incluir cuando yo registro a un alumno,
+16:5216 minutos y 52 segundoses alumno de kinder, alumno de primaria,
+16:5416 minutos y 54 segundosdó se encontraron de bachillerato, para que yo en algún momento en algún filtro pueda poner los de kinder y luego pueda poner primero de kinder, otro filtro,
+17:0117 minutos y 1 segundosegundo de kinder otro filtro por grado, grupo,
+17:0517 minutos y 5 segundosexactamente o por nombre, o sea, eh ahora sí que sería de la datos del padre y de datos del padre y del alumno, porque
+17:1417 minutos y 14 segundostambién puede hacer de que a lo mejor el padre tenga dos hijos estudiando aquí también.
+17:1817 minutos y 18 segundosExactamente. También, sí, porque también nos pasa.
+17:2217 minutos y 22 segundosAhora, este igual si pudiera incluir algunos datos,
+17:2517 minutos y 25 segundos¿sí? algunos datos personales, número de teléfono,
+17:3017 minutos y 30 segundosdirección, eh tal vez las personas que estén autorizad para recoger al niño. Es Ajá. Exactamente. Un rubro extra en donde yo pueda ver esa información,
+17:3917 minutos y 39 segundosporque también nos pasa situaciones X en donde señor exactamente donde no viene el padre de familia y entonces me pregunta un un
+17:4817 minutos y 48 segundosmaestro, "Oigan, si se lo puede entregar, yo le digo, mira, no estoy seguro porque no tengo la información a la mano o no estoy en la institución". Y entonces si él pudiera checarlo a través
+17:5717 minutos y 57 segundosde un usuario así de a ver la información principal, el que no vea la parte de pagos, sino que nada más por ejemplo la información principal que es el nombre, grado, grupo y tutores,
+18:0718 minutos y 7 segundos¿okay?
+18:0718 minutos y 7 segundosPor ejemplo, esa parte también sería un que nos gustaría bastante, ¿no?
+18:1318 minutos y 13 segundosLos datos que la actual pagos, registro de pago, se ti,
+18:2118 minutos y 21 segundosno más todo digital. Todo digital y por ejemplo recibos o comprobantes también son digital o también los
+18:2818 minutos y 28 segundosimprime papel un archivo o cómo tiene un de hecho, por ejemplo, los padres de familia vienen, ellos me mandan el
+18:3518 minutos y 35 segundoscomprobante, los comprobantes que nos va mandando los vamos nosotros guardando en una USB,
+18:4118 minutos y 41 segundosesa USB después de que terminó este siempre la estamos depurando, ¿no? Y ya cuando ven los padres nosotros les damos un comprobante físico. Pero ahora que me
+18:4918 minutos y 49 segundosdices eso, no sé si se pueda. Sería un excelente un excelente plus que yo pudiera montar tal vez un archivo, cargarlo,
+19:0019 minutoscargarlo ahí a la parte del padre de familia. Por ejemplo, él me dice,
+19:0419 minutos y 4 segundos"¿Sabes que ya te pagué inscripción así?" El material son 16,000. Me lo transfieren. Ya yo después de que cotejé
+19:1119 minutos y 11 segundosy todo eso con el banco y sé que cayó firme, ya puedo subir ese comprobante al estatus del padre. para que por
+19:1919 minutos y 19 segundoscualquier cosa ya esté guardado. Ya estáis pago de mayo de 2025. Chica aparece. Sí, acá está el comprobante.
+19:2519 minutos y 25 segundosAhí está el comprobante y ahí está el pago. Entonces ya tenemos un match y ya mi corporativo puede ver que se hizo el pago a tiempo y que ya está registrado.
+19:3419 minutos y 34 segundosEso también sería ahora sí que una facilidad enorme lo que nos harían.
+19:3819 minutos y 38 segundosY más visual. Exactamente. Más visual con Y todo estas cosas que hemos estado
+19:4819 minutos y 48 segundoshablando, ¿cuál es la que consulta con más frecuencia? Alumnos que deben pagos del día, ingresos del mes los prácticamente más los deudores.
+19:5819 minutos y 58 segundosLos deudores. Los deudores.
+20:0020 minutosY acuérdate que se le tiene que mandar un mensaje si pudieran ahí. Ah, bueno, sí, esa era una preguntaente,
+20:0720 minutos y 7 segundos¿no? Ándale. Una notificación nada más metemos el correo.
+20:1120 minutos y 11 segundosÁndale el correo para que le lleg sería muy buena idea, ¿eh? No sé si se puede, así como dice la maestra, es una muy buena idea. Puede
+20:1920 minutos y 19 segundosbueno sí, con hay protocolo está el SMTP,
+20:2320 minutos y 23 segundos¿no? Igual yo cono con N8 este cuando se acerca la fecha de mandar,
+20:3320 minutos y 33 segundoso sea, hay alguien actualmente que notifica a los padres y cómo lo hace. soy yo. Ah, pero por ejemplo,
+20:4020 minutos y 40 segundosexactamente, es algo muy laborioso porque imagínate, tengo que llega el día, entonces tengo que sacar pagos atrasados del mes pasado y todo, tengo que ver quiénes van al corriente.
+20:5120 minutos y 51 segundosEntonces es registrado, pero sería como dos mensajes porque sería uno de oye, hoy es tu último día. Ándale.
+20:5720 minutos y 57 segundosExactamente. De que oye, ya se te venció. Exactamente. O incluso si pudieran avisarle 5 días antes, 3 días antes, para que el
+21:0621 minutos y 6 segundospadre de familia sepa, ah, bueno, me quedan tres días para pagar la colegiatura normal,
+21:1021 minutos y 10 segundos¿no? Hasta este el mismo sistema de Avise la base de datos de lo que pues en 5 días va a vencer la Exactamente.
+21:2221 minutos y 22 segundosAvisar antes y después de Exactamente.
+21:2721 minutos y 27 segundosAsí que eso nos facilitaría bastante el trabajo porque como ya sería en automático, ya nosotros no tendríamos que andar haciéndolo uno por uno, uno
+21:3421 minutos y 34 segundospor uno. Y entre esos que se nos puede pasar uno y que el padre no se le avisó y nos va a decir, "Oye, pero que no avisaste, pues también puede usar, ¿no?
+21:4321 minutos y 43 segundosEs lo que por la automatización nos serviría bastante.
+21:4921 minutos y 49 segundosEh, bueno, en este colegio pues tienen kinder, primaria, secundaria, son y prepa. Los montos son fijos, varían por alumno, grado,
+21:5821 minutos y 58 segundoseh varían por por becas, exactamente, y también por periodo escolar,
+22:0222 minutos y 2 segundosporque por ejemplo en este ciclo escolar 2627 tuvimos una cantidad tope de colegiaturas que nos mandan, pero ese se
+22:1122 minutos y 11 segundosmodifica para el siguiente año. Ahora sí que como todo tiende a subir, las colegiaturas no van a ser siempre las mismas, ¿no? Este ciclo puede que sea de
+22:1822 minutos y 18 segundos5,000, el ciclo que viene puede que sea 5500, 6,000. Entonces también tendríamos que eh poder cambiar ese ese punto.
+22:3222 minutos y 32 segundosSí, independientemente cada moto igual, tanto de lo mismo queato y exacto. ¿Algo más, Luisito?
+22:4122 minutos y 41 segundosMm. ¿Qué más? ¿Qué más?
+22:4722 minutos y 47 segundos¿Qué dat esto ocupa? Para las facturas de los padres. para las facturas de los padres, por ejemplo, si llego a ocupar lo que es eh nombre completo del padre de familia,
+22:5922 minutos y 59 segundosse régimen fiscal,
+23:0223 minutos y 2 segundosaparte del régimen fiscal es dirección completa,
+23:0923 minutos y 9 segundosde ahí RPC,
+23:1423 minutos y 14 segundostipo de pago, si va a ser pago por tarjeta de crédito, tarjeta de débito, transferencia electrónica,
+23:2323 minutos y 23 segundosy la CUR del niño, porque ya cuando se factura el la facturación por
+23:3023 minutos y 30 segundosciclaturas, yo tengo que poner la CUR del niño, asociarla al RGC del padre.
+23:3623 minutos y 36 segundosTodo esto con tal de que ellos puedan deducirlo prácticamente,
+23:4323 minutos y 43 segundossí, de los padres, de ahí en fuera, de los niños. es, por ejemplo, el nombre completo del niño.
+23:5323 minutos y 53 segundosDentro del nombre completo del niño también tiene que venir el RGC del padre para que lo macheen. Y también hay algo que se llama reboe,
+24:0224 minutos y 2 segundosque es un permiso que a nosotros nos da la CPA, que es un rebo para primaria, un rebo para kinder, para secundaria y para
+24:1024 minutos y 10 segundosbachillerato. Es como una como una clave, por así decirlo.
+24:1424 minutos y 14 segundosExactamente. Que nos certifica como una escuela legal.
+24:2124 minutos y 21 segundosEste este sistema, ¿dónde va a estar instalado? ¿Va a estar instalado en una computadora de escritorio, aquí? ¿Va a estar en una laptop?
+24:2724 minutos y 27 segundosPues eh por el momento sería una L, pero le solicitamos a la jeja que nos compre una descripción.
+24:3424 minutos y 34 segundosDisculpa, también una pregunta. ¿Ese sistema podríamos instalarlo por ejemplo en varias computadoras o solo en una? Se podría ser un instalable pues así como una aplicación. Sí. Ándale. Exactamente.
+24:4424 minutos y 44 segundosSe lo pasan a las demás computadoras por un USB o hasta lo pued Sí, porque por ejemplo si la maestra que aquí presenta el norma es la directora,
+24:5324 minutos y 53 segundosella tendría que que tener pues uno de los niveles más altos de la aplicación,
+24:5624 minutos y 56 segundos¿no? Entonces para que ella pueda tenerlo ahí, pueda revisar, cotejar en algún momento que ella quiera, si quiero ver esto, lo puede hacer, ¿no?
+25:0625 minutos y 6 segundosY por ejemplo, si también la licenciada,
+25:0725 minutos y 7 segundosbueno, otra compañía, licenciada Elizabeth o por ejemplo, incluso si la maestra Ofelia, es nivel primaria,
+25:1525 minutos y 15 segundosquiere consultar a de nivel usuario, quiere consultar los tutores del padre, pueda verlo ahí también.
+25:2125 minutos y 21 segundosCada quien va a tener su storio y su contraseño.
+25:2325 minutos y 23 segundosExactamente. Principalmente los administrativos que estamos más al pendiente de esta parte para que ya tengamos como información más precisa.
+25:3025 minutos y 30 segundosSí, cierto. Va a querer que en este caso hacer administrador el punto más alto y que pueda delegar permisos. Ejemplo,
+25:3725 minutos y 37 segundosvamos un nuevo trabajador. Ah, okay. Yo me doy de mi sistema. Le creo su usuario y contraseña y seor. Exactamente. Exacto. Así como agregar, quitar.
+25:4625 minutos y 46 segundosAgregar y quitar. Exactamente. Para que ahora sí que no tengamos saturada la base porque pues como en todas las escuelas vienen, van así como en todos
+25:5525 minutos y 55 segundoslos trabajos. Igual una parte en donde también podamos eliminar a los usuarios,
+26:0026 minutosa los niños, porque en algún momento se van de la escuela o egresan.
+26:0626 minutos y 6 segundosEntonces también para que no se mantenga Exactamente, para que no se sature, podamos eliminarlos en algún momento.
+26:1126 minutos y 11 segundos¿Saben qué? Ya no voy a estar con ustedes. Ah, okay. Pues lo eliminamos y eliminar.
+26:1726 minutos y 17 segundos¿Qué gustan? Agua o refresco. Boca. Sí,
+26:2426 minutos y 24 segundos¿por qué también? para que agua igual agua agua. No prendo el clima porque veo que está préndelo.
+26:3126 minutos y 31 segundosEste tres rocas y para mí dile que me lo estáos
+26:4126 minutos y 41 segundoslo que sí le podemos asegurar que es el este asegurar que quede bien el deciones.
+26:4926 minutos y 49 segundosLe digo a ellos viendo como tenemos los tiempos si intentamos hacer las dos a la vez una va a salir mal y la otra vez.
+26:5526 minutos y 55 segundosSí. Ya, ya. O sea, se deben dedicar a una sola cosa. Eso sí lo sé. Es más importante administración, ¿no?
+27:0127 minutos y 1 segundoSí. Estoy viendo que pues ahora ese punto más débil o la sangua, pues es el sistema nóómina.
+27:0727 minutos y 7 segundosAsí es. Así es. nómina yas o miren también no sé qué les parezca esto. Dentro del mismo sistema de
+27:1527 minutos y 15 segundosnóminas en donde vamos a a dar el usuario al niño si se puede abrir una parte de primer
+27:2327 minutos y 23 segundostrimestre, segundo trimestre, tercer trimestre y ahí poner la calificación. Sí, como dato. Un dato nada más.
+27:3027 minutos y 30 segundosEx dato también para que las maestras puedan revisar. Uy, qué por el apartado de becas exactamente, qué calificación sacó este
+27:3827 minutos y 38 segundosniño en el segundo trimestre, no me acuerdo. Y ya nada más mete el usuario y que en la información de usuario normal ella pueda ver o que el nombre del niño,
+27:4627 minutos y 46 segundosla calificación que sacó el primer trimestre. Así ya no tiene que revisarse y sentarse y llevar cada boleta para ver qué qué calificación sacó. Antes que se
+27:5527 minutos y 55 segundosme olvide de lo que es tu facturación o lo que es ingreso, acuérdate que en los 3 meses el alumno se le puede dar de banda por falta de pago.
+28:0428 minutos y 4 segundosAh, por falta de pago también.
+28:0528 minutos y 5 segundosY bueno, a los tres no no se de hecho ahorita que menciona se elimina. Hm. Si por ejemplo, chicos,
+28:1328 minutos y 13 segundosel sistema, muchas gracias, el sistema detecta que el alumno Juanito Pérez este que llevó una calificación muy normal,
+28:2128 minutos y 21 segundosno tenía beca semestre alcancé a subir su calificación en estos dos, que el sistema le asigne la beca, o sea, que por ejemplo no le asigne, pero que le
+28:2928 minutos y 29 segundosaparezca este alumno ya es este seleccionable para Ah, okay. Ahí, por ejemplo, es que es lo
+28:3628 minutos y 36 segundosque pasa, nosotros las becas las manejamos en lugar de por calificación, sino por periodo de inscripción.
+28:4428 minutos y 44 segundosM por ejemplo, los que se inscriben primero tienen las mejores becas. Ajá.
+28:4928 minutos y 49 segundosPor eso le decía que en esa parte eh cuando yo inscribo, pero va acoplado al promedio.
+28:5328 minutos y 53 segundosExactamente. Yo ajustar el periodo y ajustar la beca que va a tener. Eh,
+28:5828 minutos y 58 segundosincluso, por ejemplo, hay una beca de hermanos que tenemos. Entonces, eh prácticamente nada más es yo tener la parte la pauta de poder poner eh tiene 25, tiene 30%
+29:0929 minutos y 9 segundosy así porque así tenemos que también poner qué tipo de beca es el porcentaje el porcentaje que cubre exactamente oa
+29:1729 minutos y 17 segundosrealmente que el sistema no asigne la beca, sino simplemente que muestre eso,
+29:2129 minutos y 21 segundosel no me imagino que esa parte mejor se la dejamos que ellos introduzcan el el moto no se puede automatizarí esa no
+29:2929 minutos y 29 segundossío eso es Nosotros los hay problema con eso y ya nada más una parte importante sí visualizar la información, ¿no? Sobre todo para las maestras que en algún
+29:3829 minutos y 38 segundospunto es como les digo sería de mucha relevancia porque en algún punto que una maestra puede entrar y pueda ver y qué calificación sacó en el primer
+29:4629 minutos y 46 segundostrimestre, por así decirlo, y qué quiénes son los tutores que pueden pasar por él, eh qué tipo deja tiene sería
+29:5629 minutos y 56 segundosgracias mucha ayuda. Estos trimestres que dura la época, por ejemplo, este
+30:0430 minutos y 4 segundossemestre cuando termina es cuando se hace otro pago. O sea, que en el historial cuando aparece el pago de mayo
+30:1230 minutos y 12 segundoses trimestreando escolarmente.
+30:1530 minutos y 15 segundosNo, fíjate que no, porque prácticamente los pagos se hacen de manera mensual y así cortar el trimestre. Exactamente.
+30:2230 minutos y 22 segundosEso sí, ya no. El trimestre nada más es por los periodos de exámenes y calificación.
+30:2830 minutos y 28 segundosExactamente. Y por las calificaciones prácticamente nada más. Puede variar la colegiatura también en lo que es respecto a como va corriendo el el año.
+30:3630 minutos y 36 segundosExactamente. Porque por ejemplo tenemos alumnos que a veces se inscriben a mitad de ciclo. Entonces me dicen, "Oye, me voy a escribir mitad de ciclo y tengo
+30:4430 minutos y 44 segundosque apar todo completo y solo voy a estar medio año." Bueno, pues ahí nosotros lo que hacemos es que muchas veces se les cobra nada más la mitad de inscripción. mitadel, mit de material,
+30:5530 minutos y 55 segundostodo eso para que no se sientan con Sí, també va a todo. Okay. La beca se asigna solamente al inicio del
+31:0331 minutos y 3 segundosExactamente. Al inicio del año o cuando al momento que se inscribe, más que nada cuando se inscribe ya queda fija, no var.
+31:1031 minutos y 10 segundosYa queda fija, no va a variar de bueno ahí también durante el semestre.
+31:1431 minutos y 14 segundosAjá. Durante el semestre o el año escolar.
+31:1631 minutos y 16 segundosDurante el año escolar. Si los padres llegan a ser eh muy moros en cuanto a los pavos, que no me estén pagando tiempo ya dos, tres veces.
+31:2531 minutos y 25 segundosBueno, sería hablando de esa es multa.
+31:2731 minutos y 27 segundosExactamente, es multa, pero también la el podemos quitarle la beca, por así decirlo, sancionar.
+31:3331 minutos y 33 segundosAh, también quitar por eso hablando en el aspecto que no paguen dentro de los 5 días.
+31:3831 minutos y 38 segundosExactamente. Que no paguen dentro de los 5 días, que paguen cuando ellos quieran, que no nos hagan caso, que nos digan, "Ay, sí te voy a pagar." y que me pague,
+31:4631 minutos y 46 segundosme pague la congiatura normal y que no me quiera pagar el recargo, o sabe qué,
+31:4931 minutos y 49 segundosle vamos a quitar la beca, podemos hacer el ahora sí que el cambio dentro de la plataforma.
+32:0032 minutosBueno, hace rato hablábamos de como jerarquías de de usuarios, este, por ejemplo, el administrador, ¿qué puede
+32:0832 minutos y 8 segundoshacer y qué y los otros usuarios que no pueden ver, que no pueden hacer? Por ejemplo, el administrador lo que puede hacer es de todo. Aá, de todo.
+32:2032 minutos y 20 segundosModificar, borrar, agregar usuarios.
+32:2432 minutos y 24 segundosAntes de que se me olvide también debe de generar un reporte de la lista de los alumnos que tienen de examen. Ya se lo
+32:3232 minutos y 32 segundoscomentaste. Esa esa la podemos sacar sacando los que han pagado, maestro. Es lo que les decía del pag y todo eso.
+32:4032 minutos y 40 segundosExactamente. Teniendo va de la mano el sistema de nombre y aparece todos los datos que necesitan torción calculación debería aparecer.
+32:4832 minutos y 48 segundosExactamente. Entonces es esa parte ya.
+32:5032 minutos y 50 segundosPero por ejemplo el si el administrador dar de alto usuarios, dar de bajo usuarios ahora sí que sin ninguna restricción.
+32:5732 minutos y 57 segundosPuede ser un reporte mensual también.
+32:5932 minutos y 59 segundosAjá. Exactamente. Reporte mensual global, tal vez de también un año determinado, ¿no? Ahorita que vamos a
+33:0633 minutos y 6 segundosempezar sería el año prácticamente ciclo 267, ¿no? Entonces que cuando ellos estén, o sea, el objetivo de lo que
+33:1533 minutos y 15 segundosustedes van a hacer y lo que nosotros queremos es que esto no solamente se use a un periodo, ¿sí?
+33:1933 minutos y 19 segundosSino que se lle a utilizar ahora sí que el tiempo que estemos aquí y entonces tal vez que en el 28 29 ellos puedan revisar la información. del 26 27,
+33:3033 minutos y 30 segundosporque luego los corporativos es muy usual que se vayan haciendo auditorías anuales, sobre todo para ver
+33:3733 minutos y 37 segundoscómo se van estando, cómo se fue manejando los años, si vamos teniendo un aumento de alumnos, un incremento, eh sacar indicadores, el motivo de por qué.
+33:4833 minutos y 48 segundosEntonces, nos serviría mucho que siempre se pueda realizar el farmacial anterior.
+33:5233 minutos y 52 segundosExactamente. Datos estadísticos, pero también, por ejemplo, me acuerdo que les estoy diciendo de lo de borrar. Entonces sí, cierto. Si se borra
+34:0034 minutosEntonces si se borra ya no se guardaría esa información.
+34:0334 minutos y 3 segundosEntonces habré alguna parte para que podamos solo desactivar ocultar cajón ahí guardado.
+34:1234 minutos y 12 segundosAhora les pregunto, ¿eso afectaría la larga, por ejemplo? Porque en un ciclo podemos tener 180, 200 alumnos. Al siguiente, si yo quiero dar de alta
+34:2134 minutos y 21 segundosotros 180, 200, puede empezar a saturar la base.
+34:2634 minutos y 26 segundosMm. No, si la hacemos premiada como si está bien diseñada, no tiene lo que
+34:3334 minutos y 33 segundossí, sí, porque hay también maneras de poner registros hasta de millones también diseñar ahorita lo más supon como si fuera para ticket más.
+34:4134 minutos y 41 segundosAh, sí, sí, preferiblemente cantidad de usuarios tremendos. Obviamente ahorita no lo van a rebasar ni se van a hacer caer, pero conforme vayan es como la
+34:5034 minutos y 50 segundosahorita tiene un montón, pero conforme lo vaya pasando se va a llenar cuando llene ahí sí no sé sería un problema de noche a llorar así que para otra administración
+35:0035 minutoshabría alguna parte en donde ustedes nos puedan decir no pues se podría hacer algún mantenimiento a la base.
+35:0635 minutos y 6 segundosporque nosotros pues nosotros no somos ingenieros, no sabríamos, pero incluso si ustedes ya ingresaron y todos
+35:1535 minutos y 15 segundostenemos sus contactos, pues igual hacer el mantenimiento o tal vez ustedes ya no estén aquí en la ciudad, nosotros podemos acercarnos con otro ingeniero que le haga mantenimiento. Entonces, esa
+35:2335 minutos y 23 segundosparte también nos ayudaría pues bastante. Sí, de hacer este un seguimiento, ¿no? Exactamente. Porque miren, muchachos,
+35:3235 minutos y 32 segundosesta aplicación como a nosotros nos va a ayudar también a ustedes les puede ayudar porque no somos la única escuela que luego está alto de aplicaciones.
+35:4035 minutos y 40 segundosSí, claro, cada uno es diferente.
+35:4235 minutos y 42 segundosExactamente, cada uno es diferente, pero fíjense que la base de datos de pagos casi siempre es igual. No, ni nada se repite mucho.
+35:5035 minutos y 50 segundosExactamente. Entonces, así como ustedes pueden tener esta beta con nosotros, por así decirlo, en algún futuro pueden hacerlo más grande.
+35:5935 minutos y 59 segundos¿Saben? nuestra profesora acá en Exactamente. Entonces es una parte muy amplia para ustedes. Ahora la
+36:0836 minutos y 8 segundoseh con la captura de los datos que ya los que viene digital quiere que se haga a partir de este año 20 26 o si tienen
+36:1736 minutos y 17 segundosdatos de hace 3 cu años se registren también esos indexen a la base de datos. Oh, no. Yo creo que nos demoreamos más,
+36:2336 minutos y 23 segundos¿no, maestra? Yo creo que sería nada más de actual, ¿no? O sea, empezando este ciclo en adelante, el año cero para la aplicación.
+36:3036 minutos y 30 segundosExamente. Exactamente. El año cero para la aplicación para que ahora sí empecemos eh con todo, ¿no? Así que desde cero
+36:3836 minutos y 38 segundosmitiendo información desde principio a fin.
+36:4236 minutos y 42 segundos¿Por qué? Pues bueno, lo que por ahorita le regresaríamos mucho si nos manda los datos digitalizados del para empezar a hacer ya la base de datos y
+36:5036 minutos y 50 segundoscómo la vamos a hacer, diseñar y pues qué datos van a tener.
+36:5436 minutos y 54 segundosAquí tendré que compartirle los datos de los de los nombres, maestra, para que ellos puedan hacer esa parte de todo. Mi
+37:0237 minutos y 2 segundosmi base de Excel también para que ellos la puedan checar y ahí vienen pagos y todo.
+37:1137 minutos y 11 segundosconfidencialidad. Sí, sí, porque como ustedes saben, niños, son así que temas.
+37:1637 minutos y 16 segundosLo primero que tendría tendríamos que hacer, eh, no traemos una carta de presentación de su maestro.
+37:2337 minutos y 23 segundosEs que yo hablé con él precisamente de eso porque es un un proceso de vinculación de la universidad. dice que él haría, él se va a cargar de eso. A nosotros nada más dijo, "No, ustedes trabajan, yo me encargo de eso."
+37:3237 minutos y 32 segundosEl problema es ese que ahorita, por ejemplo, cuando yo le tenga que dar la base de datos, como ahí están toda la
+37:3937 minutos y 39 segundosparte privada de los padres para atender ingreso, entonces eso es más
+37:4637 minutos y 46 segundosy necesitamos el escrito con su nombre de copia de su credencial que están inscritos y ya poder este soltar toda la
+37:5537 minutos y 55 segundosinformación de manera formal. Sí, sé que no ha esa parte eso hablar con el profe Morales que él me dijo que lo va a hacer.
+38:0738 minutos y 7 segundosEl problema es cuándo el problema es cuándo es que ya hemos trabajado más vinculaciones, pero normalmente lo hacemos eso lo hacemos nosotros, pero
+38:1438 minutos y 14 segundoseste este maestro dice que no, él la va a hacer. Él la va a hacer. Ajá.
+38:1738 minutos y 17 segundosBueno, entonces adelántenle la información que necesita para que ya nada más él imprima, no sé.
+38:2538 minutos y 25 segundos¿Cuál sería el otro?
+38:2738 minutos y 27 segundosla otra reunión tuviera ya para en caso de que tuvieran alguna duda y pues el el plan sería por los tiempos
+38:3538 minutos y 35 segundosahora sí que estar en contacto vía WhatsApp, vía a lo mucho a lo mejor un zoom de 20 minutos no más para checar revisiones.
+38:4438 minutos y 44 segundosLes puedo dar mi contacto, el de la maestra también, este, la maestra Elizabeth también. Y cualquier cosa,
+38:5238 minutos y 52 segundoscualquier duda que tengan, la hora que sea, tal vez si esto no se preocupe, les contesto en la mañana, entonces no pasa nada.
+38:5838 minutos y 58 segundosMiren, mi número es 921 297 8657.
+39:1139 minutos y 11 segundosEse es el pueden ponerle entre administración colegio San Diego 921 297 8657.
+39:2039 minutos y 20 segundosVoy a poner este van administración Colegio San Diego.
+39:2939 minutos y 29 segundosTambién les voy a dar el número de la maestra Norma que es la directora aquí presente.
+39:3339 minutos y 33 segundosEl de ella es el 921 267 77
+39:4239 minutos y 42 segundos07 07 19 2167 7707.
+39:4839 minutos y 48 segundosY el número de mi compañera, licenciada Elizabeth. Hoy ya no la conocieron. Tuvo que hacer unas diligencias, pero todos la van a conocer.
+39:5639 minutos y 56 segundosPueden ponerle igual Elizabeth administración 921 265 32.
+40:1040 minutos y 10 segundosEntonces, ya saben, cualquier duda,
+40:1340 minutos y 13 segundosestamos en igual pues lo que lo que sí nos puede proporcionar, así que pues los
+40:2040 minutos y 20 segundosformato de los escudos para una vez viendo cómo vas a diseñar en el lo que
+40:2940 minutos y 29 segundoses trabajo de ustedes más bien lo que pues bueno, para que más o menos se den una idea de cómo la aplicación y digan esto me gusta, agréguenle esto y
+40:3640 minutos y 36 segundosesto. Pues yo decía, pues no sé cómo sean los tiempos, pero el 14 de mayo es una crearles un prototipo de que cómo se
+40:4440 minutos y 44 segundosva a ver nada más eso. Simplemente traía con una foto y ustedes dicen, "No, sí me gusta el color, pero me gusta que esto vaya acá, quiero que acá vaya la lupa,
+40:5340 minutos y 53 segundosacá vayan los filtres y todo eso siempre." Sí, sí, sí, sí.
+40:5740 minutos y 57 segundosPara que pues ya más o menos vayan viendo cómo se va la aplicación y que para que igual no sirve un poco más de referencia. ¿Hay alguna aplicación que ya exista que sepan que
+41:0641 minutos y 6 segundosah quiero que se vea así? No necesariamente final no tenemos página web. Tienen página web. Tenemos página de Facebook,
+41:1541 minutos y 15 segundos¿puedo pasar?
+41:1741 minutos y 17 segundoslao porque hay una que está en desuso y otra que sí seguimos ocupando para ver
+41:2341 minutos y 23 segundosmás para
+41:4141 minutos y 41 segundosmiren, la que está en uso es la que dice colegio.
+41:4641 minutos y 46 segundosAsí normal con mayúsculo al principio y más minúsculo en uso. En uso, sí, que es la más actual que tenemos.
+41:5441 minutos y 54 segundosY el San Diego lo tiene en mayúscula totalmente. Sí, creo que sí.
+42:1842 minutos y 18 segundosazul, rojo.
+42:2042 minutos y 20 segundosLos reportes anuales serían por ciclo escolar o por año natural. Por,
+42:2742 minutos y 27 segundosmira, si pudo tener las dos maneras para saber cuánto se hizo en un ciclo y en un año, porque a veces un año comparte dos ciclos escolares
+42:3542 minutos y 35 segundosen el apartado de bachillerato, pues por semestre. por semestre. Exactamente.
+42:3942 minutos y 39 segundosPero también quisiera saber manual por simples. Sí, igual estaría bien. Igual para los mensuales,
+42:4642 minutos y 46 segundosvaya. Incluso me serviría que fuera en diario porque así ya yo nada más voy descargando los los que han pagado directamente y ya lo puedo cotejar.
+42:5442 minutos y 54 segundosPuedo imprimirlo y puedo cotejarlo. O sea, que me dé la opción de imprimir ese reporte también será s para tener todo también así que difícil.
+43:0343 minutos y 3 segundos¿Cómo prefiere esos formatos? ¿En un Excel? en un eh PDF cuando lo pases. Ah, pues sí, en un
+43:1043 minutos y 10 segundosExcel estaría bien, pero también la opción de convertirlo en PDF, porque hay veces que pues sí lo voy a me va a servir trabajando en Excel, pero hay
+43:1843 minutos y 18 segundosveces que nada más voy a querer imprimirlo para mostrar y nada más. Okay, perfecto.
+43:2743 minutos y 27 segundosPues sería todo, quiero decir tiempo. Este, quedamos de todo, ¿no?
+43:3443 minutos y 34 segundosPueden marcar por lación. Sí, pues ya igualmente de lo que nos el maestro Mor igual ya en cuanto veo prisión de se
+43:4343 minutos y 43 segundosempieza a los datos y se tiend hacer la aplicación R, pero ahorita pues para otra ya este lo que le dijimos, vamos a
+43:5143 minutos y 51 segundosmantener contacto a ver si se le entremos el signo o elotip en una semana o dos vas a tornar ya también de una no puede también si nos
+43:5943 minutos y 59 segundospuede mandar sería los campos lo que ya existe, no tanto la información pero lo que ya esos sí lasones parecer cómo se va a mostrar.
+44:0944 minutos y 9 segundosSí, sin problema registro. Hoy me desocupo y se los mando en la tardecita más o menos.
+44:1444 minutos y 14 segundosIgual si uno de ustedes me puede mandar su número, eh, me lo mandan un mensajito, ya lo registro. 921
+44:3144 minutos y 31 segundos921 125 125 86 69 8669 J KG
+44:4744 minutos y 47 segundosno tengo ese señor Sí.
+45:0845 minutos y 8 segundosListo, ya te lo mandó. Okay. Pues así quedaríamos. Gracias, chicos. Mucho gusto,
+45:1545 minutos y 15 segundospues muchas gracias por tomarse el tiempo de de venir. Hasta luego. Muchas gracias. Con permiso.
+45:2245 minutos y 22 segundosCon permiso. Hasta luego. Muchísimas gracias. Eh, pasen adelante, niños.

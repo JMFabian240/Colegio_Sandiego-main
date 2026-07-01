@@ -25,6 +25,7 @@ const calificacionesExtraRoutes = require('./v1/calificaciones-extra.routes');
 const calificacionesTallerRoutes = require('./v1/calificaciones-taller.routes');
 const importacionRoutes   = require('./importacion.routes');
 const planesGlobalRoutes  = require('./v1/planes-global.routes');
+const notificacionesRoutes= require('./notificaciones.routes');
 
 const router = Router();
 
@@ -46,6 +47,7 @@ router.use('/configuracion', configuracionRoutes);
 router.use('/reportes',      reportesRoutes);
 router.use('/tarifas',       tarifasRoutes);
 router.use('/importacion',   importacionRoutes);
+router.use('/notificaciones',notificacionesRoutes);
 
 module.exports = router;
 

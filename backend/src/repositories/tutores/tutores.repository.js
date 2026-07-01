@@ -3,12 +3,16 @@
 const prisma = require('../../config/database');
 
 async function findAll(filtros = {}) {
-  const { q, activo, page, limit } = filtros;
+  const { q, activo, requiereFactura, page, limit } = filtros;
   
   const where = {};
   
   if (activo !== undefined) {
     where.activo = activo;
+  }
+
+  if (requiereFactura !== undefined) {
+    where.requiereFactura = requiereFactura === true || requiereFactura === 'true';
   }
   
   if (q) {

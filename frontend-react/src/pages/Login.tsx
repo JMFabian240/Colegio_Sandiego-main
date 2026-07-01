@@ -51,8 +51,8 @@ export function Login() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <div className="bg-white py-10 px-6 shadow-2xl sm:rounded-[2rem] sm:px-12">
           <div className="text-center mb-10">
-            <div className="mx-auto w-20 h-20 bg-navy-50 rounded-2xl flex items-center justify-center mb-6 shadow-inner">
-               <span className="text-navy-700 font-bold text-3xl">S</span>
+            <div className="mx-auto w-24 h-24 mb-6 flex items-center justify-center">
+               <img src="/escudo.png" alt="Colegio San Diego Logo" className="w-full h-full object-contain" />
             </div>
             <h2 className="text-2xl font-bold text-navy-800 tracking-tight">Bienvenido de vuelta</h2>
             <p className="text-sm text-gray-500 mt-2">Ingresa tus credenciales para acceder</p>

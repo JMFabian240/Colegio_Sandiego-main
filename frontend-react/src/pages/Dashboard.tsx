@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, AlertTriangle, TrendingUp, Award, Clock, CreditCard } from 'lucide-react';
+import { Users, AlertTriangle, TrendingUp, Award, Clock, CreditCard, BarChart3, AlertCircle } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
 import api from '../services/api';
 
 import { useAuthStore } from '../store/useAuthStore';
@@ -13,6 +14,8 @@ export function Dashboard() {
 
   const [stats, setStats] = useState({ alumnos: 0, deudores: 0, ingresosHoy: 0, becasActivas: 0 });
   const [ultimosPagos, setUltimosPagos] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [topDeudores, setTopDeudores] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,26 +39,42 @@ export function Dashboard() {
       if (!isDocente) {
         // 2. Deudores Activos
         const resDeud = await api.get('/reportes/financieros/deudores').catch(() => null);
-        if (Array.isArray(resDeud?.data)) {
-          newStats.deudores = resDeud.data.length;
-        } else if (Array.isArray(resDeud)) {
-          newStats.deudores = resDeud.length;
-        }
-
-        // 3. Ingresos del Día
-        const hoy = new Date().toISOString().slice(0, 10);
-        const resPagos = await api.get('/pagos', { params: { fechaDesde: hoy, fechaHasta: hoy } }).catch(() => null);
-        let listaPagos = [];
-        if (Array.isArray(resPagos?.data)) {
-          listaPagos = resPagos.data;
-        } else if (resPagos?.data?.data) {
-          listaPagos = resPagos.data.data;
-        } else if (Array.isArray(resPagos)) {
-          listaPagos = resPagos;
-        }
+        let deudoresList = [];
+        if (Array.isArray(resDeud?.data)) deudoresList = resDeud.data;
+        else if (Array.isArray(resDeud)) deudoresList = resDeud;
         
-        newStats.ingresosHoy = listaPagos.reduce((acc: number, curr: any) => acc + (Number(curr.monto) || 0), 0);
-        setUltimosPagos(listaPagos.slice(0, 5));
+        newStats.deudores = deudoresList.length;
+        setTopDeudores(deudoresList.sort((a, b) => Number(b.deudaTotal) - Number(a.deudaTotal)).slice(0, 5));
+
+        // 3. Ingresos de los ultimos 7 dias
+        const hoyObj = new Date();
+        const sieteDiasAtras = new Date();
+        sieteDiasAtras.setDate(hoyObj.getDate() - 6);
+        const resPagos = await api.get('/pagos', { 
+            params: { fechaDesde: sieteDiasAtras.toISOString().slice(0, 10), fechaHasta: hoyObj.toISOString().slice(0, 10) } 
+        }).catch(() => null);
+        
+        let listaPagos = [];
+        if (Array.isArray(resPagos?.data)) listaPagos = resPagos.data;
+        else if (resPagos?.data?.data) listaPagos = resPagos.data.data;
+        else if (Array.isArray(resPagos)) listaPagos = resPagos;
+        
+        const dateStrHoy = hoyObj.toISOString().slice(0, 10);
+        const pagosHoy = listaPagos.filter((p: any) => p.fecha?.startsWith(dateStrHoy));
+        
+        newStats.ingresosHoy = pagosHoy.reduce((acc: number, curr: any) => acc + (Number(curr.monto) || 0), 0);
+        setUltimosPagos(pagosHoy.slice(0, 5));
+
+        const chart = [];
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date();
+          d.setDate(d.getDate() - i);
+          const dStr = d.toISOString().slice(0, 10);
+          const dayName = d.toLocaleDateString('es-MX', { weekday: 'short' });
+          const totalDia = listaPagos.filter((p: any) => p.fecha?.startsWith(dStr)).reduce((acc: any, curr: any) => acc + (Number(curr.monto) || 0), 0);
+          chart.push({ name: dayName.charAt(0).toUpperCase() + dayName.slice(1), total: totalDia });
+        }
+        setChartData(chart);
 
         // 4. Becas Activas
         const resBecas = await api.get('/becas').catch(() => null);
@@ -176,27 +195,70 @@ export function Dashboard() {
           </div>
         )}
 
-        <div className="bg-gradient-to-br from-navy-800 to-navy-900 rounded-2xl shadow-sm border border-navy-700 p-8 flex flex-col justify-center text-white relative overflow-hidden">
-          <div className="absolute right-0 top-0 w-64 h-64 bg-white opacity-5 rounded-full -translate-y-1/2 translate-x-1/3"></div>
-          <div className="absolute left-0 bottom-0 w-32 h-32 bg-emerald-400 opacity-10 rounded-full translate-y-1/2 -translate-x-1/2"></div>
-          
-          <h3 className="text-3xl font-black mb-2 relative z-10">Colegio San Diego</h3>
-          <p className="text-navy-200 mb-6 relative z-10">Sistema de Administración Escolar (SAE)<br/>Versión React 2026</p>
-          
-          <div className="flex gap-4 relative z-10 mt-auto pt-4 border-t border-navy-700/50">
-            <div className="text-sm">
-              <div className="text-navy-300 mb-1">Estado del Sistema</div>
-              <div className="flex items-center gap-2 font-bold text-emerald-400">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> En Línea
-              </div>
+        {!isDocente && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden">
+            <div className="p-5 border-b border-gray-100 flex items-center gap-2 bg-gray-50/50">
+              <AlertCircle className="text-crimson-500" size={18} />
+              <h3 className="font-bold text-navy-800">Top Deudores Críticos</h3>
             </div>
-            <div className="text-sm border-l border-navy-700/50 pl-4">
-              <div className="text-navy-300 mb-1">Migración</div>
-              <div className="font-bold text-white">100% Completada</div>
+            <div className="flex-1 overflow-auto max-h-[300px]">
+              {loading ? (
+                <div className="p-8 text-center text-gray-400">Cargando deudores...</div>
+              ) : topDeudores.length === 0 ? (
+                <div className="p-8 text-center text-emerald-500 font-medium">Sin deudores.</div>
+              ) : (
+                <table className="w-full text-sm text-left">
+                  <tbody className="divide-y divide-gray-100">
+                    {topDeudores.map((d, i) => (
+                      <tr key={d.alumno?.id || i} className="hover:bg-gray-50/80 transition-colors">
+                        <td className="p-4 font-bold text-navy-800">{d.alumno?.nombre || 'Desconocido'}</td>
+                        <td className="p-4 text-crimson-600 font-medium text-xs">
+                          {d.mesesAtraso} mes{d.mesesAtraso !== 1 ? 'es' : ''} de atraso
+                        </td>
+                        <td className="p-4 text-right font-mono font-bold text-crimson-600">
+                          ${Number(d.deudaTotal).toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
-        </div>
+        )}
       </div>
+
+      {!isDocente && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mt-6">
+          <div className="flex items-center gap-2 mb-6">
+            <BarChart3 className="text-navy-600" size={20} />
+            <h3 className="font-bold text-lg text-navy-800">Ingresos de los últimos 7 días</h3>
+          </div>
+          <div className="h-72 w-full">
+            {loading ? (
+              <div className="h-full flex items-center justify-center text-gray-400">Cargando gráfico...</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} tickFormatter={(value) => `$${value}`} />
+                  <Tooltip 
+                    cursor={{fill: '#f8fafc'}}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
+                    formatter={(value: number) => [`$${value.toLocaleString('es-MX', {minimumFractionDigits: 2})}`, 'Ingresos']}
+                  />
+                  <Bar dataKey="total" radius={[6, 6, 0, 0]}>
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.total > 0 ? '#10b981' : '#e2e8f0'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -139,9 +139,8 @@ export function Bitacora() {
           <select className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-navy-500" value={filtros.rol} onChange={e => {setFiltros({...filtros, rol: e.target.value}); setPage(1);}}>
             <option value="">Todos los roles</option>
             <option value="ADMIN">Administrador</option>
-            <option value="DIRECTOR">Director</option>
             <option value="GESTOR">Gestor</option>
-            <option value="MAESTRA">Maestra</option>
+            <option value="MAESTRA">Docente / Maestra</option>
           </select>
         </div>
         <div>

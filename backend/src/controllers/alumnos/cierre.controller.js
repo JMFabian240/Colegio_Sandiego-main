@@ -36,6 +36,13 @@ async function cerrarCiclo(req, res) {
               nivel: true,
               calendariosPago: {
                 where: { cicloId: cicloActivo.cicloId }
+              },
+              calificaciones: {
+                where: {
+                  periodo: { cicloId: cicloActivo.cicloId },
+                  cuentaParaPromedio: true,
+                  valorNumerico: { not: null }
+                }
               }
             }
           },
@@ -64,7 +71,35 @@ async function cerrarCiclo(req, res) {
           }
         }
 
-        if (tieneAdeudo) {
+        // Validar académico
+        let materiasReprobadas = 0;
+        if (alumno.calificaciones && alumno.calificaciones.length > 0) {
+          const porMateria = {};
+          for (const cal of alumno.calificaciones) {
+            const key = cal.grupoMateriaId;
+            if (!porMateria[key]) porMateria[key] = [];
+            porMateria[key].push(Number(cal.valorNumerico));
+          }
+          
+          for (const key in porMateria) {
+            const notas = porMateria[key];
+            const sum = notas.reduce((a, b) => a + b, 0);
+            const prom = sum / notas.length;
+            if (prom < 6.0) {
+              materiasReprobadas++;
+            }
+          }
+        }
+        const estaReprobado = (materiasReprobadas >= 3);
+
+        if (estaReprobado) {
+          // RF-21: Alumno académicamente reprobado
+          await tx.inscripcionCiclo.update({
+            where: { inscripcionId: inscripcion.inscripcionId },
+            data: { estadoEnCiclo: 'reprobado' }
+          });
+          retenidos++; // Lo sumamos a retenidos, ya que no avanza
+        } else if (tieneAdeudo) {
           // RF-21: Retener alumno con adeudos (Transición Pendiente)
           await tx.inscripcionCiclo.update({
             where: { inscripcionId: inscripcion.inscripcionId },

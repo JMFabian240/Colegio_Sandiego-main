@@ -4,6 +4,7 @@ import { Layout } from './components/layout/Layout';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Alumnos } from './pages/Alumnos';
+import { AlumnoPerfil } from './pages/AlumnoPerfil';
 import { Grupos } from './pages/Grupos';
 import { Usuarios } from './pages/Usuarios';
 import { CicloEscolar } from './pages/CicloEscolar';
@@ -14,6 +15,8 @@ import { Becas } from './pages/Becas';
 import { Pagos } from './pages/Pagos';
 import { Tutores } from './pages/Tutores';
 import { TutorPerfil } from './pages/TutorPerfil';
+import { HistorialAcademico } from './pages/HistorialAcademico';
+import { Boleta } from './pages/Boleta';
 
 function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -27,6 +30,7 @@ function App() {
         <Route path="/" element={isAuthenticated ? <Layout /> : <Navigate to="/login" />}>
           <Route index element={<Dashboard />} />
           <Route path="alumnos" element={<Alumnos />} />
+          <Route path="alumnos/:id" element={<AlumnoPerfil />} />
           <Route path="grupos" element={<Grupos />} />
           <Route path="calificaciones" element={<Calificaciones />} />
           <Route path="reportes" element={<Reportes />} />
@@ -37,6 +41,8 @@ function App() {
           <Route path="ciclo-escolar" element={<CicloEscolar />} />
           <Route path="tutores" element={<Tutores />} />
           <Route path="tutores/:id" element={<TutorPerfil />} />
+          <Route path="historial-academico" element={<HistorialAcademico />} />
+          <Route path="boleta" element={<Boleta />} />
           {/* Add more routes here as we migrate them */}
         </Route>
       </Routes>

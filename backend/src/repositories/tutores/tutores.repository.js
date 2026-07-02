@@ -115,9 +115,17 @@ async function create(datos, auditCtx) {
 async function update(id, datos, auditCtx) {
   const antes = await prisma.tutor.findUnique({ where: { tutorId: Number(id) } });
   
+  // Limpiar campos que no deben actualizarse directamente (relaciones o metadatos)
+  const datosActualizar = { ...datos };
+  delete datosActualizar.alumnos;
+  delete datosActualizar.tutorId;
+  delete datosActualizar.creadoEn;
+  delete datosActualizar.actualizadoEn;
+  delete datosActualizar.eliminadoEn;
+  
   const result = await prisma.tutor.update({
     where: { tutorId: Number(id) },
-    data: datos
+    data: datosActualizar
   });
 
   if (auditCtx?.usuarioId) {

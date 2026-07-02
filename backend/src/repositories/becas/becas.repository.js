@@ -26,6 +26,7 @@ function mapAsignacion(asig) {
     porcentaje: Number(asig.beca?.porcentaje ?? 0),
     activa:     asig.estado === 'activa',
     estado:     asig.estado,
+    motivo:     asig.solicitud?.motivo ?? null,
     fechaInicio:asig.fechaAsignacion,
     fechaFin:   asig.fechaRetiro,
     motivoRetiro:asig.motivoRetiro,
@@ -73,6 +74,7 @@ const INCLUDE_ASIGNACION = {
   alumno: { select: { alumnoId: true, nombreCompleto: true, matricula: true } },
   beca:   { select: { becaId: true, nombreBeca: true, criterio: true, porcentaje: true } },
   asignadaPorUsuario: { select: { usuarioId: true, nombreCompleto: true } },
+  solicitud: { select: { motivo: true } },
 };
 
 const INCLUDE_SOLICITUD = {
@@ -170,7 +172,7 @@ async function createBeca(datos) {
 }
 
 async function createAsignacionDirecta(datos, asignadaPorId, auditCtx = {}) { return withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
-  const { alumnoId, becaId, cicloId } = datos;
+  const { alumnoId, becaId, cicloId, motivo } = datos;
 
   const ciclo = cicloId
     ? await tx.cicloEscolar.findUnique({ where: { cicloId: Number(cicloId) } })
@@ -187,6 +189,25 @@ async function createAsignacionDirecta(datos, asignadaPorId, auditCtx = {}) { re
     data: { estado: 'retirada', fechaRetiro: new Date(), motivoRetiro: 'Reemplazada por una nueva beca' }
   });
 
+  // Si hay motivo, crear solicitud vinculada para conservar el motivo
+  let solicitudId = null;
+  if (motivo) {
+    const solicitud = await tx.solicitudBeca.create({
+      data: {
+        alumnoId:     Number(alumnoId),
+        becaId:       beca.becaId,
+        cicloId:      ciclo.cicloId,
+        motivo:       motivo,
+        estado:       'aprobada',
+        solicitadaPor: asignadaPorId ? Number(asignadaPorId) : null,
+        resueltaPor:   asignadaPorId ? Number(asignadaPorId) : null,
+        fechaResolucion: new Date(),
+        observaciones: 'Asignación directa',
+      },
+    });
+    solicitudId = solicitud.solicitudId;
+  }
+
   const asignacion = await tx.asignacionBeca.create({
     data: {
       alumnoId:    Number(alumnoId),
@@ -194,6 +215,7 @@ async function createAsignacionDirecta(datos, asignadaPorId, auditCtx = {}) { re
       cicloId:     ciclo.cicloId,
       estado:      'activa',
       asignadaPor: asignadaPorId ? Number(asignadaPorId) : null,
+      solicitudId: solicitudId,
     },
     include: INCLUDE_ASIGNACION,
   });

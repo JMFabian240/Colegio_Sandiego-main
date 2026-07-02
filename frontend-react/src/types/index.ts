@@ -70,3 +70,114 @@ export interface TutorAlumno {
   tutor?: any;
   alumno?: any;
 }
+
+export interface CicloEscolar {
+  cicloId: number;
+  nombre: string;
+  fechaInicio: string;
+  fechaFin: string;
+  activo: boolean;
+}
+
+export interface Grupo {
+  [key: string]: any;
+  grupoId?: number;
+  id?: number;
+  cicloId: number;
+  nivelId: number;
+  grado: string;
+  seccion: string;
+  nombre: string;
+  docenteTitularId?: number | null;
+  cupoMaximo?: number | null;
+  materias?: any[];
+}
+
+export interface Materia {
+  [key: string]: any;
+  materiaId: number;
+  nivelId: number;
+  claveSep?: string | null;
+  nombre: string;
+  tipo: string;
+  cuentaParaPromedio: boolean;
+}
+
+export interface Calificacion {
+  [key: string]: any;
+  calificacionId: number;
+  alumnoId: number;
+  grupoMateriaId: number;
+  periodoId: number;
+  tipoEvaluacion: string;
+  valorNumerico?: number | null;
+  valorCualitativo?: string | null;
+  textoObservacion?: string | null;
+  cuentaParaPromedio: boolean;
+  modificadaMotivo?: string | null;
+}
+
+export interface Pago {
+  [key: string]: any;
+  pagoId: number;
+  alumnoId?: number | null;
+  tutorId?: number | null;
+  fechaPago: string;
+  montoTotal: number | string;
+  metodoPago: string;
+  aplicadoASaldo: boolean;
+  observaciones?: string | null;
+  registradoPor?: number | null;
+}
+
+export interface BecaCatalogo {
+  [key: string]: any;
+  becaId: number;
+  nombreBeca: string;
+  criterio: string;
+  porcentaje: number | string;
+  descripcion?: string | null;
+}
+
+export interface BecaAsignada {
+  [key: string]: any;
+  asignacionId: number;
+  alumnoId: number;
+  becaId: number;
+  cicloId: number;
+  estado: string;
+  fechaAsignacion: string;
+  beca?: BecaCatalogo;
+  alumno?: Alumno;
+}
+
+export interface Usuario {
+  [key: string]: any;
+  usuarioId?: number;
+  id?: number;
+  nombreUsuario: string;
+  nombreCompleto: string;
+  correo?: string | null;
+  telefono?: string | null;
+  activo: boolean;
+  roles?: any[];
+  permisos?: any;
+}
+
+export interface Tarifa {
+  [key: string]: any;
+  tarifaId: number;
+  cicloId: number;
+  nivelId: number;
+  concepto: string;
+  monto: number | string;
+  descripcion?: string | null;
+  activa: boolean;
+}
+
+export interface HistorialAcademico {
+  alumno: Alumno;
+  calificaciones: Calificacion[];
+  promedioGeneral?: number;
+}
+

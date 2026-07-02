@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, AlertTriangle, TrendingUp, Award, Clock, CreditCard, BarChart3, AlertCircle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
-import api from '../services/api';
-
+import { alumnosService } from '../services/alumnos.service';
+import { reportesService } from '../services/reportes.service';
+import { pagosService } from '../services/pagos.service';
+import { becasService } from '../services/becas.service';
 import { useAuthStore } from '../store/useAuthStore';
 
 export function Dashboard() {
@@ -11,6 +13,7 @@ export function Dashboard() {
   const { user } = useAuthStore();
   const role = user?.rol?.toUpperCase() || '';
   const isDocente = role === 'DOCENTE' || role === 'MAESTRA';
+  const isAdmin = role === 'ADMIN' || role === 'ADMINISTRADOR';
 
   const [stats, setStats] = useState({ alumnos: 0, deudores: 0, ingresosHoy: 0, becasActivas: 0 });
   const [ultimosPagos, setUltimosPagos] = useState<any[]>([]);
@@ -26,38 +29,21 @@ export function Dashboard() {
     setLoading(true);
     const newStats = { alumnos: 0, deudores: 0, ingresosHoy: 0, becasActivas: 0 };
     try {
-      // 1. Alumnos Activos
-      const resAlum = await api.get('/alumnos', { params: { estado: 'Activo', limit: 1, page: 1 } }).catch(() => null);
-      if (resAlum?.pagination) {
-        newStats.alumnos = resAlum.pagination.total;
-      } else if (resAlum?.data?.pagination) {
-        newStats.alumnos = resAlum.data.pagination.total;
-      } else if (Array.isArray(resAlum?.data)) {
-        newStats.alumnos = resAlum.data.length;
+      const resAlum: any = await alumnosService.getAlumnos({ estado: 'Activo', limit: 1, page: 1 }).catch(() => null);
+      if (resAlum) {
+        newStats.alumnos = resAlum.pagination?.total || resAlum.pagination?.totalItems || (Array.isArray(resAlum.data) ? resAlum.data.length : (Array.isArray(resAlum) ? resAlum.length : 0));
       }
 
-      if (!isDocente) {
-        // 2. Deudores Activos
-        const resDeud = await api.get('/reportes/financieros/deudores').catch(() => null);
-        let deudoresList = [];
-        if (Array.isArray(resDeud?.data)) deudoresList = resDeud.data;
-        else if (Array.isArray(resDeud)) deudoresList = resDeud;
+      if (isAdmin) {
+        const resDeud: any = await reportesService.obtenerDeudores().catch(() => null);
+        const deudoresList = resDeud?.data || [];
         
         newStats.deudores = deudoresList.length;
         setTopDeudores(deudoresList.sort((a, b) => Number(b.deudaTotal) - Number(a.deudaTotal)).slice(0, 5));
 
-        // 3. Ingresos de los ultimos 7 dias
         const hoyObj = new Date();
-        const sieteDiasAtras = new Date();
-        sieteDiasAtras.setDate(hoyObj.getDate() - 6);
-        const resPagos = await api.get('/pagos', { 
-            params: { fechaDesde: sieteDiasAtras.toISOString().slice(0, 10), fechaHasta: hoyObj.toISOString().slice(0, 10) } 
-        }).catch(() => null);
-        
-        let listaPagos = [];
-        if (Array.isArray(resPagos?.data)) listaPagos = resPagos.data;
-        else if (resPagos?.data?.data) listaPagos = resPagos.data.data;
-        else if (Array.isArray(resPagos)) listaPagos = resPagos;
+        const resPagos: any = await pagosService.obtenerPagos({}).catch(() => null);
+        const listaPagos = resPagos?.data || [];
         
         const dateStrHoy = hoyObj.toISOString().slice(0, 10);
         const pagosHoy = listaPagos.filter((p: any) => p.fecha?.startsWith(dateStrHoy));
@@ -76,13 +62,8 @@ export function Dashboard() {
         }
         setChartData(chart);
 
-        // 4. Becas Activas
-        const resBecas = await api.get('/becas').catch(() => null);
-        if (Array.isArray(resBecas?.data)) {
-          newStats.becasActivas = resBecas.data.length;
-        } else if (Array.isArray(resBecas)) {
-          newStats.becasActivas = resBecas.length;
-        }
+        const resBecas: any = await becasService.obtenerAsignaciones().catch(() => null);
+        newStats.becasActivas = resBecas?.data?.length || 0;
       }
 
       setStats(newStats);

@@ -1,21 +1,46 @@
+# Dependencies
 node_modules/
 backend/node_modules/
+frontend-react/node_modules/
+
+# Environment (NUNCA subir secretos)
+.env
+.env.local
+.env.production
+# .env.example SÍ se versiona (es la plantilla)
+
+# Build artifacts
 backend/coverage/
 backend/dist/
-*.log
+frontend-react/dist/
+electron-app/dist/
+electron-app/bin/
+
+# Database files (legacy SQLite)
 *.db
 *.db-journal
 *.db-wal
 *.db-shm
+
+# Logs
+*.log
+
+# IDE
 .vscode/
 .windsurf/
 .cerebro/
 .agents/
 .codex/
 
-electron-app/dist/
+# Binarios pesados
+cloudflared.exe
 
-electron-app/bin/
-/*.js
+# Backups (no versionar dumps de BD)
+backups/
 
+# Uploads
 backend/uploads/
+
+# Scratch / temp files en raíz
+/*.js
+scratch/

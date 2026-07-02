@@ -313,6 +313,7 @@ async function create(datos, auditCtx = {}) {
           const nuevoTotalPagado = pagadoAnterior + aplicarMonto;
           const estadoCobro = nuevoTotalPagado >= (totalOriginal + recargoActual) ? 'pagado' : 'parcial';
 
+          const nuevoSaldo = Math.max(0, (totalOriginal + recargoActual) - nuevoTotalPagado);
           await tx.calendarioPago.update({
             where: { calendarioPagoId: deuda.calendarioPagoId },
             data: {
@@ -538,6 +539,7 @@ async function createConsolidado(datos, abonos, auditCtx = {}) {
       }
 
       // Actualizar CalendarioPago
+      const nuevoSaldo = Math.max(0, totalDeuda - nuevoMontoPagado);
       await tx.calendarioPago.update({
         where: { calendarioPagoId: deuda.calendarioPagoId },
         data: {

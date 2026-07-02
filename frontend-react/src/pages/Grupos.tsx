@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Users, BookOpen, Plus, Search, X, Edit, Trash2, UserPlus, ArrowUpCircle } from 'lucide-react';
-import api from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import { Users, BookOpen, Plus, Search, X, Edit, Trash2, UserPlus, ArrowUpCircle, ExternalLink } from 'lucide-react';
+import { gruposService } from '../services/grupos.service';
+import { alumnosService } from '../services/alumnos.service';
 
 import { useAuthStore } from '../store/useAuthStore';
 
 export function Grupos() {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
   const isAdmin = user?.rol === 'ADMIN' || user?.rol === 'DIRECTOR';
 
   const [grupos, setGrupos] = useState<any[]>([]);
@@ -72,13 +75,22 @@ export function Grupos() {
 
   const getSecciones = () => {
     if (!filtroNivel || !filtroGrado) return [];
-    return ['A', 'B', 'C', 'D', 'E', 'F'];
+    // Obtener secciones reales de los grupos cargados
+    const seccionesReales = grupos
+      .filter((g: any) => {
+        const nivelStr = typeof g.nivel === 'string' ? g.nivel : (g.nivel?.codigo || g.nivel?.nombre || '');
+        const matchNivel = nivelStr.toUpperCase() === filtroNivel;
+        const matchGrado = String(g.grado) === filtroGrado;
+        return matchNivel && matchGrado && g.seccion;
+      })
+      .map((g: any) => g.seccion);
+    return [...new Set(seccionesReales)].sort();
   };
 
   const cargarGrupos = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/grupos');
+      const res = await gruposService.obtenerTodos();
       if (res.data) {
         setGrupos(res.data);
       }
@@ -96,7 +108,7 @@ export function Grupos() {
 
   const cargarDocentes = async () => {
     try {
-      const res = await api.get('/usuarios?rol=MAESTRA');
+      const res = await gruposService.obtenerDocentes();
       if (res.data) setDocentes(res.data);
     } catch (error) {
       console.error('Error cargando docentes', error);
@@ -116,9 +128,9 @@ export function Grupos() {
       };
 
       if (grupoEditandoId) {
-        await api.put(`/grupos/${grupoEditandoId}`, payload);
+        await gruposService.actualizar(grupoEditandoId, payload);
       } else {
-        await api.post('/grupos', payload);
+        await gruposService.crear(payload);
       }
       
       setIsModalOpen(false);
@@ -133,23 +145,23 @@ export function Grupos() {
 
   const handleEditarGrupo = (grupo: any) => {
     setGrupoEditandoId(grupo.grupoId || grupo.id);
-    const docenteTitular = grupo.docenteTitular;
+    const docenteTitular = docentes.find(d => d.nombreCompleto === grupo.titular || d.nombre === grupo.titular);
     setNuevoGrupo({
       nombre: grupo.nombre || '',
       nivel: grupo.nivel || '',
       grado: grupo.grado || '',
       seccion: grupo.seccion || '',
-      titular: docenteTitular?.usuarioId?.toString() || '',
+      titular: docenteTitular?.id?.toString() || docenteTitular?.usuarioId?.toString() || '',
       materias: grupo.materias || []
     });
-    setBusquedaDocente(docenteTitular?.nombreCompleto || '');
+    setBusquedaDocente(grupo.titular || '');
     setIsModalOpen(true);
   };
 
   const handleEliminarGrupo = async (id: number) => {
     if (!window.confirm('¿Estás seguro de eliminar este grupo? Esta acción no se puede deshacer (soft delete).')) return;
     try {
-      await api.delete(`/grupos/${id}`);
+      await gruposService.eliminar(id);
       cargarGrupos();
     } catch (error) {
       console.error('Error eliminando grupo', error);
@@ -179,11 +191,11 @@ export function Grupos() {
     setIsAlumnosModalOpen(true);
     setLoading(true);
     try {
-      const res = await api.get(`/alumnos?grupoId=${grupo.grupoId || grupo.id}`);
-      if (res.data) {
+      const res: any = await alumnosService.getAlumnos({ grupoId: grupo.grupoId || grupo.id });
+      if (res) {
         // Handle both pagination format and array format
-        const dataList = res.data.data || res.data;
-        setAlumnosGrupo(Array.isArray(dataList) ? dataList : []);
+        const dataList = res.data?.data || res.data || res;
+        setAlumnosGrupo(Array.isArray(dataList) ? dataList : (dataList.alumnos || []));
       }
     } catch (error) {
       console.error('Error cargando alumnos', error);
@@ -225,21 +237,21 @@ export function Grupos() {
           // Changed group: remove from old group, add to new
           const oldMaterias = [...(grupoAnterior.materias || [])];
           oldMaterias.splice(materiaEditandoInfo.index, 1);
-          await api.put(`/grupos/${grupoAnterior.id || grupoAnterior.grupoId}`, { materias: oldMaterias });
+          await gruposService.actualizar(grupoAnterior.id || grupoAnterior.grupoId, { materias: oldMaterias });
           
           const targetMaterias = [...(grupoTarget.materias || [])];
           targetMaterias.push(newMateriaObj);
-          await api.put(`/grupos/${grupoTarget.id || grupoTarget.grupoId}`, { materias: targetMaterias });
+          await gruposService.actualizar(grupoTarget.id || grupoTarget.grupoId, { materias: targetMaterias });
         } else {
           // Same group, just update index
           const updatedMaterias = [...(grupoTarget.materias || [])];
           updatedMaterias[materiaEditandoInfo.index] = newMateriaObj;
-          await api.put(`/grupos/${grupoTarget.id || grupoTarget.grupoId}`, { materias: updatedMaterias });
+          await gruposService.actualizar(grupoTarget.id || grupoTarget.grupoId, { materias: updatedMaterias });
         }
       } else {
         // Creating new materia
         const updatedMaterias = [...(grupoTarget.materias || []), newMateriaObj];
-        await api.put(`/grupos/${grupoTarget.id || grupoTarget.grupoId}`, { materias: updatedMaterias });
+        await gruposService.actualizar(grupoTarget.id || grupoTarget.grupoId, { materias: updatedMaterias });
       }
 
       setIsMateriaModalOpen(false);
@@ -298,7 +310,7 @@ export function Grupos() {
     try {
       const updatedMaterias = [...(g.materias || [])];
       updatedMaterias.splice(index, 1);
-      await api.put(`/grupos/${g.id || g.grupoId}`, { materias: updatedMaterias });
+      await gruposService.actualizar(g.id || g.grupoId, { materias: updatedMaterias });
       cargarGrupos();
     } catch (error) {
       console.error('Error eliminando materia', error);
@@ -314,15 +326,16 @@ export function Grupos() {
     setIsAsignarAlumnosModalOpen(true);
     setLoading(true);
     try {
-      // Get all active students for this level and grade
-      const resAlumnos = await api.get(`/alumnos?estado=Activo&nivel=${g.nivel}&grado=${g.grado}`);
-      if (resAlumnos.data) {
-        const arr = Array.isArray(resAlumnos.data) ? resAlumnos.data : (resAlumnos.data?.data || []);
+      // Get all active students
+      const resAlumnos: any = await alumnosService.getAlumnos({ estado: 'Activo' });
+      if (resAlumnos) {
+        const payload = resAlumnos.data?.data || resAlumnos.data || resAlumnos;
+        const arr = Array.isArray(payload) ? payload : (payload.alumnos || []);
         setAlumnosAsignacionDisponibles(arr);
       }
       // Get enrolled students for this materia
       if (m.id) {
-        const resAsignados = await api.get(`/grupos/materias/${m.id}/alumnos`);
+        const resAsignados = await gruposService.obtenerAlumnosMateria(m.id);
         if (resAsignados.data) {
           setAlumnosAsignacionSeleccionados(resAsignados.data.map((a: any) => Number(a.id || a.alumnoId)));
         }
@@ -348,9 +361,7 @@ export function Grupos() {
         alert("La materia no tiene un ID válido. Guárdala primero.");
         return;
       }
-      await api.put(`/grupos/materias/${materiaActualAsignacion.id}/alumnos`, {
-        alumnosIds: alumnosAsignacionSeleccionados
-      });
+      await gruposService.asignarAlumnosMateria(materiaActualAsignacion.id, alumnosAsignacionSeleccionados);
       setIsAsignarAlumnosModalOpen(false);
       cargarGrupos();
     } catch (error) {
@@ -465,18 +476,6 @@ export function Grupos() {
             <span className="bg-navy-50 text-navy-700 px-3 py-1.5 rounded-full text-sm font-medium">
               Grupos encontrados: {gruposFiltrados.length}
             </span>
-            <button 
-              className="flex items-center gap-2 px-4 py-2 bg-navy-600 text-white rounded-xl hover:bg-navy-700 transition-colors shadow-sm font-medium"
-              onClick={() => {
-                setGrupoEditandoId(null);
-                setNuevoGrupo({ nombre: '', nivel: '', grado: '', seccion: '', titular: '', materias: [] });
-                setBusquedaDocente('');
-                setGrupoPlantillaId('');
-                setIsModalOpen(true);
-              }}
-            >
-              <Plus size={16} /> Nuevo Grupo
-            </button>
           </div>
 
           {loading ? (
@@ -504,7 +503,7 @@ export function Grupos() {
                   <div className="text-right">
                     <div className="text-xs text-gray-500 mb-1">Docente Titular</div>
                     <div className="font-medium text-navy-700 bg-gray-50 px-3 py-1 rounded-lg">
-                      {grupo.docenteTitular?.nombreCompleto || 'Sin asignar'}
+                      {grupo.titular || 'Sin asignar'}
                     </div>
                   </div>
                   {isAdmin && (
@@ -664,6 +663,7 @@ export function Grupos() {
                         <th className="p-4 font-semibold text-gray-600">Matrícula</th>
                         <th className="p-4 font-semibold text-gray-600">Nombre</th>
                         <th className="p-4 font-semibold text-gray-600">Estado</th>
+                        <th className="p-4 font-semibold text-gray-600 text-right">Acciones</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -675,6 +675,14 @@ export function Grupos() {
                             <span className="bg-green-50 text-green-700 px-2 py-1 rounded text-xs font-semibold">
                               Inscrito
                             </span>
+                          </td>
+                          <td className="p-4 text-right">
+                            <button
+                              onClick={() => navigate(`/alumnos/${a.alumnoId || a.id}`)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-navy-600 bg-navy-50 rounded-lg hover:bg-navy-100 transition-colors"
+                            >
+                              <ExternalLink size={14} /> Ver Expediente
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -1011,15 +1019,22 @@ export function Grupos() {
                     disabled={!nuevaMateria.grado}
                   >
                     <option value="">- Sección -</option>
-                    {['A','B','C','D','E','F'].map(s => <option key={s} value={s}>{s}</option>)}
+                    {grupos
+                      .filter((g: any) => {
+                        const nivelStr = typeof g.nivel === 'string' ? g.nivel : (g.nivel?.codigo || g.nivel?.nombre || '');
+                        return nivelStr.toUpperCase() === (nuevaMateria.nivel || '').toUpperCase() && String(g.grado) === nuevaMateria.grado && g.seccion;
+                      })
+                      .map((g: any) => g.seccion)
+                      .filter((s: string, i: number, arr: string[]) => arr.indexOf(s) === i)
+                      .sort()
+                      .map((s: string) => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Docente Asignado *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Docente Asignado (Opcional)</label>
                 <select
-                  required
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-navy-500 outline-none"
                   value={nuevaMateria.docente}
                   onChange={(e) => setNuevaMateria({...nuevaMateria, docente: e.target.value})}

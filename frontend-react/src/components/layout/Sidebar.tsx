@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, BookOpen, Shield, LogOut, Calendar, Award, BarChart3, History, Star, CreditCard, Heart } from 'lucide-react';
+import { Home, Users, BookOpen, Shield, LogOut, Calendar, Award, BarChart3, History, Star, CreditCard, Heart, FileText, FileDown } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 
 export function Sidebar() {
@@ -20,6 +20,8 @@ export function Sidebar() {
         { name: 'Padres & Tutores', path: '/tutores', icon: Heart, roles: ['ADMIN', 'DIRECTOR', 'GESTOR'] },
         { name: 'Grupos & Materias', path: '/grupos', icon: BookOpen, roles: ['ADMIN', 'DIRECTOR', 'GESTOR', 'DOCENTE', 'MAESTRA'] },
         { name: 'Calificaciones', path: '/calificaciones', icon: Award, roles: ['ADMIN', 'DIRECTOR', 'GESTOR', 'DOCENTE', 'MAESTRA'] },
+        { name: 'Historial Académico', path: '/historial-academico', icon: FileText, roles: ['ADMIN', 'DIRECTOR', 'GESTOR', 'DOCENTE', 'MAESTRA'] },
+        { name: 'Boletas', path: '/boleta', icon: FileDown, roles: ['ADMIN', 'DIRECTOR', 'GESTOR', 'DOCENTE', 'MAESTRA'] },
       ]
     },
     {

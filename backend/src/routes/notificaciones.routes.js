@@ -3,13 +3,14 @@
 const express = require('express');
 const router = express.Router();
 const { verificarYEnviarAlertas } = require('../services/notificaciones/alertasPagos.service');
-const { requireAuth, requireRoles } = require('../middlewares/auth.middleware');
+const { authenticate } = require('../middleware/auth.middleware');
+const { authorize } = require('../middleware/rbac.middleware');
 
 /**
  * POST /api/v1/notificaciones/test-cron
  * Endpoint manual para disparar la revisión de vencimientos (solo ADMIN).
  */
-router.post('/test-cron', requireAuth, requireRoles(['ADMIN']), async (req, res, next) => {
+router.post('/test-cron', authenticate, authorize('ADMIN'), async (req, res, next) => {
   try {
     const resultado = await verificarYEnviarAlertas();
     res.json({

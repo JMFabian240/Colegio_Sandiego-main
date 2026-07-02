@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Plus, Search, DollarSign, X, CheckCircle2, Printer, Download } from 'lucide-react';
-import api from '../services/api';
+import { CreditCard, DollarSign, Calendar, Upload, FileText, CheckCircle, AlertCircle, FileDigit, Plus, Download, Search, X, CheckCircle2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { alumnosService } from '../services/alumnos.service';
+import { pagosService } from '../services/pagos.service';
 import { useAuthStore } from '../store/useAuthStore';
 
 export function Pagos() {
@@ -80,29 +82,26 @@ export function Pagos() {
   useEffect(() => {
     cargarPagos(page);
     
-    // Check if came from Alumnos profile
     const urlParams = new URLSearchParams(window.location.search);
     const alId = urlParams.get('alumnoId');
     if (alId) {
-      setIsModalOpen(true);
-      api.get(`/alumnos/${alId}`).then(res => {
-        if (res.data) {
-          seleccionarAlumno(res.data);
-        }
-      }).catch(console.error);
+      alumnosService.getAlumnoById(Number(alId)).then((res: any) => {
+        setIsModalOpen(true);
+        seleccionarAlumno(res.data || res);
+      });
     }
   }, [page]);
 
   const cargarPagos = async (pagina = 1) => {
     setLoading(true);
     try {
-      const res = await api.get('/pagos', { params: { page: pagina, limit } });
-      const data = res.data;
-      if (data && data.data) {
-        setPagos(data.data);
-        setPage(data.pagination?.page || 1);
-        setTotalPages(data.pagination?.pages || 1);
-        setTotalRecords(data.pagination?.total || 0);
+      const res: any = await pagosService.obtenerPagos({ page: pagina, limit });
+      const data = res.data?.data || res.data;
+      if (data && res.data?.pagination) {
+        setPagos(data);
+        setPage(res.data.pagination?.page || 1);
+        setTotalPages(res.data.pagination?.pages || 1);
+        setTotalRecords(res.data.pagination?.total || 0);
       } else if (Array.isArray(data)) {
         setPagos(data);
       }
@@ -113,21 +112,21 @@ export function Pagos() {
     }
   };
 
-  // Autocomplete Alumno
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const timeId = setTimeout(() => {
       if (busquedaAlumno.trim() && !alumnoSeleccionado) {
-        api.get('/alumnos', { params: { q: busquedaAlumno, limit: 10 } })
-          .then(res => {
-            const data = res.data.data || res.data;
-            setAlumnosSugeridos(Array.isArray(data) ? data : []);
+        alumnosService.getAlumnos({ q: busquedaAlumno, limit: 10 })
+          .then((res: any) => {
+            const payload = res.data?.data || res.data || res;
+            const arr = Array.isArray(payload) ? payload : (payload.alumnos || []);
+            setAlumnosSugeridos(arr);
           })
           .catch(() => setAlumnosSugeridos([]));
       } else {
         setAlumnosSugeridos([]);
       }
     }, 300);
-    return () => clearTimeout(timer);
+    return () => clearTimeout(timeId);
   }, [busquedaAlumno, alumnoSeleccionado]);
 
   const seleccionarAlumno = async (al: any) => {
@@ -138,27 +137,27 @@ export function Pagos() {
     
     const id = al.id || al.alumnoId;
     try {
-      let becaInfo = null;
+      const alRes: any = await alumnosService.getAlumnoById(id);
+      const alumnoData = alRes.data || alRes;
+      setAlumnoSeleccionado(alumnoData);
+      
       let pctBeca = 0;
-      // Obtener ficha completa para ver si tiene beca
-      const alRes = await api.get(`/alumnos/${id}`);
-      if (alRes.data && alRes.data.beca) {
-        becaInfo = alRes.data.beca;
-        pctBeca = Number(becaInfo.porcentaje);
+      if (alumnoData.beca) {
+        pctBeca = Number(alumnoData.beca.porcentaje);
       }
       setPorcentajeBeca(pctBeca);
       
-      // Obtener adeudos
-      const adRes = await api.get('/pagos/calendario', { params: { alumnoId: id, estadoCobro: 'pendiente' } });
-      if (adRes.data) {
-        setAdeudos(adRes.data);
-        setSelectedDeudas([]);
-        setPagoForm(prev => ({
-          ...prev,
-          concepto: 'Colegiatura',
-          monto: ''
-        }));
-      }
+      const adRes: any = await pagosService.obtenerCalendario(id);
+      const data = adRes.data?.data || adRes.data || [];
+      const pendientes = data.filter((a: any) => a.estadoCobro === 'pendiente');
+      
+      setAdeudos(pendientes);
+      setSelectedDeudas([]);
+      setPagoForm(prev => ({
+        ...prev,
+        concepto: 'Colegiatura',
+        monto: ''
+      }));
     } catch (e) {
       console.error('Error calculando adeudos', e);
     } finally {
@@ -195,7 +194,6 @@ export function Pagos() {
         total += Math.max(0, deuda);
       });
     } else {
-      // Si no hay deudas del concepto, el total es 0 (el usuario lo pone manual)
       total = 0; 
     }
     setPagoForm(prev => ({ ...prev, monto: total > 0 ? total.toFixed(2) : '' }));
@@ -237,8 +235,9 @@ export function Pagos() {
     if (!alumnoSeleccionado) return;
     const id = alumnoSeleccionado.id || alumnoSeleccionado.alumnoId;
     try {
-      const becaRes = await api.get(`/alumnos/${id}`);
-      const asignacion = becaRes.data?.asignacionesBeca?.find((b: any) => b.estado === 'activa');
+      const becaRes: any = await alumnosService.getAlumnoById(id);
+      const alumnoData = becaRes.data || becaRes;
+      const asignacion = alumnoData?.asignacionesBeca?.find((b: any) => b.estado === 'activa');
       const porcBeca = asignacion?.beca?.porcentaje || 0;
       
       const deudasFiltradas = adeudos.filter((d:any) => d.concepto?.toLowerCase() === 'colegiatura');
@@ -260,25 +259,7 @@ export function Pagos() {
     if (!pagoForm.monto || Number(pagoForm.monto) <= 0) return alert('Ingrese un monto válido.');
 
     setSaving(true);
-    const id = alumnoSeleccionado.id || alumnoSeleccionado.alumnoId;
     try {
-      const conceptoBackendMap: Record<string, string> = {
-        'Colegiatura': 'COLEGIATURA',
-        'Inscripcion': 'INSCRIPCION',
-        'Inscripción': 'INSCRIPCION',
-        'Material_didactico': 'MATERIAL_DIDACTICO',
-        'Material didáctico': 'MATERIAL_DIDACTICO',
-        'Uniforme': 'UNIFORME',
-        'Otro': 'OTRO'
-      };
-      const conceptoToSend = conceptoBackendMap[pagoForm.concepto] || 'COLEGIATURA';
-
-      let tutorIdToSend = undefined;
-      if (alumnoSeleccionado.padres && alumnoSeleccionado.padres.length > 0) {
-        const tutor = alumnoSeleccionado.padres.find((p: any) => p.esTutor);
-        tutorIdToSend = tutor ? (tutor.id || tutor.tutorId) : (alumnoSeleccionado.padres[0].id || alumnoSeleccionado.padres[0].tutorId);
-      }
-
       let res;
       if (selectedDeudas.length > 0) {
         const abonos = selectedDeudas.map((d: any) => {
@@ -286,41 +267,35 @@ export function Pagos() {
           if (d.concepto?.toLowerCase() === 'colegiatura') deuda -= (deuda * porcentajeBeca) / 100;
           return { calendarioPagoId: d.calendarioPagoId, montoAbonado: Math.max(0, deuda) };
         });
-        res = await api.post('/pagos/consolidado', {
-          alumnoId: id,
-          tutorId: tutorIdToSend,
+        res = await pagosService.registrarPagoConsolidado({
+          alumnoId: alumnoSeleccionado.id || alumnoSeleccionado.alumnoId,
           metodoPago: pagoForm.metodoPago,
           fecha: pagoForm.fecha,
           abonos
         });
-      } else if (pagoAdelantado && conceptoToSend === 'COLEGIATURA') {
-        res = await api.post('/pagos/adelantado', {
-          alumnoId: id,
-          tutorId: tutorIdToSend,
+      } else if (pagoAdelantado) {
+        res = await pagosService.registrarPagoAdelantado({
+          alumnoId: alumnoSeleccionado.id || alumnoSeleccionado.alumnoId,
           monto: Number(pagoForm.monto),
           meses: Number(mesesAdelanto),
           metodoPago: pagoForm.metodoPago,
           fecha: pagoForm.fecha
         });
       } else {
-        res = await api.post('/pagos', {
-          alumnoId: id,
-          tutorId: tutorIdToSend,
+        res = await pagosService.registrarPago({
+          alumnoId: alumnoSeleccionado.id || alumnoSeleccionado.alumnoId,
           monto: Number(pagoForm.monto),
-          concepto: conceptoToSend,
+          concepto: pagoForm.concepto.toUpperCase(),
           metodoPago: pagoForm.metodoPago,
           fecha: pagoForm.fecha
         });
       }
 
-      // Subir comprobante si existe
       if (comprobante && res?.data?.data?.pagoId) {
         const formData = new FormData();
-        formData.append('comprobante', comprobante);
+        formData.append('documento', comprobante);
         try {
-          await api.post(`/pagos/${res.data.data.pagoId}/comprobante`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-          });
+          await pagosService.subirComprobante(res.data.data.pagoId, formData);
         } catch (uploadError) {
           console.error('Error subiendo comprobante', uploadError);
           alert('El pago se registró pero hubo un problema al subir el comprobante.');
@@ -332,35 +307,12 @@ export function Pagos() {
         ? selectedDeudas.map((d: any) => `${d.concepto.replace(/_/g, ' ')}${d.mes ? ` (${d.mes})` : ''}`).join(', ')
         : pagoForm.concepto;
 
-      let totalDescuento = 0;
-      const detalles = selectedDeudas.length > 0
-        ? selectedDeudas.map((d: any) => {
-            let deuda = Number(d.montoOriginal) + Number(d.montoRecargo || 0) - Number(d.montoPagado || 0);
-            if (d.concepto?.toLowerCase() === 'colegiatura' && porcentajeBeca > 0) {
-              const descuento = (deuda * porcentajeBeca) / 100;
-              totalDescuento += descuento;
-              deuda -= descuento;
-            }
-            return {
-              descripcion: `${d.concepto.replace(/_/g, ' ')}${d.mes ? ` (${d.mes})` : ''}`,
-              monto: Math.max(0, deuda)
-            };
-          })
-        : [{ descripcion: pagoForm.concepto, monto: Number(pagoForm.monto) }];
-
-      if (pagoAdelantado && porcentajeBeca > 0 && conceptoToSend === 'COLEGIATURA') {
-        const original = Number(pagoForm.monto) / (1 - (porcentajeBeca / 100));
-        totalDescuento = original - Number(pagoForm.monto);
-      }
-
       setTicketRecibo({
         pagoId: pagoData?.pagoId || pagoData?.id || '---',
         fecha: new Date().toLocaleString('es-MX'),
         alumno: alumnoSeleccionado.nombre,
         concepto: conceptoStr,
         monto: pagoForm.monto,
-        detalles,
-        descuentoBeca: totalDescuento,
         metodoPago: pagoForm.metodoPago
       });
       cargarPagos(1);
@@ -438,7 +390,6 @@ export function Pagos() {
         )}
       </div>
 
-      {/* Modal Nuevo Pago */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-navy-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] shadow-2xl flex flex-col overflow-hidden">
@@ -454,39 +405,39 @@ export function Pagos() {
                     <div className="space-y-5">
                       <div className="relative z-20">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Buscar Alumno</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <input 
-                    type="text" 
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none pr-10" 
-                    placeholder="Buscar alumno..."
-                    value={busquedaAlumno}
-                    onChange={e => { setBusquedaAlumno(e.target.value); if(alumnoSeleccionado) setAlumnoSeleccionado(null); }}
-                  />
-                  {alumnoSeleccionado && (
-                    <button type="button" onClick={limpiarSeleccion} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500">
-                      <X size={16} />
-                    </button>
-                  )}
-                </div>
-                {alumnoSeleccionado && (
-                  <div className="flex items-center gap-1 text-xs font-medium text-emerald-600 mt-2 px-1">
-                    <CheckCircle2 size={14} /> Alumno seleccionado: {alumnoSeleccionado.nombre}
-                  </div>
-                )}
-                {alumnosSugeridos.length > 0 && !alumnoSeleccionado && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                    {alumnosSugeridos.map(al => (
-                      <div key={al.id} onClick={() => seleccionarAlumno(al)} className="px-4 py-2 hover:bg-emerald-50 cursor-pointer border-b border-gray-50 last:border-0 flex justify-between items-center">
-                        <div>
-                          <div className="font-medium text-navy-800">{al.nombre}</div>
-                          <div className="text-xs text-gray-500 font-mono">{al.matricula}</div>
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                          <input 
+                            type="text" 
+                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none pr-10" 
+                            placeholder="Buscar alumno..."
+                            value={busquedaAlumno}
+                            onChange={e => { setBusquedaAlumno(e.target.value); if(alumnoSeleccionado) setAlumnoSeleccionado(null); }}
+                          />
+                          {alumnoSeleccionado && (
+                            <button type="button" onClick={limpiarSeleccion} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500">
+                              <X size={16} />
+                            </button>
+                          )}
                         </div>
+                        {alumnoSeleccionado && (
+                          <div className="flex items-center gap-1 text-xs font-medium text-emerald-600 mt-2 px-1">
+                            <CheckCircle2 size={14} /> Alumno seleccionado: {alumnoSeleccionado.nombre}
+                          </div>
+                        )}
+                        {alumnosSugeridos.length > 0 && !alumnoSeleccionado && (
+                          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                            {alumnosSugeridos.map(al => (
+                              <div key={al.id} onClick={() => seleccionarAlumno(al)} className="px-4 py-2 hover:bg-emerald-50 cursor-pointer border-b border-gray-50 last:border-0 flex justify-between items-center">
+                                <div>
+                                  <div className="font-medium text-navy-800">{al.nombre}</div>
+                                  <div className="text-xs text-gray-500 font-mono">{al.matricula}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
 
                       {calculando ? (
                         <div className="text-center py-4 text-emerald-600 font-medium animate-pulse">Calculando adeudos...</div>
@@ -494,37 +445,37 @@ export function Pagos() {
                         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                           <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 max-h-48 overflow-y-auto">
                             <div className="flex justify-between items-center mb-3">
-                      <h4 className="text-xs font-semibold text-gray-500">Adeudos Pendientes</h4>
-                      {adeudos.length > 0 && (
-                        <button type="button" onClick={seleccionarTodasLasDeudas} className="text-xs font-medium text-emerald-600 hover:text-emerald-700">Pagar Todos</button>
-                      )}
-                    </div>
-                    {adeudos.length === 0 ? (
-                      <p className="text-sm text-gray-500">No hay adeudos pendientes.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {adeudos.map((adeudo: any, idx: number) => {
-                          const montoRaw = Number(adeudo.montoOriginal) + Number(adeudo.montoRecargo || 0) - Number(adeudo.montoPagado || 0);
-                          const monto = adeudo.concepto?.toLowerCase() === 'colegiatura' ? montoRaw - (montoRaw * porcentajeBeca / 100) : montoRaw;
-                          const isSelected = selectedDeudas.some((d: any) => d.calendarioPagoId === adeudo.calendarioPagoId);
-                          return (
-                            <div key={idx} 
-                              onClick={() => toggleDeuda(adeudo)}
-                              className={`flex justify-between items-center p-3 rounded-lg border shadow-sm cursor-pointer transition-colors ${isSelected ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-gray-200'}`}>
-                              <div className="flex items-center gap-3">
-                                <input type="checkbox" checked={isSelected} readOnly className="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500" />
-                                <div>
-                                  <div className="font-medium text-sm text-gray-800 capitalize">{adeudo.concepto.replace(/_/g, ' ')} {adeudo.mes ? `(${adeudo.mes})` : ''}</div>
-                                  <div className="text-xs text-gray-400 mt-0.5">Vencimiento: {new Date(adeudo.fechaVencimiento).toLocaleDateString('es-MX')}</div>
-                                </div>
-                              </div>
-                              <div className="font-bold text-red-600 text-sm">
-                                ${monto.toFixed(2)}
-                              </div>
+                              <h4 className="text-xs font-semibold text-gray-500">Adeudos Pendientes</h4>
+                              {adeudos.length > 0 && (
+                                <button type="button" onClick={seleccionarTodasLasDeudas} className="text-xs font-medium text-emerald-600 hover:text-emerald-700">Pagar Todos</button>
+                              )}
                             </div>
-                          );
-                        })}
-                      </div>
+                            {adeudos.length === 0 ? (
+                              <p className="text-sm text-gray-500">No hay adeudos pendientes.</p>
+                            ) : (
+                              <div className="space-y-2">
+                                {adeudos.map((adeudo: any, idx: number) => {
+                                  const montoRaw = Number(adeudo.montoOriginal) + Number(adeudo.montoRecargo || 0) - Number(adeudo.montoPagado || 0);
+                                  const monto = adeudo.concepto?.toLowerCase() === 'colegiatura' ? montoRaw - (montoRaw * porcentajeBeca / 100) : montoRaw;
+                                  const isSelected = selectedDeudas.some((d: any) => d.calendarioPagoId === adeudo.calendarioPagoId);
+                                  return (
+                                    <div key={idx} 
+                                      onClick={() => toggleDeuda(adeudo)}
+                                      className={`flex justify-between items-center p-3 rounded-lg border shadow-sm cursor-pointer transition-colors ${isSelected ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-gray-200'}`}>
+                                      <div className="flex items-center gap-3">
+                                        <input type="checkbox" checked={isSelected} readOnly className="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500" />
+                                        <div>
+                                          <div className="font-medium text-sm text-gray-800 capitalize">{adeudo.concepto.replace(/_/g, ' ')} {adeudo.mes ? `(${adeudo.mes})` : ''}</div>
+                                          <div className="text-xs text-gray-400 mt-0.5">Vencimiento: {new Date(adeudo.fechaVencimiento).toLocaleDateString('es-MX')}</div>
+                                        </div>
+                                      </div>
+                                      <div className="font-bold text-red-600 text-sm">
+                                        ${monto.toFixed(2)}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             )}
                           </div>
                         </div>
@@ -532,117 +483,120 @@ export function Pagos() {
                     </div>
                   
                     <div className="space-y-5">
-                      {alumnoSeleccionado && (
+                      {alumnoSeleccionado && !alumnoSeleccionado.planPago ? (
+                        <div className="bg-orange-50 border border-orange-200 p-6 rounded-xl text-center">
+                          <h4 className="text-orange-800 font-bold mb-2">Sin plan de pagos</h4>
+                          <p className="text-orange-700 text-sm mb-4">Este alumno no tiene un plan de pagos asignado. No es posible registrar pagos hasta asignarle uno.</p>
+                          <Link to={`/alumnos/${alumnoSeleccionado.id || alumnoSeleccionado.alumnoId}?tab=planes`} className="inline-block bg-orange-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-orange-700 transition-colors">
+                            Ir a asignarle plan
+                          </Link>
+                        </div>
+                      ) : alumnoSeleccionado && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                           <div className="flex bg-white rounded-xl border border-gray-200 p-1">
                             <button type="button" className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${!pagoAdelantado ? 'bg-navy-900 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`} onClick={() => {
-                      setPagoAdelantado(false);
-                      recalcularMontoPorConcepto(pagoForm.concepto, adeudos, 0); 
-                    }}>
-                      Pago Normal
-                    </button>
-                    <button type="button" className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${pagoAdelantado ? 'bg-navy-900 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`} onClick={() => {
-                      setPagoAdelantado(true);
-                      setPagoForm(prev => ({ ...prev, concepto: 'Colegiatura' }));
-                      recalcularMontoAdelanto(Number(mesesAdelanto));
-                    }}>
-                      Pago Adelantado
-                    </button>
-                  </div>
-
-                  {pagoAdelantado && (
-                    <div className="flex items-center gap-3 bg-indigo-50/50 border border-indigo-100 rounded-xl p-3">
-                      <span className="text-sm font-medium text-indigo-900">Adelantar</span>
-                      <input type="number" min="1" max="12" className="w-20 px-3 py-1.5 rounded-lg border border-indigo-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" value={mesesAdelanto} onChange={e => {
-                        setMesesAdelanto(e.target.value);
-                        recalcularMontoAdelanto(Number(e.target.value));
-                      }} />
-                      <span className="text-sm font-medium text-indigo-900">meses</span>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Concepto</label>
-                      <select required disabled={pagoAdelantado} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed" value={pagoForm.concepto} onChange={e => {
-                        const val = e.target.value;
-                        setPagoForm({...pagoForm, concepto: val});
-                        // Obtener beca % (simplificado a buscar la activa)
-                        api.get(`/alumnos/${alumnoSeleccionado.id}`).then(res => {
-                          const asig = res.data?.asignacionesBeca?.find((b:any)=>b.estado==='activa');
-                          recalcularMontoPorConcepto(val, adeudos, asig?.beca?.porcentaje || 0);
-                        });
-                      }}>
-                        <option value="Colegiatura">Colegiatura</option>
-                        <option value="Inscripcion">Inscripción</option>
-                        <option value="Material_didactico">Material Didáctico</option>
-                        <option value="Uniforme">Uniforme</option>
-                        <option value="Otro">Otro</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="relative z-0">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Monto</label>
-                    <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                      <input 
-                        required 
-                        type="number" 
-                        min="1" 
-                        step="0.01"
-                        className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-gray-800 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" 
-                        value={pagoForm.monto} 
-                        onChange={e => setPagoForm({...pagoForm, monto: e.target.value})}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 relative z-0">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Fecha</label>
-                      <input 
-                        type="date"
-                        required
-                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
-                        value={pagoForm.fecha}
-                        onChange={e => setPagoForm({...pagoForm, fecha: e.target.value})}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Método de pago</label>
-                      <select required className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" value={pagoForm.metodoPago} onChange={e => setPagoForm({...pagoForm, metodoPago: e.target.value})}>
-                        <option value="transferencia">Transferencia</option>
-                        <option value="tarjeta">Tarjeta</option>
-                        <option value="efectivo">Efectivo</option>
-                        <option value="deposito">Depósito</option>
-                      </select>
-                    </div>
-                  </div>
-                  
-                  <div className="relative z-0">
-                    <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1"><span className="text-gray-400">📎</span> Adjuntar comprobante (Opcional)</label>
-                    <input 
-                      type="file" 
-                      accept=".pdf,image/*"
-                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border file:border-gray-300 file:text-xs file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 cursor-pointer"
-                      onChange={e => {
-                        if(e.target.files && e.target.files.length > 0) {
-                          setComprobante(e.target.files[0]);
-                        } else {
-                          setComprobante(null);
-                        }
-                      }}
-                    />
-                  </div>
+                              setPagoAdelantado(false);
+                              recalcularMontoPorConcepto(pagoForm.concepto, adeudos, porcentajeBeca); 
+                            }}>
+                              Pago Normal
+                            </button>
+                            <button type="button" className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${pagoAdelantado ? 'bg-navy-900 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`} onClick={() => {
+                              setPagoAdelantado(true);
+                              setPagoForm(prev => ({ ...prev, concepto: 'Colegiatura' }));
+                              recalcularMontoAdelanto(Number(mesesAdelanto));
+                            }}>
+                              Pago Adelantado
+                            </button>
+                          </div>
+    
+                          {pagoAdelantado && (
+                            <div className="flex items-center gap-3 bg-indigo-50/50 border border-indigo-100 rounded-xl p-3">
+                              <span className="text-sm font-medium text-indigo-900">Adelantar</span>
+                              <input type="number" min="1" max="12" className="w-20 px-3 py-1.5 rounded-lg border border-indigo-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" value={mesesAdelanto} onChange={e => {
+                                setMesesAdelanto(e.target.value);
+                                recalcularMontoAdelanto(Number(e.target.value));
+                              }} />
+                              <span className="text-sm font-medium text-indigo-900">meses</span>
+                            </div>
+                          )}
+    
+                          <div className="grid grid-cols-1 gap-4">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Concepto</label>
+                              <select required disabled={pagoAdelantado} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed" value={pagoForm.concepto} onChange={e => {
+                                const val = e.target.value;
+                                setPagoForm({...pagoForm, concepto: val});
+                                recalcularMontoPorConcepto(val, adeudos, porcentajeBeca);
+                              }}>
+                                <option value="Colegiatura">Colegiatura</option>
+                                <option value="Inscripcion">Inscripción</option>
+                                <option value="Material_didactico">Material Didáctico</option>
+                                <option value="Uniforme">Uniforme</option>
+                                <option value="Otro">Otro</option>
+                              </select>
+                            </div>
+                          </div>
+    
+                          <div className="relative z-0">
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Monto</label>
+                            <div className="relative">
+                              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                              <input 
+                                required 
+                                type="number" 
+                                min="1" 
+                                step="0.01"
+                                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-gray-800 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" 
+                                value={pagoForm.monto} 
+                                onChange={e => setPagoForm({...pagoForm, monto: e.target.value})}
+                              />
+                            </div>
+                          </div>
+    
+                          <div className="grid grid-cols-2 gap-4 relative z-0">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Fecha</label>
+                              <input 
+                                type="date"
+                                required
+                                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                                value={pagoForm.fecha}
+                                onChange={e => setPagoForm({...pagoForm, fecha: e.target.value})}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Método de pago</label>
+                              <select required className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" value={pagoForm.metodoPago} onChange={e => setPagoForm({...pagoForm, metodoPago: e.target.value})}>
+                                <option value="transferencia">Transferencia</option>
+                                <option value="tarjeta_credito">Tarjeta de Crédito</option>
+                                <option value="tarjeta_debito">Tarjeta de Débito</option>
+                              </select>
+                            </div>
+                          </div>
+                          
+                          <div className="relative z-0">
+                            <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1"><span className="text-gray-400">📎</span> Adjuntar comprobante (Opcional)</label>
+                            <input 
+                              type="file" 
+                              accept=".pdf,image/*"
+                              className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border file:border-gray-300 file:text-xs file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 cursor-pointer"
+                              onChange={e => {
+                                if(e.target.files && e.target.files.length > 0) {
+                                  setComprobante(e.target.files[0]);
+                                } else {
+                                  setComprobante(null);
+                                }
+                              }}
+                            />
+                          </div>
                         </div>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-
-                <div className="pt-6 mt-6 flex justify-end gap-3 border-t border-gray-100 relative z-0">
+    
+                  <div className="pt-6 mt-6 flex justify-end gap-3 border-t border-gray-100 relative z-0">
                   <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">Cancelar</button>
-                  <button type="submit" disabled={saving || !alumnoSeleccionado} className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors shadow-sm disabled:opacity-70">
+                  <button type="submit" disabled={saving || !alumnoSeleccionado || !alumnoSeleccionado.planPago} className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors shadow-sm disabled:opacity-70">
                     <CheckCircle2 size={16} /> {saving ? 'Registrando...' : 'Registrar Pago'}
                   </button>
                 </div>

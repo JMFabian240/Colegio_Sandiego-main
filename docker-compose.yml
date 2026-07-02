@@ -49,8 +49,8 @@ services:
   # ── Backend Node.js / Express ────────────────────────────────
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: sae-backend
     restart: unless-stopped
 
@@ -80,9 +80,6 @@ services:
     volumes:
       # Backups persistentes fuera del contenedor
       - sae_backups:/app/backups
-      # Frontend servido como estáticos: app.js resuelve /frontend desde /app/src → /frontend
-      # path.resolve('/app/src', '..', '..', 'frontend') == '/frontend' dentro del contenedor
-      - ./frontend:/frontend:ro
 
     networks:
       - sae-network

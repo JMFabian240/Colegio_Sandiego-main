@@ -21,8 +21,6 @@ async function authenticate(req, res, next) {
 
   if (authHeader && authHeader.startsWith('Bearer ')) {
     token = authHeader.split(' ')[1];
-  } else if (req.query && req.query.token) {
-    token = req.query.token;
   }
 
   if (!token) {
@@ -62,7 +60,7 @@ async function authenticate(req, res, next) {
   }
 
   // Inyectar datos del usuario en la request
-req.usuario = payload; console.log('AUTHMIDDLEWARE USER:', payload);
+  req.usuario = payload;
   next();
 }
 

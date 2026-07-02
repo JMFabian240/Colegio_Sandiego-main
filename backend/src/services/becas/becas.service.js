@@ -9,8 +9,7 @@ const becasRepository   = require('../../repositories/becas/becas.repository');
 const alumnosRepository = require('../../repositories/alumnos/alumnos.repository');
 const calendarioPagoService = require('../pagos/calendarioPago.service');
 const { PORCENTAJES_BECA } = require('../../utils/constants');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../../config/database');
 
 async function listarBecasActivas() {
   return becasRepository.findBecasActivas();

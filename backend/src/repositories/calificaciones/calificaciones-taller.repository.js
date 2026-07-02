@@ -1,6 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
-
+const prisma = require('../../config/database');
 async function findUnique(alumnoId, periodoId, cicloId) {
   return prisma.calificacionTaller.findUnique({
     where: {

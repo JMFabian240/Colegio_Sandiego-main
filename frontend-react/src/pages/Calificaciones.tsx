@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Award, CheckCircle2, Search, BookOpen, Star, AlertCircle, Save } from 'lucide-react';
-import api from '../services/api';
+import { gruposService } from '../services/grupos.service';
+import { alumnosService } from '../services/alumnos.service';
+import { calificacionesService } from '../services/calificaciones.service';
 import { useAuthStore } from '../store/useAuthStore';
 
 export function Calificaciones() {
@@ -29,8 +31,8 @@ export function Calificaciones() {
   useEffect(() => {
     const fetchGrupos = async () => {
       try {
-        const res = await api.get('/grupos', { params: { todos: true } });
-        setGrupos(res.data || res);
+        const res: any = await gruposService.obtenerTodos({ limit: 1000 });
+      setGrupos(res.data?.data || res.data || []);
       } catch (err) {
         console.error('Error fetching grupos:', err);
       }
@@ -52,7 +54,7 @@ export function Calificaciones() {
     const fetchGrupoDetails = async () => {
       setLoading(true);
       try {
-        const resG: any = await api.get(`/grupos/${grupoSeleccionadoId}`);
+        const resG: any = await gruposService.obtenerPorId(Number(grupoSeleccionadoId));
         const grupo = resG.data || resG;
         setGrupoSeleccionado(grupo);
         
@@ -93,14 +95,14 @@ export function Calificaciones() {
       setLoading(true);
       try {
         // Fetch students in the group
-        const resA: any = await api.get('/alumnos', { params: { grupoId: grupoSeleccionadoId, limit: 200 } });
+        const resA: any = await alumnosService.getAlumnos({ grupoId: grupoSeleccionadoId, limit: 200 });
         const listAlumnos = resA.data?.data || resA.data || resA;
         // Sort alphabetically
         listAlumnos.sort((a: any, b: any) => a.nombre?.localeCompare(b.nombre));
         setAlumnos(listAlumnos);
 
         // Fetch grades for this specific subject
-        const resC: any = await api.get('/calificaciones', { params: { grupoMateriaId: materiaSeleccionadaId, limit: 1000 } });
+        const resC: any = await calificacionesService.obtenerPorGrupoMateria(Number(materiaSeleccionadaId));
         const califsList = resC.data?.data || resC.data || resC;
 
         // Initialize grid
@@ -215,7 +217,7 @@ export function Calificaciones() {
 
     setSaving(true);
     try {
-      await api.post('/calificaciones/lote', { calificaciones: lote });
+      await calificacionesService.guardarLote(lote);
       alert('Calificaciones guardadas correctamente.');
     } catch (error) {
       console.error('Error guardando', error);

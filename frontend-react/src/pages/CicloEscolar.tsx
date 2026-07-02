@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Plus, Save, AlertTriangle, Lock, X } from 'lucide-react';
-import api from '../services/api';
+import { tarifasService } from '../services/tarifas.service';
+import { alumnosService } from '../services/alumnos.service';
 
 export function CicloEscolar() {
   const [ciclos, setCiclos] = useState<any[]>([]);
@@ -21,6 +22,7 @@ export function CicloEscolar() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [nuevoCiclo, setNuevoCiclo] = useState({ nombre: '', activo: true });
+  const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
     cargarCiclosYNiveles();
@@ -28,11 +30,11 @@ export function CicloEscolar() {
 
   const cargarCiclosYNiveles = async () => {
     try {
-      const resC = await api.get('/tarifas/ciclos');
-      if (resC.data) setCiclos(resC.data);
+      const resC: any = await tarifasService.obtenerCiclos();
+      setCiclos(resC.data?.data || resC.data || []);
       
-      const resN = await api.get('/tarifas/niveles');
-      if (resN.data) setNiveles(resN.data);
+      const resN: any = await tarifasService.obtenerNiveles();
+      setNiveles(resN.data?.data || resN.data || []);
     } catch (error) {
       console.error('Error cargando catálogos', error);
     }
@@ -54,17 +56,16 @@ export function CicloEscolar() {
   const cargarTarifas = async () => {
     setLoadingTarifas(true);
     try {
-      const res = await api.get(`/tarifas`, { params: { cicloId, nivelId } });
-      if (res.data) {
-        const nuevosConceptos = { colegiatura: '', inscripcion: '', arancel: '', material: '' };
-        res.data.forEach((t: any) => {
-          if (t.concepto === 'colegiatura') nuevosConceptos.colegiatura = String(Number(t.monto) * 10);
-          if (t.concepto === 'inscripcion') nuevosConceptos.inscripcion = t.monto;
-          if (t.concepto === 'arancel') nuevosConceptos.arancel = t.monto;
-          if (t.concepto === 'material') nuevosConceptos.material = t.monto;
-        });
-        setConceptos(nuevosConceptos);
-      }
+      const res: any = await tarifasService.obtenerTarifas(Number(cicloId), Number(nivelId));
+      const data = res.data?.data || res.data || [];
+      const nuevosConceptos = { colegiatura: '', inscripcion: '', arancel: '', material: '' };
+      data.forEach((t: any) => {
+        if (t.concepto === 'colegiatura') nuevosConceptos.colegiatura = String(Number(t.monto) * 10);
+        if (t.concepto === 'inscripcion') nuevosConceptos.inscripcion = t.monto;
+        if (t.concepto === 'arancel') nuevosConceptos.arancel = t.monto;
+        if (t.concepto === 'material') nuevosConceptos.material = t.monto;
+      });
+      setConceptos(nuevosConceptos);
     } catch (error) {
       console.error('Error cargando tarifas', error);
     } finally {
@@ -88,7 +89,7 @@ export function CicloEscolar() {
 
     setSaving(true);
     try {
-      await api.put('/tarifas', {
+      await tarifasService.guardarTarifas({
         cicloId: Number(cicloId),
         nivelId: Number(nivelId),
         tarifas: tarifasArray
@@ -108,7 +109,7 @@ export function CicloEscolar() {
     if (!nuevoCiclo.nombre) return;
     setSaving(true);
     try {
-      await api.post('/tarifas/ciclos', nuevoCiclo);
+      await tarifasService.crearCiclo(nuevoCiclo);
       alert('Ciclo creado exitosamente.');
       setIsModalOpen(false);
       setNuevoCiclo({ nombre: '', activo: true });
@@ -118,6 +119,37 @@ export function CicloEscolar() {
       alert('Error al crear el ciclo escolar.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleReactivarCiclo = async () => {
+    if (!window.confirm("¿Estás seguro de reactivar este ciclo? El ciclo actual pasará a ser histórico.")) return;
+    setSaving(true);
+    try {
+      await tarifasService.activarCiclo(Number(cicloId));
+      alert('Ciclo reactivado correctamente.');
+      cargarCiclosYNiveles();
+    } catch (error) {
+      console.error('Error reactivando ciclo', error);
+      alert('Error al reactivar el ciclo.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCierreCiclo = async () => {
+    if (confirm('¿Estás SEGURO de querer cerrar el ciclo? Esta acción es irreversible, promoverá a los alumnos y cerrará el ciclo actual.')) {
+      setIsClosing(true);
+      try {
+        const res = await alumnosService.cerrarCiclo();
+        alert(`¡Ciclo cerrado con éxito!\n\nPromovidos: ${res.data.data.promovidos}\nEgresados: ${res.data.data.egresados}\nRetenidos: ${res.data.data.retenidos}`);
+        cargarCiclosYNiveles();
+      } catch (error: any) {
+        console.error(error);
+        alert(error.response?.data?.message || 'Ocurrió un error al cerrar el ciclo.');
+      } finally {
+        setIsClosing(false);
+      }
     }
   };
 
@@ -173,13 +205,24 @@ export function CicloEscolar() {
 
             <div className="h-full flex flex-col justify-center">
               {cicloId && !cicloActivo ? (
-                <div className="bg-amber-50 p-5 rounded-2xl border border-amber-100 flex gap-4">
-                  <div className="text-amber-500 mt-0.5"><Lock size={20} /></div>
-                  <div>
-                    <div className="font-bold text-amber-800 mb-1">Ciclo Escolar Cerrado</div>
-                    <p className="text-sm text-amber-700/80">
-                      Este ciclo escolar ya no está activo. Las tarifas son de solo lectura y no pueden modificarse para preservar la integridad de los registros históricos.
-                    </p>
+                <div className="bg-amber-50 p-5 rounded-2xl border border-amber-100 flex flex-col gap-4">
+                  <div className="flex gap-4">
+                    <div className="text-amber-500 mt-0.5"><Lock size={20} /></div>
+                    <div>
+                      <div className="font-bold text-amber-800 mb-1">Ciclo Escolar Cerrado</div>
+                      <p className="text-sm text-amber-700/80">
+                        Este ciclo escolar ya no está activo. Las tarifas son de solo lectura y no pueden modificarse para preservar la integridad de los registros históricos.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex justify-end border-t border-amber-200 pt-3">
+                    <button 
+                      className="px-4 py-1.5 bg-amber-600 text-white text-sm rounded-lg hover:bg-amber-700 font-medium transition-colors"
+                      onClick={handleReactivarCiclo}
+                      disabled={saving}
+                    >
+                      {saving ? 'Reactivando...' : 'Reactivar este ciclo'}
+                    </button>
                   </div>
                 </div>
               ) : (
@@ -293,10 +336,11 @@ export function CicloEscolar() {
                 Al ejecutar el cierre de ciclo escolar, se promoverá masivamente a todos los alumnos regulares al siguiente grado y se retendrá a aquellos con adeudos significativos. El ciclo actual se marcará como cerrado irreversiblemente y no podrá recibir más modificaciones de tarifas ni inscripciones.
               </p>
               <button 
-                onClick={() => alert('Función de cierre no implementada en este demo.')}
-                className="px-5 py-2.5 bg-white border border-red-200 text-red-600 font-bold rounded-xl hover:bg-red-50 transition-colors shadow-sm"
+                onClick={handleCierreCiclo}
+                disabled={isClosing}
+                className="px-5 py-2.5 bg-white border border-red-200 text-red-600 font-bold rounded-xl hover:bg-red-50 transition-colors shadow-sm disabled:opacity-50"
               >
-                Ejecutar Cierre de Ciclo
+                {isClosing ? 'Cerrando Ciclo...' : 'Ejecutar Cierre de Ciclo'}
               </button>
             </div>
           </div>

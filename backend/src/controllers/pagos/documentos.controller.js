@@ -19,6 +19,7 @@ if (!fs.existsSync(UPLOAD_DIR)) {
 async function subirComprobante(req, res, next) {
   try {
     const pagoId = Number(req.params.pagoId);
+    if (isNaN(pagoId)) return res.status(400).json({ ok: false, message: 'ID de pago inválido (recibido: ' + req.params.pagoId + ')' });
 
     if (!req.file) {
       return res.status(400).json({ ok: false, message: 'No se recibió ningún archivo.' });
@@ -68,6 +69,7 @@ async function subirComprobante(req, res, next) {
  */
 async function descargarComprobante(req, res, next) {
   try {
+    console.log("DESCARGAR COMPROBANTE REQUEST:", req.params.pagoId);
     const pagoId = Number(req.params.pagoId);
 
     const documento = await prisma.documento.findFirst({

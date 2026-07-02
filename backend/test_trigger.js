@@ -1,1 +1,0 @@
-const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); async function main() { const res = await prisma.(SELECT event_object_table, trigger_name FROM information_schema.triggers WHERE action_statement LIKE '%log_auditoria%';); console.log(res); } main().finally(()= 

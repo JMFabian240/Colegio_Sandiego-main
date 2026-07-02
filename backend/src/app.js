@@ -85,6 +85,7 @@ const corsOptions = (req, callback) => {
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],
       credentials: true,
+    exposedHeaders: ['Content-Disposition'],
     });
   } else {
     callback(new Error(`CORS: origen no permitido — ${origin}`));
@@ -104,7 +105,7 @@ const limiter = rateLimit({
     message: 'Demasiadas solicitudes. Intenta de nuevo en 15 minutos.',
   },
 });
-// app.use('/api', limiter); // Deshabilitado a petición del usuario
+app.use('/api', limiter);
 
 // ── Rate Limit estricto para auth ────────────────────────────
 const authLimiter = rateLimit({
@@ -115,7 +116,7 @@ const authLimiter = rateLimit({
     message: 'Demasiados intentos de inicio de sesión. Intenta en 15 minutos.',
   },
 });
-// app.use('/api/v1/auth', authLimiter); // Deshabilitado a petición del usuario
+app.use('/api/v1/auth', authLimiter);
 
 // ── Parsers ───────────────────────────────────────────────────
 app.use(express.json({ limit: '1mb' }));
@@ -159,40 +160,14 @@ console.log('[SAE] Servidor:', '${host}');`
   );
 });
 
-// ── Frontend estático (sirve los paneles HTML existentes) ─────
-// REGLA: el frontend NO se modifica. Solo se sirve como archivos estáticos.
-//
-// path.resolve desde backend/src/app.js:
-//   __dirname  = .../colegio-sandiego/backend/src
-//   ../..      = .../colegio-sandiego
-//   ../../frontend = .../colegio-sandiego/frontend   ← correcto
-//
-// Usamos path.resolve para evitar diferencias Windows/WSL con separadores.
-const frontendPath = process.pkg ? path.join(path.dirname(process.execPath), 'frontend') : path.resolve(__dirname, '..', '..', 'frontend');
+// ── Frontend estático (React SPA) ─────
+const frontendPath = process.pkg ? path.join(path.dirname(process.execPath), 'frontend-react', 'dist') : path.resolve(__dirname, '..', '..', 'frontend-react', 'dist');
 
-app.use(
-  express.static(frontendPath, {
-    // No buscar index.html automáticamente — los paneles tienen nombres propios
-    index: false,
-    // Extensiones que puede servir
-    extensions: ['html'],
-  })
-);
+app.use(express.static(frontendPath));
 
-// ── Ruta raíz: redirige al panel de administración ────────────
-// Placeholder temporal hasta que se implemente la pantalla de login.
-// Una vez que exista /auth/login.html, este redirect apuntará ahí.
-app.get('/', (req, res) => {
-  res.redirect('/panel.html');
-});
-
-// ── Accesos directos explícitos a cada panel ──────────────────
-// Permite acceder mediante rutas limpias además de la URL directa al .html
-app.get('/panel',   (req, res) => res.sendFile(path.join(frontendPath, 'panel.html')));
-// Legacy routes — redirect to unified panel
-app.get('/admin',   (req, res) => res.redirect('/panel.html'));
-app.get('/gestor',  (req, res) => res.redirect('/panel.html'));
-app.get('/maestra', (req, res) => res.redirect('/panel.html'));
+// ── Uploads (Archivos estáticos locales) ─────
+const uploadsPath = path.resolve(__dirname, '..', '..', 'uploads');
+app.use('/uploads', express.static(uploadsPath));
 
 // ── Rutas API ─────────────────────────────────────────────────
 app.use('/api/v1', router);
@@ -214,6 +189,12 @@ app.use('/api', (req, res) => {
     ok: false,
     message: `Ruta API no encontrada: ${req.method} ${req.originalUrl}`,
   });
+});
+
+// Catch-all para el SPA (debe ir DESPUÉS de las rutas API)
+app.get('*', (req, res, next) => {
+  if (req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/config.js')) return next();
+  res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
 // ── Manejador de errores global ───────────────────────────────

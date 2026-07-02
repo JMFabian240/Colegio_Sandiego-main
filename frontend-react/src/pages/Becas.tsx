@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Star, Plus, Award, X, Search, ShieldAlert, CheckCircle2 } from 'lucide-react';
-import api from '../services/api';
+import { becasService } from '../services/becas.service';
+import { alumnosService } from '../services/alumnos.service';
 import { useAuthStore } from '../store/useAuthStore';
 
 export function Becas() {
@@ -40,16 +41,18 @@ export function Becas() {
 
   const cargarCatalogo = async () => {
     try {
-      const res = await api.get('/becas/catalogo').catch(() => ({ data: [] }));
-      setCatalogo(res.data || []);
+      const res: any = await becasService.obtenerCatalogo();
+      const data = res.data?.data || res.data || [];
+      setCatalogo(Array.isArray(data) ? data : []);
     } catch (e) { console.warn(e); }
   };
 
   const cargarAsignadas = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/becas').catch(() => ({ data: [] }));
-      setAsignadas(res.data || []);
+      const res: any = await becasService.obtenerAsignaciones();
+      const data = res.data?.data || res.data || [];
+      setAsignadas(Array.isArray(data) ? data : []);
     } catch (e) { console.warn(e); }
     finally { setLoading(false); }
   };
@@ -65,9 +68,9 @@ export function Becas() {
       };
 
       if (tipoForm.becaId) {
-        await api.patch(`/becas/catalogo/${tipoForm.becaId}`, payload);
+        await becasService.actualizarEnCatalogo(Number(tipoForm.becaId), payload);
       } else {
-        await api.post('/becas/catalogo', payload);
+        await becasService.crearEnCatalogo(payload);
       }
       alert('Tipo de beca guardado exitosamente.');
       setIsModalTipoOpen(false);
@@ -94,10 +97,11 @@ export function Becas() {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (busquedaAlumno.trim() && !asignarForm.alumnoId) {
-        api.get('/alumnos', { params: { q: busquedaAlumno, limit: 10 } })
-          .then(res => {
-            const data = res.data.data || res.data;
-            setAlumnosSugeridos(Array.isArray(data) ? data : []);
+        alumnosService.getAlumnos({ q: busquedaAlumno, limit: 10 })
+          .then((res: any) => {
+            const payload = res.data?.data || res.data || res;
+            const arr = Array.isArray(payload) ? payload : (payload.alumnos || []);
+            setAlumnosSugeridos(arr);
           })
           .catch(() => setAlumnosSugeridos([]));
       } else {
@@ -119,10 +123,11 @@ export function Becas() {
     
     setSaving(true);
     try {
-      await api.post('/becas/asignar', {
+      await becasService.asignar({
         alumnoId: Number(asignarForm.alumnoId),
         becaId: Number(asignarForm.becaId),
-        motivo: asignarForm.motivo
+        cicloId: 1,
+        observaciones: asignarForm.motivo
       });
       alert('Beca asignada exitosamente.');
       setIsModalAsignarOpen(false);
@@ -140,7 +145,7 @@ export function Becas() {
     if (!motivo) return;
     
     try {
-      await api.post(`/becas/asignaciones/${id}/retirar`, { motivoRetiro: motivo });
+      await becasService.retirar(Number(id), motivo);
       alert('Beca retirada exitosamente.');
       cargarAsignadas();
     } catch (error: any) {
@@ -162,6 +167,17 @@ export function Becas() {
     if (criterio === 'hermanos') return 'bg-emerald-50 text-emerald-600 border-emerald-100';
     if (criterio === 'calificacion') return 'bg-amber-50 text-amber-600 border-amber-100';
     return 'bg-navy-50 text-navy-600 border-navy-100';
+  };
+
+  const eliminarTipoBeca = async (becaId: number) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar este tipo de beca?')) return;
+    try {
+      await becasService.eliminarDeCatalogo(becaId);
+      alert('Tipo de beca eliminado.');
+      cargarCatalogo();
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Error al eliminar el tipo de beca.');
+    }
   };
 
   return (
@@ -207,8 +223,9 @@ export function Becas() {
                 <p className="text-sm text-gray-500 capitalize">{beca.criterio}</p>
                 
                 {isAdmin && (
-                  <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
                     <button onClick={() => openEditarTipo(beca)} className="text-xs font-medium text-navy-600 hover:text-navy-800 bg-navy-50 px-3 py-1 rounded-full">Editar</button>
+                    <button onClick={() => eliminarTipoBeca(beca.becaId || beca.id)} className="text-xs font-medium text-red-600 hover:text-red-800 bg-red-50 px-3 py-1 rounded-full">Eliminar</button>
                   </div>
                 )}
               </div>
@@ -228,15 +245,16 @@ export function Becas() {
                   <th className="p-4 font-semibold">Alumno</th>
                   <th className="p-4 font-semibold">Tipo de Beca</th>
                   <th className="p-4 font-semibold">Descuento</th>
+                  <th className="p-4 font-semibold">Motivo</th>
                   <th className="p-4 font-semibold">Estado</th>
                   <th className="p-4 font-semibold text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {loading && asignadas.length === 0 ? (
-                  <tr><td colSpan={5} className="p-8 text-center text-gray-400">Cargando becas asignadas...</td></tr>
+                  <tr><td colSpan={6} className="p-8 text-center text-gray-400">Cargando becas asignadas...</td></tr>
                 ) : asignadas.length === 0 ? (
-                  <tr><td colSpan={5} className="p-8 text-center text-gray-400">No hay becas asignadas en este momento.</td></tr>
+                  <tr><td colSpan={6} className="p-8 text-center text-gray-400">No hay becas asignadas en este momento.</td></tr>
                 ) : (
                   asignadas.map(asig => (
                     <tr key={asig.id} className="hover:bg-gray-50/80 transition-colors">
@@ -244,6 +262,13 @@ export function Becas() {
                       <td className="p-4 text-gray-600">{asig.nombre || asig.tipo}</td>
                       <td className="p-4">
                         <span className="font-black text-lg text-emerald-600">{asig.porcentaje}%</span>
+                      </td>
+                      <td className="p-4 text-gray-600 text-sm max-w-[200px]">
+                        {asig.motivo ? (
+                          <span className="italic">{asig.motivo}</span>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
                       </td>
                       <td className="p-4">
                         {asig.activa ? (

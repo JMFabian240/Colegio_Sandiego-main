@@ -11,6 +11,7 @@ router.use(authenticate);
 router.get('/ciclos', authorizePermiso('configuracion', 'lectura'), tarifasController.listarCiclos);
 router.post('/ciclos', authorizePermiso('configuracion', 'escritura'), tarifasController.crearCiclo);
 router.get('/niveles', authorizePermiso('configuracion', 'lectura'), tarifasController.listarNiveles);
+router.put('/:id/activar', authorizePermiso('configuracion', 'escritura'), tarifasController.activarCiclo);
 router.get('/', authorizePermiso('configuracion', 'lectura'), tarifasController.obtenerTarifas);
 router.put('/', authorizePermiso('configuracion', 'escritura'), tarifasController.guardarTarifas);
 

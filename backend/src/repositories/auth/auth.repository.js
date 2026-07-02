@@ -18,12 +18,16 @@ const prisma = require('../../config/database');
  */
 function derivarRolSistema(roles) {
   const codigos = roles
-    .filter(r => r.activo && !r.eliminadoEn)
-    .map(r => r.rol.codigo);
+    .filter(r => (r.activo ?? true) && (r.eliminadoEn == null))
+    .map(r => r.rol.codigo.toUpperCase()); // Normalize to uppercase
 
-  if (codigos.includes('administrador') || codigos.includes('directora')) return 'ADMIN';
-  if (codigos.includes('empleado')) return 'GESTOR';
-  if (codigos.includes('docente'))  return 'MAESTRA';
+  if (codigos.includes('ADMINISTRADOR') || codigos.includes('DIRECTORA') || codigos.includes('ADMIN')) return 'ADMIN';
+  if (codigos.includes('EMPLEADO') || codigos.includes('GESTOR')) return 'GESTOR';
+  if (codigos.includes('DOCENTE') || codigos.includes('MAESTRA')) return 'MAESTRA';
+  
+  // If it's something else, but we have exactly 1 role, just use it
+  if (codigos.length === 1 && ['ADMIN', 'GESTOR', 'MAESTRA'].includes(codigos[0])) return codigos[0];
+  
   return 'MAESTRA'; // fallback seguro
 }
 
@@ -68,16 +72,26 @@ async function findByUsername(username) {
   if (!usuario) return null;
 
   // Mapear a formato compatible con el contrato anterior
+  const rolSistema = derivarRolSistema(usuario.roles);
+  let permisosMap = usuario.permisosModulos?.reduce((acc, p) => { acc[p.modulo] = p.nivel; return acc; }, {}) || {};
+  
+  if (Object.keys(permisosMap).length === 0) {
+    const { PERMISOS_POR_DEFECTO } = require('../../utils/constants');
+    if (PERMISOS_POR_DEFECTO[rolSistema]) {
+      permisosMap = { ...PERMISOS_POR_DEFECTO[rolSistema] };
+    }
+  }
+
   return {
     id:       usuario.usuarioId,
     nombre:   usuario.nombreCompleto,
     username: usuario.nombreUsuario,
     password: usuario.passwordHash,          // campo esperado por auth.service
-    rol:      derivarRolSistema(usuario.roles),
+    rol:      rolSistema,
     activo:   usuario.activo,
     bloqueadoHasta:   usuario.bloqueadoHasta,
     intentosFallidos: usuario.intentosFallidos,
-    permisos: usuario.permisosModulos?.reduce((acc, p) => { acc[p.modulo] = p.nivel; return acc; }, {}) || {}
+    permisos: permisosMap
   };
 }
 

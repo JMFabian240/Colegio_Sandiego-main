@@ -139,9 +139,28 @@ async function guardarTarifas(cicloId, nivelId, tarifas, usuarioId) {
   });
 }
 
+async function activarCiclo(cicloId) {
+  return prisma.$transaction(async (tx) => {
+    // Desactivar todos
+    await tx.cicloEscolar.updateMany({
+      where: { activo: true },
+      data: { activo: false }
+    });
+
+    // Activar el deseado
+    const ciclo = await tx.cicloEscolar.update({
+      where: { cicloId: Number(cicloId) },
+      data: { activo: true }
+    });
+
+    return ciclo;
+  });
+}
+
 module.exports = {
   listarCiclos,
   crearCiclo,
+  activarCiclo,
   listarNiveles,
   obtenerTarifas,
   guardarTarifas

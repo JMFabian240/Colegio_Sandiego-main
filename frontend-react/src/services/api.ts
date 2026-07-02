@@ -27,6 +27,9 @@ api.interceptors.request.use(
 // Response interceptor to handle errors globally
 api.interceptors.response.use(
   (response) => {
+    if (response.config.responseType === 'blob') {
+      return response;
+    }
     return response.data; // En SAE, el backend suele enviar { status: 'success', data: ... }
   },
   (error) => {

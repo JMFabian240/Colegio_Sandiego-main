@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, UserCircle, Shield, X, Key, Trash2, Power, Eye, EyeOff } from 'lucide-react';
-import api from '../services/api';
+import { Users, Shield, Key, Search, UserPlus, Trash2, Edit, Save, X, RefreshCcw, Plus, UserCircle, Eye, EyeOff } from 'lucide-react';
+import { usuariosService } from '../services/usuarios.service';
 
 export function Usuarios() {
   const [usuarios, setUsuarios] = useState<any[]>([]);
@@ -29,10 +29,9 @@ export function Usuarios() {
   const cargarUsuarios = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/usuarios', {
-        params: { incluirInactivos: mostrarInactivos }
-      });
-      if (res.data) setUsuarios(res.data);
+      const res: any = await usuariosService.obtenerTodos({ includeInactivos: true });
+      const data = res.data?.data || res.data || [];
+      setUsuarios(data);
     } catch (error) {
       console.error('Error cargando usuarios', error);
     } finally {
@@ -55,15 +54,13 @@ export function Usuarios() {
     try {
       let modulos = modulosValidos;
       if (modulos.length === 0) {
-        const resModulos = await api.get('/permisos/modulos');
-        if (resModulos.data) {
-          modulos = resModulos.data;
-          setModulosValidos(modulos);
-        }
+        const resModulos: any = await usuariosService.obtenerModulos();
+        modulos = resModulos.data || resModulos || [];
+        setModulosValidos(modulos);
       }
 
-      const resPermisos = await api.get(`/permisos/usuarios/${userId}`);
-      const permisosArray = resPermisos.data || [];
+      const resPermisos: any = await usuariosService.obtenerPermisosUsuario(userId);
+      const asignados = resPermisos.data || resPermisos || [];
       
       const newPermisosMap: Record<string, 'NINGUNO' | 'lectura' | 'escritura'> = {};
       
@@ -71,7 +68,7 @@ export function Usuarios() {
         newPermisosMap[mod] = 'NINGUNO';
       });
 
-      permisosArray.forEach((p: any) => {
+      asignados.forEach((p: any) => {
         if (newPermisosMap[p.modulo] !== undefined) {
           newPermisosMap[p.modulo] = p.nivel;
         }
@@ -89,7 +86,8 @@ export function Usuarios() {
   const handleCrearUsuario = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/usuarios', nuevoUsuario);
+      await usuariosService.crear(nuevoUsuario);
+      alert('Usuario creado exitosamente');
       setIsModalOpen(false);
       setNuevoUsuario({ nombre: '', username: '', password: '', rol: 'MAESTRA' });
       cargarUsuarios();
@@ -101,11 +99,13 @@ export function Usuarios() {
 
   const handleToggleEstado = async (user: any) => {
     try {
-      if (user.activo) {
-        if (!window.confirm(`¿Estás seguro de desactivar a ${user.nombre}? No podrá iniciar sesión.`)) return;
-        await api.delete(`/usuarios/${user.id || user.usuarioId}`);
+      if (user.estado === 'inactivo') {
+        await usuariosService.reactivar(user.id || user.usuarioId);
+        alert('Usuario reactivado exitosamente.');
       } else {
-        await api.put(`/usuarios/${user.id || user.usuarioId}/reactivar`, {});
+        if (!window.confirm(`¿Estás seguro de desactivar a ${user.nombre}?`)) return;
+        await usuariosService.eliminar(user.id || user.usuarioId);
+        alert('Usuario desactivado exitosamente.');
       }
       cargarUsuarios();
       setSelectedUser(null);
@@ -125,8 +125,8 @@ export function Usuarios() {
     }
 
     try {
-      await api.put(`/usuarios/${user.id || user.usuarioId}`, { password: newPassword });
-      alert("Contraseña restablecida correctamente.");
+      await usuariosService.cambiarPassword(user.id || user.usuarioId, newPassword);
+      alert('Contraseña actualizada correctamente.');
     } catch (error) {
       console.error("Error al restablecer la contraseña:", error);
       alert("Ocurrió un error al restablecer la contraseña.");
@@ -141,8 +141,8 @@ export function Usuarios() {
         modulo,
         nivel: permisosActivos[modulo]
       }));
-      await api.put(`/permisos/usuarios/${selectedUser.id || selectedUser.usuarioId}`, { permisos: permisosToSave });
-      alert('Permisos actualizados correctamente.');
+      await usuariosService.actualizarPermisosUsuario(selectedUser.id || selectedUser.usuarioId, permisosToSave.map((p: any) => p.modulo));
+      alert('Permisos guardados correctamente.');
     } catch (error: any) {
       console.error('Error guardando permisos', error);
       alert(error.response?.data?.message || 'Error al guardar los permisos.');

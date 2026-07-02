@@ -32,7 +32,10 @@ const INCLUDE_COMPLETO = {
   },
   inscripciones: {
     where: { eliminadoEn: null },
-    orderBy: { ciclo: { nombre: 'desc' } },
+    orderBy: [
+      { ciclo: { activo: 'desc' } },
+      { ciclo: { nombre: 'desc' } }
+    ],
     take: 1,
     include: {
       grupo: { select: { grupoId: true, nombre: true, grado: true, seccion: true, nivel: { select: { codigo: true } } } },

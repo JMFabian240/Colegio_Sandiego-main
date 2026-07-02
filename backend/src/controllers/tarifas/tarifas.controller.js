@@ -56,9 +56,18 @@ async function guardarTarifas(req, res, next) {
   } catch (err) { next(err); }
 }
 
+async function activarCiclo(req, res, next) {
+  try {
+    const { id } = req.params;
+    const ciclo = await tarifasService.activarCiclo(id);
+    res.json({ ok: true, data: ciclo, message: 'Ciclo escolar activado exitosamente.' });
+  } catch (err) { next(err); }
+}
+
 module.exports = {
   listarCiclos,
   crearCiclo,
+  activarCiclo,
   listarNiveles,
   obtenerTarifas,
   guardarTarifas

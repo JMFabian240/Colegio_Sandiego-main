@@ -7,6 +7,8 @@
 
 const alumnosRepository = require('../../repositories/alumnos/alumnos.repository');
 const calendarioPagoService = require('../pagos/calendarioPago.service');
+const prisma = require('../../config/database');
+const AppError = require('../../utils/AppError');
 
 async function listar(filtros, usuario) {
   // page y limit son opcionales — sin ellos la respuesta es el array plano (backward compat)
@@ -16,7 +18,7 @@ async function listar(filtros, usuario) {
 async function obtenerPorId(id) {
   const alumno = await alumnosRepository.findById(id);
   if (!alumno) {
-    throw Object.assign(new Error('Alumno no encontrado.'), { statusCode: 404 });
+    throw new AppError('Alumno no encontrado.', 404);
   }
   return alumno;
 }
@@ -27,18 +29,13 @@ async function crear(datos, auditCtx) {
   // Verificar matrícula única
   const existente = await alumnosRepository.findByMatricula(datos.matricula);
   if (existente) {
-    throw Object.assign(
-      new Error(`Ya existe un alumno con la matrícula ${datos.matricula}.`),
-      { statusCode: 409 }
-    );
+    throw new AppError(`Ya existe un alumno con la matrícula ${datos.matricula}.`, 409);
   }
   const alumnoCreado = await alumnosRepository.create(datos, auditCtx);
   
   // Hook: Generar Calendario de Pagos Automáticamente si se inscribió (RF-15)
   // La creación inscribe al alumno en el ciclo activo automáticamente si se pasó grupoId.
   if (datos.grupoId) {
-    const { PrismaClient } = require('@prisma/client');
-    const prisma = new PrismaClient();
     const inscripcion = await prisma.inscripcionCiclo.findFirst({
       where: { alumnoId: alumnoCreado.id },
       orderBy: { creadoEn: 'desc' }
@@ -84,8 +81,6 @@ async function actualizar(id, datos, auditCtx) {
 
   // Hook: Generar Calendario de Pagos si se le asignó un grupo y no tiene pagos
   if (datos.grupoId !== undefined) {
-    const { PrismaClient } = require('@prisma/client');
-    const prisma = new PrismaClient();
     const inscripcion = await prisma.inscripcionCiclo.findFirst({
       where: { alumnoId: Number(id) },
       orderBy: { creadoEn: 'desc' }
@@ -113,14 +108,10 @@ async function eliminar(id, auditCtx) {
 }
 
 async function obtenerHistorialAcademico(id) {
-  const { PrismaClient } = require('@prisma/client');
-  const prisma = new PrismaClient();
-  const alumnosRepository = require('../../repositories/alumnos/alumnos.repository');
-
   const alumno = await alumnosRepository.findById(id);
 
   if (!alumno) {
-    throw Object.assign(new Error('Alumno no encontrado.'), { statusCode: 404 });
+    throw new AppError('Alumno no encontrado.', 404);
   }
 
   const curricularesRaw = await prisma.calificacion.findMany({

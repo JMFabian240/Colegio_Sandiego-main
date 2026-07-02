@@ -2,28 +2,63 @@ import api from './api';
 import type { Alumno } from '../types';
 
 export const alumnosService = {
-  getAlumnos: async (params?: any): Promise<Alumno[]> => {
-    const res = await api.get('/alumnos', { params });
-    // Assuming backend returns data directly, or maybe in res.data if intercepted
-    return res.data || res;
+  getAlumnos: async (params?: any): Promise<any> => {
+    return api.get('/alumnos', { params });
   },
 
-  getAlumnoById: async (id: number): Promise<Alumno> => {
-    const res = await api.get(`/alumnos/${id}`);
-    return res.data || res;
+  getEstadoCuenta: async (id: number): Promise<any> => {
+    return api.get(`/alumnos/${id}/estado-cuenta`);
   },
 
-  createAlumno: async (data: Partial<Alumno>): Promise<Alumno> => {
-    const res = await api.post('/alumnos', data);
-    return res.data || res;
+  previewPlanPagos: async (id: number, meses: number): Promise<any> => {
+    return api.get(`/alumnos/${id}/planes/preview?meses=${meses}`);
   },
 
-  updateAlumno: async (id: number, data: Partial<Alumno>): Promise<Alumno> => {
-    const res = await api.put(`/alumnos/${id}`, data);
-    return res.data || res;
+  generarPlanPagos: async (id: number, meses: number): Promise<any> => {
+    return api.post(`/alumnos/${id}/planes`, { meses });
+  },
+
+  eliminarPlanPagos: async (id: number): Promise<any> => {
+    return api.delete(`/alumnos/${id}/planes`);
+  },
+
+  getAlumnoById: async (id: number): Promise<any> => {
+    return api.get(`/alumnos/${id}`);
+  },
+
+  createAlumno: async (data: Partial<Alumno>): Promise<any> => {
+    return api.post('/alumnos', data);
+  },
+
+  updateAlumno: async (id: number, data: Partial<Alumno>): Promise<any> => {
+    return api.put(`/alumnos/${id}`, data);
   },
 
   deleteAlumno: async (id: number): Promise<void> => {
-    await api.delete(`/alumnos/${id}`);
+    return api.delete(`/alumnos/${id}`);
+  },
+
+  obtenerEstadoCuenta: async (id: number): Promise<any> => {
+    return api.get(`/alumnos/${id}/estado-cuenta`);
+  },
+
+  obtenerPreviewPlanes: async (id: number, meses: number): Promise<any> => {
+    return api.get(`/alumnos/${id}/planes/preview?meses=${meses}`);
+  },
+
+  crearPlan: async (id: number, meses: number): Promise<any> => {
+    return api.post(`/alumnos/${id}/planes`, { meses });
+  },
+
+  eliminarPlanes: async (id: number): Promise<void> => {
+    return api.delete(`/alumnos/${id}/planes`);
+  },
+
+  obtenerHistorialAcademico: async (id: number): Promise<any> => {
+    return api.get(`/alumnos/${id}/historial-academico`);
+  },
+
+  cerrarCiclo: async (): Promise<any> => {
+    return api.post('/alumnos/cierre-ciclo');
   }
 };

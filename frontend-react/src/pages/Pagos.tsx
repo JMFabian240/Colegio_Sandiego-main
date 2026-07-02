@@ -570,6 +570,7 @@ export function Pagos() {
                                 <option value="transferencia">Transferencia</option>
                                 <option value="tarjeta_credito">Tarjeta de Crédito</option>
                                 <option value="tarjeta_debito">Tarjeta de Débito</option>
+                                <option value="deposito">Depósito</option>
                               </select>
                             </div>
                           </div>

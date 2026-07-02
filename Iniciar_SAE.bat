@@ -7,8 +7,16 @@ docker compose up -d postgres_sae
 
 echo.
 echo ===================================================
-echo Iniciando servidor backend...
+echo Iniciando servidor backend y Frontend Antiguo...
 echo ===================================================
 cd backend
+start cmd /k "title Backend SAE && npm run dev"
 start "" http://localhost:3000/auth/login.html
-npm.cmd start
+
+echo.
+echo ===================================================
+echo Iniciando Frontend React (Nuevo)...
+echo ===================================================
+cd ../frontend-react
+start cmd /k "title Frontend React && npm run dev"
+start "" http://localhost:5173/login

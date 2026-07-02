@@ -392,20 +392,6 @@ export function Grupos() {
           <h2 className="text-2xl font-bold text-navy-800">Grupos y materias</h2>
           <p className="text-sm text-gray-500 mt-1">Gestiona los grupos, asigna docentes titulares y administra las materias.</p>
         </div>
-        {isAdmin && (
-          <button 
-            onClick={() => {
-              setGrupoEditandoId(null);
-              setNuevoGrupo({ nombre: '', nivel: '', grado: '', seccion: '', titular: '', materias: [] });
-              setBusquedaDocente('');
-              setGrupoPlantillaId('');
-              setIsModalOpen(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-navy-600 text-white rounded-xl hover:bg-navy-700 transition-colors shadow-sm"
-          >
-            <Plus size={16} /> Nuevo Grupo
-          </button>
-        )}
       </div>
 
       <div className="grid md:grid-cols-3 gap-4 mb-6">

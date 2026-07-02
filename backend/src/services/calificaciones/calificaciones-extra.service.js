@@ -52,14 +52,23 @@ async function registrarCalificacion({ alumnoId, club, numeroTrimestre, cicloId,
   }
 
   // Crear registro
-  return calificacionesExtraRepository.create({
-    alumnoId,
-    club,
-    periodoId,
-    cicloId: realCicloId,
-    valorNumerico,
-    registradaPor: usuarioId
-  });
+  try {
+    return await calificacionesExtraRepository.create({
+      alumnoId,
+      club,
+      periodoId,
+      cicloId: realCicloId,
+      valorNumerico,
+      registradaPor: usuarioId
+    });
+  } catch (err) {
+    if (err.message && err.message.includes('Invalid prisma')) {
+      const customErr = new Error('Error en la base de datos al registrar la calificación extracurricular. Por favor, verifique la configuración.');
+      customErr.statusCode = 500;
+      throw customErr;
+    }
+    throw err;
+  }
 }
 
 /**

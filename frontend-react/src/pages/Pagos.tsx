@@ -21,12 +21,12 @@ export function Pagos() {
   const [busquedaAlumno, setBusquedaAlumno] = useState('');
   const [alumnosSugeridos, setAlumnosSugeridos] = useState<any[]>([]);
   const [alumnoSeleccionado, setAlumnoSeleccionado] = useState<any>(null);
-  
+
   const [adeudos, setAdeudos] = useState<any[]>([]);
   const [selectedDeudas, setSelectedDeudas] = useState<any[]>([]);
   const [porcentajeBeca, setPorcentajeBeca] = useState(0);
   const [calculando, setCalculando] = useState(false);
-  
+
   const [pagoForm, setPagoForm] = useState({
     concepto: 'Colegiatura',
     monto: '',
@@ -36,7 +36,7 @@ export function Pagos() {
   const [comprobante, setComprobante] = useState<File | null>(null);
   const [pagoAdelantado, setPagoAdelantado] = useState(false);
   const [mesesAdelanto, setMesesAdelanto] = useState('1');
-  
+
   const [saving, setSaving] = useState(false);
   const [ticketRecibo, setTicketRecibo] = useState<any>(null);
 
@@ -81,7 +81,7 @@ export function Pagos() {
 
   useEffect(() => {
     cargarPagos(page);
-    
+
     const urlParams = new URLSearchParams(window.location.search);
     const alId = urlParams.get('alumnoId');
     if (alId) {
@@ -134,23 +134,23 @@ export function Pagos() {
     setBusquedaAlumno(`${al.nombre || al.nombreCompleto} (${al.matricula})`);
     setAlumnosSugeridos([]);
     setCalculando(true);
-    
+
     const id = al.id || al.alumnoId;
     try {
       const alRes: any = await alumnosService.getAlumnoById(id);
       const alumnoData = alRes.data || alRes;
       setAlumnoSeleccionado(alumnoData);
-      
+
       let pctBeca = 0;
       if (alumnoData.beca) {
         pctBeca = Number(alumnoData.beca.porcentaje);
       }
       setPorcentajeBeca(pctBeca);
-      
+
       const adRes: any = await pagosService.obtenerCalendario(id);
       const data = adRes.data?.data || adRes.data || [];
       const pendientes = data.filter((a: any) => a.estadoCobro === 'pendiente');
-      
+
       setAdeudos(pendientes);
       setSelectedDeudas([]);
       setPagoForm(prev => ({
@@ -194,7 +194,7 @@ export function Pagos() {
         total += Math.max(0, deuda);
       });
     } else {
-      total = 0; 
+      total = 0;
     }
     setPagoForm(prev => ({ ...prev, monto: total > 0 ? total.toFixed(2) : '' }));
   };
@@ -239,10 +239,10 @@ export function Pagos() {
       const alumnoData = becaRes.data || becaRes;
       const asignacion = alumnoData?.asignacionesBeca?.find((b: any) => b.estado === 'activa');
       const porcBeca = asignacion?.beca?.porcentaje || 0;
-      
-      const deudasFiltradas = adeudos.filter((d:any) => d.concepto?.toLowerCase() === 'colegiatura');
+
+      const deudasFiltradas = adeudos.filter((d: any) => d.concepto?.toLowerCase() === 'colegiatura');
       const periodos = deudasFiltradas.slice(0, meses);
-      
+
       let total = 0;
       periodos.forEach((d: any) => {
         let deuda = Number(d.montoOriginal) + Number(d.montoRecargo || 0) - Number(d.montoPagado || 0);
@@ -250,7 +250,7 @@ export function Pagos() {
         total += Math.max(0, deuda);
       });
       setPagoForm(prev => ({ ...prev, monto: total.toFixed(2) }));
-    } catch(e) {}
+    } catch (e) { }
   };
 
   const registrarPago = async (e: React.FormEvent) => {
@@ -368,7 +368,7 @@ export function Pagos() {
                     <td className="p-4 text-gray-600 capitalize">{p.concepto?.replace(/_/g, ' ')}</td>
                     <td className="p-4 text-gray-500">{new Date(p.fecha).toLocaleDateString('es-MX')}</td>
                     <td className="p-4 text-right font-mono font-bold text-emerald-600">
-                      ${Number(p.monto).toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                      ${Number(p.monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                     </td>
                   </tr>
                 ))
@@ -397,7 +397,7 @@ export function Pagos() {
               <h3 className="text-lg font-bold text-emerald-800 flex items-center gap-2"><DollarSign size={20} /> Registrar Nuevo Pago</h3>
               <button type="button" onClick={() => setIsModalOpen(false)} className="text-emerald-700 hover:text-emerald-900 p-2 rounded-full hover:bg-emerald-100 transition-colors"><X size={20} /></button>
             </div>
-            
+
             <form onSubmit={registrarPago} className="p-6 flex-1 overflow-y-auto">
               {!ticketRecibo ? (
                 <>
@@ -407,12 +407,12 @@ export function Pagos() {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Buscar Alumno</label>
                         <div className="relative">
                           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                          <input 
-                            type="text" 
-                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none pr-10" 
+                          <input
+                            type="text"
+                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none pr-10"
                             placeholder="Buscar alumno..."
                             value={busquedaAlumno}
-                            onChange={e => { setBusquedaAlumno(e.target.value); if(alumnoSeleccionado) setAlumnoSeleccionado(null); }}
+                            onChange={e => { setBusquedaAlumno(e.target.value); if (alumnoSeleccionado) setAlumnoSeleccionado(null); }}
                           />
                           {alumnoSeleccionado && (
                             <button type="button" onClick={limpiarSeleccion} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500">
@@ -459,7 +459,7 @@ export function Pagos() {
                                   const monto = adeudo.concepto?.toLowerCase() === 'colegiatura' ? montoRaw - (montoRaw * porcentajeBeca / 100) : montoRaw;
                                   const isSelected = selectedDeudas.some((d: any) => d.calendarioPagoId === adeudo.calendarioPagoId);
                                   return (
-                                    <div key={idx} 
+                                    <div key={idx}
                                       onClick={() => toggleDeuda(adeudo)}
                                       className={`flex justify-between items-center p-3 rounded-lg border shadow-sm cursor-pointer transition-colors ${isSelected ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-gray-200'}`}>
                                       <div className="flex items-center gap-3">
@@ -481,7 +481,7 @@ export function Pagos() {
                         </div>
                       )}
                     </div>
-                  
+
                     <div className="space-y-5">
                       {alumnoSeleccionado && !alumnoSeleccionado.planPago ? (
                         <div className="bg-orange-50 border border-orange-200 p-6 rounded-xl text-center">
@@ -496,7 +496,7 @@ export function Pagos() {
                           <div className="flex bg-white rounded-xl border border-gray-200 p-1">
                             <button type="button" className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${!pagoAdelantado ? 'bg-navy-900 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`} onClick={() => {
                               setPagoAdelantado(false);
-                              recalcularMontoPorConcepto(pagoForm.concepto, adeudos, porcentajeBeca); 
+                              recalcularMontoPorConcepto(pagoForm.concepto, adeudos, porcentajeBeca);
                             }}>
                               Pago Normal
                             </button>
@@ -508,7 +508,7 @@ export function Pagos() {
                               Pago Adelantado
                             </button>
                           </div>
-    
+
                           {pagoAdelantado && (
                             <div className="flex items-center gap-3 bg-indigo-50/50 border border-indigo-100 rounded-xl p-3">
                               <span className="text-sm font-medium text-indigo-900">Adelantar</span>
@@ -519,13 +519,13 @@ export function Pagos() {
                               <span className="text-sm font-medium text-indigo-900">meses</span>
                             </div>
                           )}
-    
+
                           <div className="grid grid-cols-1 gap-4">
                             <div>
                               <label className="block text-xs font-medium text-gray-700 mb-1">Concepto</label>
                               <select required disabled={pagoAdelantado} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed" value={pagoForm.concepto} onChange={e => {
                                 const val = e.target.value;
-                                setPagoForm({...pagoForm, concepto: val});
+                                setPagoForm({ ...pagoForm, concepto: val });
                                 recalcularMontoPorConcepto(val, adeudos, porcentajeBeca);
                               }}>
                                 <option value="Colegiatura">Colegiatura</option>
@@ -536,37 +536,37 @@ export function Pagos() {
                               </select>
                             </div>
                           </div>
-    
+
                           <div className="relative z-0">
                             <label className="block text-xs font-medium text-gray-700 mb-1">Monto</label>
                             <div className="relative">
                               <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                              <input 
-                                required 
-                                type="number" 
-                                min="1" 
+                              <input
+                                required
+                                type="number"
+                                min="1"
                                 step="0.01"
-                                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-gray-800 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" 
-                                value={pagoForm.monto} 
-                                onChange={e => setPagoForm({...pagoForm, monto: e.target.value})}
+                                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-gray-800 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                                value={pagoForm.monto}
+                                onChange={e => setPagoForm({ ...pagoForm, monto: e.target.value })}
                               />
                             </div>
                           </div>
-    
+
                           <div className="grid grid-cols-2 gap-4 relative z-0">
                             <div>
                               <label className="block text-xs font-medium text-gray-700 mb-1">Fecha</label>
-                              <input 
+                              <input
                                 type="date"
                                 required
                                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
                                 value={pagoForm.fecha}
-                                onChange={e => setPagoForm({...pagoForm, fecha: e.target.value})}
+                                onChange={e => setPagoForm({ ...pagoForm, fecha: e.target.value })}
                               />
                             </div>
                             <div>
                               <label className="block text-xs font-medium text-gray-700 mb-1">Método de pago</label>
-                              <select required className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" value={pagoForm.metodoPago} onChange={e => setPagoForm({...pagoForm, metodoPago: e.target.value})}>
+                              <select required className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" value={pagoForm.metodoPago} onChange={e => setPagoForm({ ...pagoForm, metodoPago: e.target.value })}>
                                 <option value="transferencia">Transferencia</option>
                                 <option value="tarjeta_credito">Tarjeta de Crédito</option>
                                 <option value="tarjeta_debito">Tarjeta de Débito</option>
@@ -574,15 +574,15 @@ export function Pagos() {
                               </select>
                             </div>
                           </div>
-                          
+
                           <div className="relative z-0">
                             <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1"><span className="text-gray-400">📎</span> Adjuntar comprobante (Opcional)</label>
-                            <input 
-                              type="file" 
+                            <input
+                              type="file"
                               accept=".pdf,image/*"
                               className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border file:border-gray-300 file:text-xs file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 cursor-pointer"
                               onChange={e => {
-                                if(e.target.files && e.target.files.length > 0) {
+                                if (e.target.files && e.target.files.length > 0) {
                                   setComprobante(e.target.files[0]);
                                 } else {
                                   setComprobante(null);
@@ -594,14 +594,14 @@ export function Pagos() {
                       )}
                     </div>
                   </div>
-    
+
                   <div className="pt-6 mt-6 flex justify-end gap-3 border-t border-gray-100 relative z-0">
-                  <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">Cancelar</button>
-                  <button type="submit" disabled={saving || !alumnoSeleccionado || !alumnoSeleccionado.planPago} className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors shadow-sm disabled:opacity-70">
-                    <CheckCircle2 size={16} /> {saving ? 'Registrando...' : 'Registrar Pago'}
-                  </button>
-                </div>
-              </>
+                    <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">Cancelar</button>
+                    <button type="submit" disabled={saving || !alumnoSeleccionado || !alumnoSeleccionado.planPago} className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors shadow-sm disabled:opacity-70">
+                      <CheckCircle2 size={16} /> {saving ? 'Registrando...' : 'Registrar Pago'}
+                    </button>
+                  </div>
+                </>
               ) : (
                 <div className="pt-4 border-t border-gray-100 mt-2 animate-in slide-in-from-bottom-4 fade-in duration-300">
                   <div id="ticket-imprimible" className="border-2 border-dashed border-gray-200 rounded-xl p-6 bg-white mb-6">
@@ -655,7 +655,7 @@ export function Pagos() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex justify-center gap-3">
                     <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors">Cerrar</button>
                     <button type="button" onClick={imprimirTicket} className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white bg-navy-800 hover:bg-navy-900 rounded-xl transition-colors shadow-sm">

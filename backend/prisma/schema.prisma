@@ -175,7 +175,8 @@ model Grupo {
   gruposMaterias GrupoMateria[]
   inscripciones  InscripcionCiclo[]
 
-  @@unique([cicloId, nivelId, grado, seccion])
+  @@unique([cicloId, nivelId, grado, seccion], map: "grupo_ciclo_id_nivel_id_grado_seccion_key")
+  @@unique([grupoId, cicloId], map: "grupo_grupo_id_ciclo_id_key")
   @@map("grupo")
 }
 
@@ -525,7 +526,7 @@ model CalendarioPago {
   montoPagado      Decimal   @default(0) @map("monto_pagado") @db.Decimal(12, 2)
   montoRecargo     Decimal   @default(0) @map("monto_recargo") @db.Decimal(12, 2)
   // GENERATED ALWAYS AS (monto_original + monto_recargo - monto_pagado) STORED
-  saldoPendiente   Decimal   @default(dbgenerated("(monto_original + monto_recargo - monto_pagado)")) @map("saldo_pendiente") @db.Decimal(12, 2)
+//  saldoPendiente   Decimal   @default(dbgenerated("(monto_original + monto_recargo - monto_pagado)")) @map("saldo_pendiente") @db.Decimal(12, 2)
   estadoCobro      String    @default("pendiente") @map("estado_cobro") @db.VarChar(15)
   liquidadoAt      DateTime? @map("liquidado_at") @db.Timestamptz()
   creadoEn         DateTime  @default(now()) @map("creado_en") @db.Timestamptz()

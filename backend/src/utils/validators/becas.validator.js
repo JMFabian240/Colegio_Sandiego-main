@@ -40,8 +40,8 @@ const crearCatalogoBecaValidators = [
 
   body('criterio')
     .notEmpty().withMessage('El criterio de asignación es obligatorio.')
-    .isIn(['inscripcion_temprana', 'calificacion', 'hermanos'])
-    .withMessage('El criterio debe ser tiempo de inscripción, calificación o beca por hermanos.'),
+    .isIn(['inscripcion_temprana', 'calificacion', 'hermanos', 'especial'])
+    .withMessage('El criterio debe ser tiempo de inscripción, calificación, beca por hermanos o especial.'),
 
   body('porcentaje')
     .notEmpty().withMessage('El porcentaje es obligatorio.')
@@ -63,8 +63,8 @@ const actualizarCatalogoBecaValidators = [
   body('criterio')
     .optional()
     .notEmpty().withMessage('El criterio de asignación no puede estar vacío.')
-    .isIn(['inscripcion_temprana', 'calificacion', 'hermanos'])
-    .withMessage('El criterio debe ser tiempo de inscripción, calificación o beca por hermanos.'),
+    .isIn(['inscripcion_temprana', 'calificacion', 'hermanos', 'especial'])
+    .withMessage('El criterio debe ser tiempo de inscripción, calificación, beca por hermanos o especial.'),
 
   body('porcentaje')
     .optional()

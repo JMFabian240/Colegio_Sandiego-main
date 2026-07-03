@@ -262,6 +262,7 @@ CREATE TABLE IF NOT EXISTS alumno (
     curp                  VARCHAR(18)  UNIQUE,
     nombre_completo       VARCHAR(120) NOT NULL,
     fecha_nacimiento      DATE,
+    lugar_nacimiento      VARCHAR(100),
     sexo                  CHAR(1)      CHECK (sexo IN ('M','F','X')),
     nivel_id              INT          REFERENCES nivel_educativo(nivel_id) ON DELETE RESTRICT,
     estado                VARCHAR(20)  NOT NULL DEFAULT 'Activo'

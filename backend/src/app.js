@@ -159,37 +159,33 @@ console.log('[SAE] Servidor:', '${host}');`
   );
 });
 
-// ── Frontend estático (sirve los paneles HTML existentes) ─────
-// REGLA: el frontend NO se modifica. Solo se sirve como archivos estáticos.
+// ── Frontend React (dist compilado) ──────────────────────────
+// Sirve el build de Vite/React en la raíz. Debe ir ANTES del legacy.
 //
 // path.resolve desde backend/src/app.js:
-//   __dirname  = .../colegio-sandiego/backend/src
-//   ../..      = .../colegio-sandiego
-//   ../../frontend = .../colegio-sandiego/frontend   ← correcto
-//
-// Usamos path.resolve para evitar diferencias Windows/WSL con separadores.
-const frontendPath = path.resolve(__dirname, '..', '..', 'frontend');
+//   __dirname      = .../Colegio_Sandiego-main/backend/src
+//   ../../frontend-react/dist = .../Colegio_Sandiego-main/frontend-react/dist
+const reactDistPath  = path.resolve(__dirname, '..', '..', 'frontend-react', 'dist');
+const frontendPath   = path.resolve(__dirname, '..', '..', 'frontend');
 
 app.use(
-  express.static(frontendPath, {
-    // No buscar index.html automáticamente — los paneles tienen nombres propios
-    index: false,
-    // Extensiones que puede servir
+  express.static(reactDistPath, {
+    index: 'index.html',
     extensions: ['html'],
   })
 );
 
-// ── Ruta raíz: redirige al panel de administración ────────────
-// Placeholder temporal hasta que se implemente la pantalla de login.
-// Una vez que exista /auth/login.html, este redirect apuntará ahí.
-app.get('/', (req, res) => {
-  res.redirect('/panel.html');
-});
+// ── Frontend legacy (paneles HTML clásicos) ───────────────────
+// Sirve los archivos HTML originales bajo sus mismas URLs.
+app.use(
+  express.static(frontendPath, {
+    index: false,
+    extensions: ['html'],
+  })
+);
 
-// ── Accesos directos explícitos a cada panel ──────────────────
-// Permite acceder mediante rutas limpias además de la URL directa al .html
+// ── Accesos directos explícitos a paneles legacy ──────────────
 app.get('/panel',   (req, res) => res.sendFile(path.join(frontendPath, 'panel.html')));
-// Legacy routes — redirect to unified panel
 app.get('/admin',   (req, res) => res.redirect('/panel.html'));
 app.get('/gestor',  (req, res) => res.redirect('/panel.html'));
 app.get('/maestra', (req, res) => res.redirect('/panel.html'));
@@ -214,6 +210,13 @@ app.use('/api', (req, res) => {
     ok: false,
     message: `Ruta API no encontrada: ${req.method} ${req.originalUrl}`,
   });
+});
+
+// ── SPA Fallback (React Router) ───────────────────────────────
+// Cualquier ruta desconocida que NO sea /api ni un archivo estático
+// se delega al index.html de React para que el router de cliente la maneje.
+app.get('*', (req, res) => {
+  res.sendFile(path.join(reactDistPath, 'index.html'));
 });
 
 // ── Manejador de errores global ───────────────────────────────
